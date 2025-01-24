@@ -1,7 +1,9 @@
 from yt_dlp import YoutubeDL
 
 list = [
+    # Movement for climbers
     "https://www.youtube.com/watch?v=jLsii8s6acM&t=8s"
+    
 ]
 
 output_dir = "../data/videos"
