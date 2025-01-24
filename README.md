@@ -1,0 +1,1 @@
+# climbing-technique-detector
