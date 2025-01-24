@@ -18,6 +18,8 @@ google-pasta==0.2.0
 grpcio==1.70.0
 h5py==3.12.1
 idna==3.10
+imageio==2.37.0
+imageio-ffmpeg==0.6.0
 iniconfig==2.0.0
 ipykernel==6.29.5
 ipython==8.29.0
@@ -60,9 +62,10 @@ packaging==24.2
 pandas==2.2.3
 parso==0.8.4
 pexpect==4.9.0
-pillow==11.0.0
+pillow==10.4.0
 platformdirs==4.3.6
 pluggy==1.5.0
+proglog==0.1.10
 prompt_toolkit==3.0.50
 protobuf==4.25.5
 psutil==6.1.1
@@ -73,6 +76,7 @@ Pygments==2.19.1
 pyparsing==3.2.1
 pytest==8.3.3
 python-dateutil==2.9.0.post0
+python-dotenv==1.0.1
 pytz==2024.2
 pyzmq==26.2.0
 requests==2.32.3
@@ -88,6 +92,7 @@ tensorboard-data-server==0.7.2
 tensorflow==2.18.0
 termcolor==2.5.0
 tornado==6.4.2
+tqdm==4.67.1
 traitlets==5.14.3
 typing_extensions==4.12.2
 tzdata==2025.1
