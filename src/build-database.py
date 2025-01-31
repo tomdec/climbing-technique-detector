@@ -10,7 +10,7 @@ output_dir = "../data/videos"
 
 def download_yt_video(video_url):
     yt_opts = {
-        'format': 'best[ext=mp4]',  # Specify the format you want
+        'format': 'best',  # Specify the format you want
         'outtmpl': f'{output_dir}/%(title)s.%(ext)s'
     }
 

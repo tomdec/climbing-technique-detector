@@ -32,3 +32,36 @@ Install dependencies with the `pip install` command, and then add these to the r
 ```
 pip freeze > requirements.txt
 ```
+
+## FFMPEG
+Make sure ffmpeg is installed for video editing.
+When using linux (or wsl) run
+```
+sudo apt update
+sudo apt install ffmpeg
+```
+
+# Structure
+
+## root folder
+Python files in the root folder are meant to be run as scripts from the command line with: 
+```
+python <file-name>.py
+```
+
+## /data
+Contains all data files required in this project.
+Label files will be included source control to have back-ups of them, video files and images won't since they are too large and not mine
+to make publically available.
+
+## /src
+Contains the source code required in the project.
+
+### /src/notebook.ipynb
+Jupyter notebook mean as experimentation tool to build/debug/test source code.
+
+## /test
+Contains tests for the source code, run by 
+```
+pytest
+```

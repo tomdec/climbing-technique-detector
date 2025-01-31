@@ -1,4 +1,4 @@
-import csv
+from csv import reader as csv_reader
 from common import Technique
 from os import listdir
 from os.path import join
@@ -7,11 +7,11 @@ labels_dir = "./data/labels"
 
 def validate_label(file_path):
     with open(file_path, 'r', newline='') as csvfile:
-        reader = csv.reader(csvfile)
+        reader = csv_reader(csvfile)
         for idx, row in enumerate(reader):
             #print(f'{idx}: {row}')
             if len(row) != 2:
-                print(f'Line {idx}: {row} - Expected a pair of numbers')
+                print(f'Line {idx}: {row} - Expected a pair of values')
                 continue
             if not row[0].isdigit() or not row[1].isdigit():
                 print(f'Line {idx}: {row} - not a number')

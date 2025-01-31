@@ -1,5 +1,5 @@
 from enum import Enum
-
+from csv import reader as csv_reader
 class Technique(Enum):
     INVALID = 0
     NONE = 1
@@ -12,3 +12,14 @@ class Technique(Enum):
     CROSS_MIDLINE = 8
 
 
+def get_label(label_path, frame_number):
+    with open(label_path, 'r', newline='') as csvfile:
+        reader = csv_reader(csvfile)
+        label = Technique.INVALID
+        for row in reader:
+            current_frame = int(row[0])
+            if frame_number >= current_frame:
+                label = Technique(int(row[1]))
+            else:
+                break
+        return label
