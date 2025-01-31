@@ -34,7 +34,7 @@ pip freeze > requirements.txt
 ```
 
 ## FFMPEG
-Make sure ffmpeg is installed for video editing.
+Make sure ffmpeg is installed for saving video's after editing. 
 When using linux (or wsl) run
 ```
 sudo apt update
