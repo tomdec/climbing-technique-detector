@@ -2,6 +2,7 @@ from enum import Enum
 from csv import writer as csv_writer, reader as csv_reader
 from os import listdir
 from os.path import join
+from pandas import DataFrame, read_csv
 
 class Technique(Enum):
     INVALID = 0
@@ -14,37 +15,47 @@ class Technique(Enum):
     DROP_KNEE = 7
     CROSS_MIDLINE = 8
 
-def get_label(label_path, frame_number):
+def get_label(label_path: str, frame_number: int):
     with open(label_path, 'r', newline='') as csvfile:
         reader = csv_reader(csvfile)
-        label = Technique.INVALID
         for row in reader:
-            current_frame = int(row[0])
-            if frame_number >= current_frame:
-                label = Technique(int(row[1]))
+            current_start = int(row[0])
+            current_stop = int(row[1])
+            if current_stop <= frame_number:
+                continue
+            elif current_start <= frame_number and frame_number < current_stop:
+                return Technique(int(row[2]))
             else:
-                break
-        return label
- 
+                return Technique.INVALID
+
+def get_labels_as_dataframe(label_path):
+    return read_csv(label_path, header=None, names=["start", "stop", "label"])
+
 def validate_label(file_path):
     with open(file_path, 'r', newline='') as csvfile:
         reader = csv_reader(csvfile)
-        last_frame = -1
+        last_stop = -1
         for idx, row in enumerate(reader):
             #print(f'{idx}: {row}')
-            if len(row) != 2:
-                print(f'Line {idx}: {row} - Expected a pair of values')
+            if len(row) != 3:
+                print(f'Line {idx}: {row} - Expected three values')
                 continue
-            if not row[0].isdigit() or not row[1].isdigit():
+            if not row[0].isdigit() or not row[1].isdigit() or not row[2].isdigit():
                 print(f'Line {idx}: {row} - not a number')
                 continue
-            if int(row[1]) not in Technique:
-                print(f'Line {idx}: {row} - second value not a valid technique')
+            if int(row[2]) == 0:
+                print(f'Line {idx}: {row} - unnecessary INVALID label found')
                 continue
-            if last_frame >= int(row[0]):
-                print(f'Line {idx}: {row} - expected strictly increasing frame numbers')
+            if int(row[2]) not in Technique:
+                print(f'Line {idx}: {row} - third value not a valid technique')
                 continue
-            last_frame = int(row[0])
+            if int(row[0]) >= int(row[1]):
+                print(f'Line {idx}: {row} - stop must be higher than start')
+                continue
+            if last_stop > int(row[0]):
+                print(f'Line {idx}: {row} - start must be higher or equal to previous stop')
+                continue
+            last_stop = int(row[1])
 
 def validate_all(root_dir):
     files = listdir(root_dir)
@@ -56,19 +67,18 @@ def validate_all(root_dir):
 def correct_fps(label_path, output_path):
     '''
     Example: 
-        correct_fps("../data/labels/How to Flag - A Climbing Technique for Achieving Balance.csv", 
-            "../data/labels/How to Flag - A Climbing Technique for Achieving Balance corrected.csv")
+        correct_fps("./data/labels/How to Flag - A Climbing Technique for Achieving Balance.csv", 
+            "./data/labels/How to Flag - A Climbing Technique for Achieving Balance corrected.csv")
     '''
-    
     actual = 29.97
     current = 23.976
     with open(label_path, 'r', newline='') as original:
         reader = csv_reader(original)
-        
-    
+            
         with open(output_path, 'w', newline='') as new:
             writer = csv_writer(new)
             for row in reader:
-                frame = int(row[0])
-                label = int(row[1])
-                writer.writerow([int(frame / current * actual), label])
+                start = int(row[0])
+                stop = int(row[1])
+                label = int(row[2])
+                writer.writerow([int(start / current * actual), int(stop / current * actual), label])
