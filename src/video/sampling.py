@@ -72,12 +72,11 @@ def generate_samples(video_path,
 
 def generate_all_samples(data_root):
     video_root = join(data_root, "videos")
-    samples_root = join(data_root, "samples")
 
-    build_sample_dirs(samples_root)
+    build_sample_dirs(data_root)
 
     videos = listdir(video_root)
     for video in videos:
         video_path = join(video_root, video)
-        generate_samples(video_path, samples_root, False)
+        generate_samples(video_path, data_root, False)
 
