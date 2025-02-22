@@ -12,7 +12,7 @@ def build_image_dirs(root):
     if not exists(dataset_dir):
         makedirs(dataset_dir)
     
-    for segment in ["train", "test"]:
+    for segment in ["train", "test", "val"]:
         segment_dir = join(dataset_dir, segment)
         if not exists(segment_dir):
             makedirs(segment_dir)
@@ -37,9 +37,29 @@ def get_label_from_path(path) -> Technique:
 def random_init_skip(max):
     return randint(0, max-1)
 
+def data_slice_factory(data_split):
+    train_limit = data_split[0]
+    val_limit = data_split[0] + data_split[1]
+
+    def factory():
+        rand = random()
+        if rand < train_limit: 
+            return "train"
+        elif rand < val_limit:
+            return "val"
+        else:
+            return "test"
+        
+    return factory
+
 def generate_image_dataset(video_path,
-                           dataset_root):
+        dataset_root,
+        data_split = (0.8, 0.0, 0.2)):
+    '''
+    data_split = (train, val, test)
+    '''
     label = get_label_from_path(video_path)
+    slice_factory = data_slice_factory(data_split)
 
     sample_video = VideoCapture(video_path)
     if not sample_video.isOpened():
@@ -51,23 +71,24 @@ def generate_image_dataset(video_path,
     frame_skip = 10
     frame_num = random_init_skip(min(frame_skip, total_frames))
     current_frame = 0
-    train_split = 0.8
 
     while sample_video.isOpened() and (frame_num < total_frames):
         while current_frame < frame_num:
             success = sample_video.grab()
             if not success:
-                print(f'Could not read frame nr {frame_num}')
+                print(f'Could not read frame nr {current_frame} of {total_frames}')
                 break
             current_frame += 1
 
         success, image = sample_video.read()
         if not success or image is None:
-            print(f'Could not read frame nr {frame_num}')
+            print(f'Could not read frame nr {current_frame} of {total_frames}')
             break
 
+        slice = slice_factory()
+        label_dir = join(dataset_root, "techniques", slice, label.name)
+        
         file_name = f'{video_name}__{frame_num}.png'
-        label_dir = join(dataset_root, "techniques", "train" if random() < train_split else "test" , label.name)
         imwrite(join(label_dir, file_name), image)
         
         frame_num += frame_skip
@@ -77,7 +98,9 @@ def generate_image_dataset(video_path,
 
     sample_video.release()
 
-def generate_image_dataset_from_samples(data_root):
+def generate_image_dataset_from_samples(data_root,
+        data_split = (0.8, 0.0, 0.2)):
+    
     samples_root = join(data_root, "samples")
     img_root = join(data_root, "img")
 
@@ -87,4 +110,4 @@ def generate_image_dataset_from_samples(data_root):
         label_path = join(samples_root, label)
         for video in listdir(label_path):
             video_path = join(label_path, video)
-            generate_image_dataset(video_path, img_root)
+            generate_image_dataset(video_path, img_root, data_split)

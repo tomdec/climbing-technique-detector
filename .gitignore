@@ -1,6 +1,8 @@
 data/videos/**
 data/samples/**
 data/img/**
+data/runs/**
+**.pt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
