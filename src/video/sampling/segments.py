@@ -5,7 +5,7 @@ from cv2 import VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME
 from src.labels import get_labels_as_dataframe, Technique
 from src.common import get_filename
 
-def build_sample_dirs(rootpath):
+def build_segment_dirs(rootpath):
     samples_dir = join(rootpath, "samples")
     if not exists(samples_dir):
         makedirs(samples_dir)
@@ -17,7 +17,7 @@ def build_sample_dirs(rootpath):
         if not exists(samples_label_path):
             makedirs(samples_label_path)
 
-def generate_samples(video_path, 
+def generate_segment(video_path, 
                      path_to_samples,
                      run_build_sample_dirs = True):
     original_video = VideoCapture(video_path)
@@ -39,7 +39,7 @@ def generate_samples(video_path,
     write_frames = False
 
     if run_build_sample_dirs:
-        build_sample_dirs(path_to_samples)
+        build_segment_dirs(path_to_samples)
 
     while (original_video.isOpened()):
         success, image = original_video.read()
@@ -70,13 +70,13 @@ def generate_samples(video_path,
     original_video.release()
     sample.release()
 
-def generate_all_samples(data_root):
+def generate_all_segments(data_root):
     video_root = join(data_root, "videos")
 
-    build_sample_dirs(data_root)
+    build_segment_dirs(data_root)
 
     videos = listdir(video_root)
     for video in videos:
         video_path = join(video_root, video)
-        generate_samples(video_path, data_root, False)
+        generate_segment(video_path, data_root, False)
 
