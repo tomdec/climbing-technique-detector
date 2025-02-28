@@ -1,4 +1,4 @@
-from os.path import exists, join, split
+from os.path import exists, join
 from os import makedirs, listdir
 from random import randint, random
 from cv2 import VideoCapture, CAP_PROP_FRAME_COUNT, imwrite
@@ -24,16 +24,6 @@ def build_image_dirs(root):
             if not exists(label_dir):
                 makedirs(label_dir)
 
-def get_label_from_path(path) -> Technique:
-    head, tail = split(path)
-    if head == '':
-        raise Exception("Could not find Technique")
-    
-    if tail in [label.name for label in Technique]:
-        return Technique[tail]
-    
-    return get_label_from_path(head)
-
 def random_init_skip(max):
     return randint(0, max-1)
 
@@ -54,11 +44,11 @@ def data_slice_factory(data_split):
 
 def generate_image_dataset(video_path,
         dataset_root,
+        label_name,
         data_split = (0.8, 0.0, 0.2)):
     '''
     data_split = (train, val, test)
     '''
-    label = get_label_from_path(video_path)
     slice_factory = data_slice_factory(data_split)
 
     sample_video = VideoCapture(video_path)
@@ -86,7 +76,7 @@ def generate_image_dataset(video_path,
             break
 
         slice = slice_factory()
-        label_dir = join(dataset_root, "techniques", slice, label.name)
+        label_dir = join(dataset_root, "techniques", slice, label_name)
         
         file_name = f'{video_name}__{frame_num}.png'
         imwrite(join(label_dir, file_name), image)
@@ -110,4 +100,4 @@ def generate_image_dataset_from_samples(data_root,
         label_path = join(samples_root, label)
         for video in listdir(label_path):
             video_path = join(label_path, video)
-            generate_image_dataset(video_path, img_root, data_split)
+            generate_image_dataset(video_path, img_root, label, data_split)

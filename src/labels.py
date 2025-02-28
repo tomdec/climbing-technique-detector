@@ -1,8 +1,8 @@
 from enum import Enum
 from csv import writer as csv_writer, reader as csv_reader
 from os import listdir
-from os.path import join
-from pandas import DataFrame, read_csv
+from os.path import join, split
+from pandas import read_csv
 
 class Technique(Enum):
     INVALID = 0
@@ -82,3 +82,13 @@ def correct_fps(label_path, output_path):
                 stop = int(row[1])
                 label = int(row[2])
                 writer.writerow([int(start / current * actual), int(stop / current * actual), label])
+
+def get_label_from_path(path) -> Technique:
+    head, tail = split(path)
+    if head == '':
+        raise Exception("Could not find Technique")
+    
+    if tail in [label.name for label in Technique]:
+        return Technique[tail]
+    
+    return get_label_from_path(head)

@@ -50,7 +50,7 @@ def play_with_hpe(video_path: str):
                 print(f"Could not read frame nr {frame_num}")
                 break
 
-            _, results, _ = predict_landmarks(frame, holistic)
+            results, _ = predict_landmarks(frame, holistic)
             frame = draw_my_landmarks(frame, results)
 
             imshow(video_path, frame)
