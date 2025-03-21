@@ -3,8 +3,8 @@ from os import makedirs, listdir
 from random import randint, random
 from cv2 import VideoCapture, CAP_PROP_FRAME_COUNT, imwrite
 
-from src.labels import Technique
-from src.common import get_filename
+from labels import Technique
+from common import get_filename, get_split_limits
 
 def build_image_dirs(root):
     name = "techniques"
@@ -28,8 +28,7 @@ def random_init_skip(max):
     return randint(0, max-1)
 
 def data_slice_factory(data_split):
-    train_limit = data_split[0]
-    val_limit = data_split[0] + data_split[1]
+    train_limit, val_limit = get_split_limits(data_split)
 
     def factory():
         rand = random()

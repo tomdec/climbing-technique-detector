@@ -63,6 +63,7 @@ def validate_all(root_dir):
         file_path = join(root_dir, file)
         print(f'Validating: {file}')
         validate_label(file_path)
+    print("Done validating")
 
 def correct_fps(label_path, output_path):
     '''
