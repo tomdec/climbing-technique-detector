@@ -11,7 +11,7 @@ class Technique(Enum):
     OUTSIDE_FLAG = 3
     BACK_FLAG = 4
     INSIDE_FLAG = 5
-    BACK_STEP = 6
+    #BACK_STEP = 6
     DROP_KNEE = 7
     CROSS_MIDLINE = 8
 

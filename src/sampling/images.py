@@ -1,7 +1,9 @@
 from os.path import exists, join
 from os import makedirs, listdir
 from random import randint, random
-from cv2 import VideoCapture, CAP_PROP_FRAME_COUNT, imwrite
+from cv2 import VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FPS, imwrite
+from matplotlib.pyplot import subplots, subplots_adjust, Axes
+from numpy import mean
 
 from labels import Technique
 from common import get_filename, get_split_limits
@@ -100,3 +102,40 @@ def generate_image_dataset_from_samples(data_root,
         for video in listdir(label_path):
             video_path = join(label_path, video)
             generate_image_dataset(video_path, img_root, label, data_split)
+
+def plot_frame_count_distributions(samples_root_dir: str):
+    frames_dict = {}
+    for label in listdir(samples_root_dir):
+        label_root = join(samples_root_dir, label)
+        frames = []
+        
+        for sample in listdir(label_root):
+            sample_path = join(label_root, sample)
+            cap = VideoCapture(sample_path)
+            frame_num = cap.get(CAP_PROP_FRAME_COUNT)
+            fps = cap.get(CAP_PROP_FPS)
+            frames.append(frame_num)
+            #durations.append(round((frame_num / fps) * 1000)) #ms
+            cap.release()
+
+        frames_dict[label] = frames
+
+    fig, axes = subplots(4, 2, figsize=(12,12))
+    fig.suptitle("Frame counts from samples of each label")
+    fig.text(0.55, 0.04, "Frame count", ha="center")
+    fig.text(0.04, 0.5, "Sample count", va="center", rotation="vertical")
+    fig.tight_layout()
+    subplots_adjust(hspace=0.3, left=0.1, bottom=0.1, top=0.92)
+
+    axes = axes.ravel()
+    __plot_hist(axes[0], sum(frames_dict.values(), []), "TOTAL")
+    for idx, label in enumerate(listdir(samples_root_dir)):
+        __plot_hist(axes[idx+1], frames_dict[label], label)
+
+def __plot_hist(axes: Axes, data, title:str):
+    axes.hist(data, bins=20, range=(0, 600))
+    axes.set_title(f"{title} (Count: {len(data)})")
+    average = mean(data)
+    axes.axvline(average, color="k", linestyle="dashed", linewidth=1)
+    _, max_ylim = axes.get_ylim()
+    axes.text(average*1.1, max_ylim*0.9, 'Mean: {:.2f}'.format(average))
