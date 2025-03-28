@@ -1,8 +1,9 @@
 from cv2 import cvtColor, COLOR_BGR2RGB
 from mediapipe.python.solutions.holistic import Holistic
 from typing import NamedTuple
-from hpe.landmarks import _used_pose_landmarks, _used_hand_landmarks
 from numpy import array
+
+from src.hpe.landmarks import _used_pose_landmarks, _used_hand_landmarks
 
 def predict_landmarks(image, model: Holistic):
 	image_height, image_width, _ = image.shape

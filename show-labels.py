@@ -1,5 +1,5 @@
 import cv2
-from src.video.play import play_with_label
+from src.video.play.with_text import play_with_label
 
 if __name__ == '__main__':
     try:
