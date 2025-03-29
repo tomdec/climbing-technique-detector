@@ -6,8 +6,8 @@ __list = [
     #"https://www.youtube.com/watch?v=2LEnGELJxw0",
     #"https://www.youtube.com/watch?v=U0v9xxqEjfY",
 
-    #Catalyst Climbing
-    "https://www.youtube.com/watch?v=BGQy77SXo50"
+    #Latice Training
+    "https://www.youtube.com/watch?v=s-ArwEzr-2M"
 ]
 __output_dir = "./data/videos"
 
