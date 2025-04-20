@@ -43,7 +43,7 @@ def play_with_frame_num(video_path: str):
         print(f"Cannot open video file '{video_path}'")
         exit()
     
-    fps = vid_capture.get(CAP_PROP_FPS)
+    fps = int(vid_capture.get(CAP_PROP_FPS))
     frame_count = vid_capture.get(CAP_PROP_FRAME_COUNT)
     frame_num = 0
     current = frame_num
