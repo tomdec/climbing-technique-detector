@@ -2,7 +2,7 @@ from yt_dlp import YoutubeDL
 
 def download_yt_video(video_url, output_dir):
     yt_opts = {
-        'format': 'best',  # Specify the format you want
+        'format': 'bestvideo*[ext=mp4][width<=640]',  # Specify the format you want
         'outtmpl': f'{output_dir}/%(title)s.%(ext)s'
     }
 

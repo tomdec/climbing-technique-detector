@@ -1,12 +1,7 @@
 from mediapipe.python.solutions.holistic import PoseLandmark, HandLandmark
 from typing import Mapping
 from enum import Enum
-from os.path import dirname, join
-from sys import path
-
-this_dir = dirname( __file__ )
-mymodule_dir = join( this_dir, '..' )
-path.append( mymodule_dir )
+from numpy import concatenate
 
 class MyLandmark(Enum):
 	HEAD = 0
@@ -38,7 +33,7 @@ class MyLandmark(Enum):
 	LEFT_ANKLE = 26
 	RIGHT_ANKLE = 27
 
-_used_pose_landmarks = set([
+_used_pose_landmarks = list([
 	PoseLandmark.NOSE,
 	PoseLandmark.LEFT_SHOULDER,
 	PoseLandmark.LEFT_ELBOW,
@@ -60,7 +55,7 @@ _used_pose_landmarks = set([
 
 _unused_pose_landmarks = set(PoseLandmark).difference(_used_pose_landmarks)
 
-_used_hand_landmarks = set([
+_used_hand_landmarks = list([
 	HandLandmark.THUMB_MCP,
 	HandLandmark.THUMB_IP,
 	HandLandmark.THUMB_TIP,
@@ -123,3 +118,18 @@ def get_right_hand_landmark(key: MyLandmark) -> HandLandmark | None:
 		return _right_hand_landmark_mapping[key]
 	except KeyError:
 		return None
+	
+def get_feature_labels():
+	def to_pose_features(landmark: PoseLandmark):
+		name = landmark.name
+		return [f'{name}_x', f'{name}_y', f'{name}_z', f'{name}_visibility']
+
+	def to_hand_features(landmark: HandLandmark, prefix: str):
+		name = landmark.name
+		return [f'{prefix}_{name}_x', f'{prefix}_{name}_y', f'{prefix}_{name}_z']
+	
+	pose_feature = concatenate([to_pose_features(x) for x in _used_pose_landmarks])
+	right_hand_features = concatenate([to_hand_features(x, "RIGHT") for x in _used_hand_landmarks])
+	left_hand_features = concatenate([to_hand_features(x, "LEFT") for x in _used_hand_landmarks])
+
+	return concatenate([pose_feature, right_hand_features, left_hand_features])

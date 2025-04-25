@@ -1,5 +1,5 @@
 import cv2
-from src.video.play import play_with_hpe
+from video.play.with_hpe import play_with_hpe
 
 if __name__ == '__main__':
     try:

@@ -1,4 +1,4 @@
-from src.video.sampling.segments import generate_all_segments
+from src.sampling.segments import generate_all_segments
 
 __data_root = "./data"
 
