@@ -5,8 +5,8 @@ from cv2 import VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FPS, imwrite
 from matplotlib.pyplot import subplots, subplots_adjust, Axes
 from numpy import mean
 
-from labels import Technique
-from common import get_filename, get_split_limits
+from src.labels import Technique
+from src.common import get_filename, get_split_limits
 
 def build_image_dirs(root):
     name = "techniques"
@@ -27,7 +27,8 @@ def build_image_dirs(root):
                 makedirs(label_dir)
 
 def random_init_skip(max):
-    return randint(0, max-1)
+    max_int = int(max)
+    return randint(0, max_int-1)
 
 def data_slice_factory(data_split):
     train_limit, val_limit = get_split_limits(data_split)
