@@ -4,6 +4,10 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import LabelBinarizer
 import tensorflow as tf
 from keras import layers, Input, Model, losses, utils
+from os.path import join
+from os import listdir
+from keras._tf_keras.keras.callbacks import ModelCheckpoint
+from os import makedirs
 
 from common import get_split_limits
 
@@ -153,7 +157,7 @@ def make_hpe_dnn_model(train: tf.data.Dataset, normalize=True, debugging=False) 
     intermediate = layers.Dropout(0.1)(intermediate)
     intermediate = layers.Dense(32, activation="relu")(intermediate)
     intermediate = layers.Dropout(0.1)(intermediate)
-    output = layers.Dense(4, activation="softmax")(intermediate)
+    output = layers.Dense(7, activation="softmax")(intermediate)
 
     model = Model(input_dict, output)
 
@@ -167,9 +171,36 @@ def make_hpe_dnn_model(train: tf.data.Dataset, normalize=True, debugging=False) 
 def plot_model(model: Model):
     utils.plot_model(model, show_shapes=True, show_layer_names=True, rankdir="TB")
 
-def train_model(model: Model, train: tf.data.Dataset, val: tf.data.Dataset):
-    model.fit(train, epochs=10, validation_data=val)
+def get_current_train_run(hpe_dnn_run_path):
+    train_runs = [dir for dir in listdir(hpe_dnn_run_path) if "train" in dir]
+    return f"train{len(train_runs)+1}"
+
+def train_model(model: Model, train: tf.data.Dataset, val: tf.data.Dataset,
+        data_root_path: str):
+    
+    hpe_dnn_run_path = join(data_root_path, "runs", "hpe_dnn")
+    current_train_run = get_current_train_run(hpe_dnn_run_path)
+    checkpoint_dir = join(hpe_dnn_run_path, current_train_run, "models")
+    makedirs(checkpoint_dir)
+    checkpoint_path = join(checkpoint_dir, "epoch_{epoch:02d}__val_accuracy_{val_accuracy:.4f}.keras")
+    cp_callback = ModelCheckpoint(checkpoint_path, 
+        save_best_only=True, 
+        save_weights_only=False, 
+        verbose=1,
+        monitor="val_accuracy")
+
+    model.fit(train, epochs=10, validation_data=val, callbacks=[cp_callback])
 
 def evaluate(model: Model, data: tf.data.Dataset):
     results = model.evaluate(data, return_dict=True)
     print(results)
+
+def train_fresh_model(data_root_path) -> Model:
+    df = read_data(join(data_root_path, "df", "hpe-dnn-data.pkl"))
+    train_ds, val_ds, _ = generate_split_datasets(df, (0.7, 0.15, 0.15))
+    model = make_hpe_dnn_model(train_ds)
+    
+    train_model(model, train_ds, val_ds, data_root_path)
+
+    return model
+
