@@ -8,6 +8,7 @@ from os.path import join
 from os import listdir
 from keras._tf_keras.keras.callbacks import ModelCheckpoint
 from os import makedirs
+from keras._tf_keras.keras.models import load_model
 
 from common import get_split_limits
 
@@ -175,6 +176,10 @@ def get_current_train_run(hpe_dnn_run_path):
     train_runs = [dir for dir in listdir(hpe_dnn_run_path) if "train" in dir]
     return f"train{len(train_runs)+1}"
 
+def get_last_train_run(hpe_dnn_run_path):
+    train_runs = [dir for dir in listdir(hpe_dnn_run_path) if "train" in dir]
+    return train_runs[-1]
+
 def train_model(model: Model, train: tf.data.Dataset, val: tf.data.Dataset,
         data_root_path: str):
     
@@ -204,3 +209,27 @@ def train_fresh_model(data_root_path) -> Model:
 
     return model
 
+def get_last_model(train_run_path) -> Model:
+    models_path = join(train_run_path, "models")
+    models = listdir(models_path)
+    model_path = join(models_path, models[-1])
+
+    print(f"Using model loaded from: {model_path}")
+
+    return load_model(model_path)
+
+
+def get_best_model(data_root_path) -> Model:
+    hpe_dnn_path = join(data_root_path, "runs", "hpe_dnn")
+    last_train_run = get_last_train_run(hpe_dnn_path)
+    return get_last_model(join(hpe_dnn_path, last_train_run))
+
+def train_best_model(data_root_path) -> Model:
+    df = read_data(join(data_root_path, "df", "hpe-dnn-data.pkl"))
+    train_ds, val_ds, _ = generate_split_datasets(df, (0.7, 0.15, 0.15))
+
+    model = get_best_model(data_root_path)
+
+    train_model(model, train_ds, val_ds, data_root_path)
+    
+    return model
