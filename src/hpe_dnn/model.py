@@ -6,7 +6,7 @@ import tensorflow as tf
 from keras import layers, Input, Model, losses, utils
 from os.path import join
 from os import listdir
-from keras._tf_keras.keras.callbacks import ModelCheckpoint
+from keras._tf_keras.keras.callbacks import ModelCheckpoint, TensorBoard
 from os import makedirs
 from keras._tf_keras.keras.models import load_model
 
@@ -185,6 +185,7 @@ def train_model(model: Model, train: tf.data.Dataset, val: tf.data.Dataset,
     
     hpe_dnn_run_path = join(data_root_path, "runs", "hpe_dnn")
     current_train_run = get_current_train_run(hpe_dnn_run_path)
+    
     checkpoint_dir = join(hpe_dnn_run_path, current_train_run, "models")
     makedirs(checkpoint_dir)
     checkpoint_path = join(checkpoint_dir, "epoch_{epoch:02d}__val_accuracy_{val_accuracy:.4f}.keras")
@@ -193,8 +194,13 @@ def train_model(model: Model, train: tf.data.Dataset, val: tf.data.Dataset,
         save_weights_only=False, 
         verbose=1,
         monitor="val_accuracy")
-
-    model.fit(train, epochs=10, validation_data=val, callbacks=[cp_callback])
+    
+    tensorboard_dir = join(hpe_dnn_run_path, current_train_run, "logs")
+    makedirs(tensorboard_dir)
+    tb_callback = TensorBoard(log_dir=tensorboard_dir, histogram_freq=1)
+    
+    model.fit(train, epochs=10, validation_data=val, 
+        callbacks=[cp_callback, tb_callback])
 
 def evaluate(model: Model, data: tf.data.Dataset):
     results = model.evaluate(data, return_dict=True)
@@ -217,7 +223,6 @@ def get_last_model(train_run_path) -> Model:
     print(f"Using model loaded from: {model_path}")
 
     return load_model(model_path)
-
 
 def get_best_model(data_root_path) -> Model:
     hpe_dnn_path = join(data_root_path, "runs", "hpe_dnn")
