@@ -5,8 +5,8 @@ from cv2 import VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FPS, imwrite
 from matplotlib.pyplot import subplots, subplots_adjust, Axes
 from numpy import mean
 
-from src.labels import Technique
-from src.common import get_filename, get_split_limits
+from labels import Technique
+from common import get_filename, get_split_limits
 
 def build_image_dirs(root):
     name = "techniques"
