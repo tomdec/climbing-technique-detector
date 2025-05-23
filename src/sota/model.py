@@ -47,14 +47,18 @@ class SOTA:
 
     data_root_path: str
     name: str
+    dataset_name: str 
     model: Optional[YOLO]
 
-    def __init__(self, data_root_path: str, name: str):
+    def __init__(self, data_root_path: str, name: str, 
+            dataset_name: str = "techniques"):
+    
         if (name == ""):
             raise Exception(f"'{name}' is not a valid name")
         
         self.data_root_path = data_root_path
         self.name = name
+        self.dataset_name = dataset_name
 
     def initialize_model(self, name = ""):
         if (exists(self.__get_model_dir())):
@@ -68,7 +72,7 @@ class SOTA:
             raise Exception("Cannot train before model is initialized")
         
         project_path = join(self.data_root_path, "runs", "sota", self.name)
-        dataset_path = join(self.data_root_path, "img", "techniques")
+        dataset_path = join(self.data_root_path, "img", self.dataset_name)
         results = self.model.train(data=dataset_path, 
             epochs=20,
             imgsz=640,
