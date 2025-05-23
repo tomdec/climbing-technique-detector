@@ -17,7 +17,7 @@ def generate_hpe_feature_df(data_path) -> DataFrame:
     img_path = join(data_path, "img", "techniques")
  
     with build_holistic_model() as model:
-
+        #TODO: make seperate df for test data
         for data_split in listdir(img_path):
             data_split_path = join(img_path, data_split)
             if (isdir(data_split_path)):

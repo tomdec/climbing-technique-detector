@@ -27,7 +27,8 @@ def build_image_dirs(root):
                 makedirs(label_dir)
 
 def random_init_skip(max):
-    return randint(0, max-1)
+    max_int = int(max)
+    return randint(0, max_int-1)
 
 def data_slice_factory(data_split):
     train_limit, val_limit = get_split_limits(data_split)

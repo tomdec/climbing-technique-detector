@@ -8,7 +8,7 @@ this_dir = dirname( __file__ )
 mymodule_dir = join( this_dir, '..', 'src' )
 path.append( mymodule_dir )
 
-from sampling.images import data_slice_factory
+from src.sampling.images import data_slice_factory, random_init_skip
 
 @pytest.mark.parametrize("input,expected", [
         ((1, 0, 0), ["train"] * 10),
@@ -25,3 +25,19 @@ def test_data_slice_factory(input, expected):
     for elem in expected:
         actual = factory()
         assert actual == elem
+
+
+def test_random_init_skip():
+    seed(456)
+
+    actual = random_init_skip(5)
+
+    assert actual == 3
+
+
+def test_random_init_skip__with_float():
+    seed(456)
+
+    actual = random_init_skip(5.5)
+
+    assert actual == 3
