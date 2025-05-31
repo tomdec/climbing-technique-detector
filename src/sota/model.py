@@ -1,6 +1,6 @@
 from ultralytics import YOLO
 from os.path import join, exists
-from os import listdir
+from os import listdir, rename
 from typing import Optional
 
 def get_fresh_model():
@@ -47,14 +47,18 @@ class SOTA:
 
     data_root_path: str
     name: str
+    dataset_name: str 
     model: Optional[YOLO]
 
-    def __init__(self, data_root_path: str, name: str):
+    def __init__(self, data_root_path: str, name: str, 
+            dataset_name: str = "techniques"):
+    
         if (name == ""):
             raise Exception(f"'{name}' is not a valid name")
         
         self.data_root_path = data_root_path
         self.name = name
+        self.dataset_name = dataset_name
 
     def initialize_model(self, name = ""):
         if (exists(self.__get_model_dir())):
@@ -67,8 +71,8 @@ class SOTA:
         if (self.model is None):
             raise Exception("Cannot train before model is initialized")
         
-        project_path = join(self.data_root_path, "runs", "sota", self.name)
-        dataset_path = join(self.data_root_path, "img", "techniques")
+        project_path = self.__get_project_dir()
+        dataset_path = self.__get_dataset_dir()
         results = self.model.train(data=dataset_path, 
             epochs=20,
             imgsz=640,
@@ -79,6 +83,12 @@ class SOTA:
         print(results)
 
     def __get_model_dir(self):
+        return join(self.data_root_path, "runs", "sota", self.name)
+
+    def __get_dataset_dir(self):
+        return join(self.data_root_path, "img", self.dataset_name)
+
+    def __get_project_dir(self):
         return join(self.data_root_path, "runs", "sota", self.name)
 
     def __get_best_weights_path(self):
@@ -96,6 +106,14 @@ class SOTA:
     def __load_model(self, best_weights_path):
         print(f"loading the model '{self.name}' with the weights at '{best_weights_path}'")
         self.model = YOLO(best_weights_path)
+
+    def test_model(self):
+        if (self.model is None):
+            raise Exception("Cannot test before model is initialized")
+        
+        print(f"Make sure to swap val and test splits for {self.dataset_name}, otherwise validation data will be used.")
+        
+        self.model.val()
     
 
 #TODO: try https://github.com/rigvedrs/YOLO-V11-CAM for activation heatmaps
