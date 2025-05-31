@@ -71,7 +71,7 @@ class SOTA:
         if (self.model is None):
             raise Exception("Cannot train before model is initialized")
         
-        project_path = join(self.data_root_path, "runs", "sota", self.name)
+        project_path = self.__get_project_dir()
         dataset_path = self.__get_dataset_dir()
         results = self.model.train(data=dataset_path, 
             epochs=20,
@@ -87,6 +87,9 @@ class SOTA:
 
     def __get_dataset_dir(self):
         return join(self.data_root_path, "img", self.dataset_name)
+
+    def __get_project_dir(self):
+        return join(self.data_root_path, "runs", "sota", self.name)
 
     def __get_best_weights_path(self):
         model_dir = self.__get_model_dir()
@@ -107,6 +110,8 @@ class SOTA:
     def test_model(self):
         if (self.model is None):
             raise Exception("Cannot test before model is initialized")
+        
+        print(f"Make sure to swap val and test splits for {self.dataset_name}, otherwise validation data will be used.")
         
         self.model.val()
     
