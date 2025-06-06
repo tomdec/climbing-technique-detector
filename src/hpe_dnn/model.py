@@ -243,7 +243,9 @@ def get_last_train_run(hpe_dnn_run_path):
     train_runs = [dir for dir in listdir(hpe_dnn_run_path) if "train" in dir]
     return train_runs[-1]
 
-def train_model(model: Model, train: tf.data.Dataset, val: tf.data.Dataset,
+def train_model(model: Model, 
+        train: tf.data.Dataset, 
+        val: tf.data.Dataset,
         data_root_path: str):
     
     hpe_dnn_run_path = join(data_root_path, "runs", "hpe_dnn")
@@ -322,7 +324,7 @@ class HpeDnn:
         self.name = name
         self.dataset_name = dataset_name
     
-    def initialize_model(self, arch: DnnArch = DnnArch.ARCH1):
+    def initialize_model(self, arch: DnnArch = DnnArch.ARCH1, normalize: bool = True):
         if (exists(self.__get_model_dir())):
             model_path = self.__get_best_model_path()
             self.__load_model(model_path)
@@ -387,11 +389,10 @@ class HpeDnn:
         print(f"loading the model '{self.name}' from '{best_model_path}'")
         self.model = load_model(best_model_path)
 
-    def __fresh_model(self, arch: DnnArch):
+    def __fresh_model(self, arch: DnnArch, normalize: bool = True):
         print(f"loading a fresh model '{self.name}'")
 
         train_ds = self.__get_data_from_split("train")
-        normalize = True
         debugging = False
         model_func = _arch_mapping[arch]
         self.model = model_func(train_ds, normalize, debugging)

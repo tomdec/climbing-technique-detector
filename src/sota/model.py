@@ -115,6 +115,11 @@ class SOTA:
         
         self.model.val()
     
+# results = model.predict(img, verbose = False)
+# result = results[0]
+# idx = result.probs.top1
+# conf = result.probs.top1conf.item()
+# label = model.names[idx]
 
 #TODO: try https://github.com/rigvedrs/YOLO-V11-CAM for activation heatmaps
 
