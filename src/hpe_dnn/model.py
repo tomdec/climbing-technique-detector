@@ -149,7 +149,10 @@ def make_input_layer(train: tf.data.Dataset, normalize=True):
 
     return all_inputs, layers.concatenate(encoded_feature)
 
-def make_hpe_dnn_model(train: tf.data.Dataset, normalize=True, debugging=False) -> Model:
+def make_hpe_dnn_model(train: tf.data.Dataset, 
+        normalize=True, 
+        debugging=False,
+        dropout_rate=0.1) -> Model:
     """
         Arch1.
         Don't change, make new DnnArch and function.
@@ -157,13 +160,13 @@ def make_hpe_dnn_model(train: tf.data.Dataset, normalize=True, debugging=False) 
 
     input_dict, all_features = make_input_layer(train, normalize=normalize)
     intermediate = layers.Dense(256, activation="relu")(all_features)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     intermediate = layers.Dense(128, activation="relu")(intermediate)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     intermediate = layers.Dense(64, activation="relu")(intermediate)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     intermediate = layers.Dense(32, activation="relu")(intermediate)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     output = layers.Dense(7, activation="softmax")(intermediate)
 
     model = Model(input_dict, output)
@@ -175,7 +178,10 @@ def make_hpe_dnn_model(train: tf.data.Dataset, normalize=True, debugging=False) 
     
     return model
 
-def make_hpe_dnn_model2(train: tf.data.Dataset, normalize=True, debugging=False) -> Model:
+def make_hpe_dnn_model2(train: tf.data.Dataset, 
+        normalize=True, 
+        debugging=False,
+        dropout_rate=0.1) -> Model:
     """
         Arch2.
         Don't change, make new DnnArch and function.
@@ -183,11 +189,11 @@ def make_hpe_dnn_model2(train: tf.data.Dataset, normalize=True, debugging=False)
 
     input_dict, all_features = make_input_layer(train, normalize=normalize)
     intermediate = layers.Dense(128, activation="relu")(all_features)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     intermediate = layers.Dense(64, activation="relu")(intermediate)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     intermediate = layers.Dense(32, activation="relu")(intermediate)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     output = layers.Dense(7, activation="softmax")(intermediate)
 
     model = Model(input_dict, output)
@@ -199,7 +205,10 @@ def make_hpe_dnn_model2(train: tf.data.Dataset, normalize=True, debugging=False)
     
     return model
 
-def make_hpe_dnn_model3(train: tf.data.Dataset, normalize=True, debugging=False) -> Model:
+def make_hpe_dnn_model3(train: tf.data.Dataset, 
+        normalize=True, 
+        debugging=False,
+        dropout_rate=0.1) -> Model:
     """
         Arch3.
         Don't change, make new DnnArch and function.
@@ -207,9 +216,9 @@ def make_hpe_dnn_model3(train: tf.data.Dataset, normalize=True, debugging=False)
 
     input_dict, all_features = make_input_layer(train, normalize=normalize)
     intermediate = layers.Dense(64, activation="relu")(all_features)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     intermediate = layers.Dense(32, activation="relu")(intermediate)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     output = layers.Dense(7, activation="softmax")(intermediate)
 
     model = Model(input_dict, output)
@@ -324,12 +333,13 @@ class HpeDnn:
         self.name = name
         self.dataset_name = dataset_name
     
-    def initialize_model(self, arch: DnnArch = DnnArch.ARCH1, normalize: bool = True):
+    def initialize_model(self, arch: DnnArch = DnnArch.ARCH1, normalize: bool = True,
+            dropout_rate = 0.1):
         if (exists(self.__get_model_dir())):
             model_path = self.__get_best_model_path()
             self.__load_model(model_path)
         else:
-            self.__fresh_model(arch)
+            self.__fresh_model(arch, normalize, dropout_rate)
     
     def train_model(self):
         if (self.model is None):
@@ -389,13 +399,13 @@ class HpeDnn:
         print(f"loading the model '{self.name}' from '{best_model_path}'")
         self.model = load_model(best_model_path)
 
-    def __fresh_model(self, arch: DnnArch, normalize: bool = True):
+    def __fresh_model(self, arch: DnnArch, normalize, dropout_rate):
         print(f"loading a fresh model '{self.name}'")
 
         train_ds = self.__get_data_from_split("train")
         debugging = False
         model_func = _arch_mapping[arch]
-        self.model = model_func(train_ds, normalize, debugging)
+        self.model = model_func(train_ds, normalize, debugging, dropout_rate)
     
     def __get_data_from_split(self, split: str) -> tf.data.Dataset:
         df = read_data(join(self.__get_dataset_dir(), f"{split}.pkl"))
