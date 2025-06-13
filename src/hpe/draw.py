@@ -30,7 +30,6 @@ def get_my_hand_landmark_styles() -> Mapping[int, DrawingSpec]:
 			result[key] = value
 	return result
 
-
 def draw_my_landmarks(image: MatLike, results) -> MatLike:
 	annotated = image.copy()
 	

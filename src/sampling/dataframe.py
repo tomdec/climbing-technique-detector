@@ -19,20 +19,19 @@ def generate_hpe_feature_df(data_path,
     if (not exists(df_path)):
         makedirs(df_path)
 
-    with build_holistic_model() as model:
-        #TODO: make seperate df for test data
-        for data_split in listdir(img_path):
-            matrix = []
-            data_split_path = join(img_path, data_split)
-            if (isdir(data_split_path)):
-                for label in listdir(data_split_path):
-                    label_path = join(data_split_path, label)
-                    for image_name in listdir(label_path):
-                        image_file_path = join(label_path, image_name)
-                        
-                        image = imread(image_file_path)
+    for data_split in listdir(img_path):
+        matrix = []
+        data_split_path = join(img_path, data_split)
+        if (isdir(data_split_path)):
+            for label in listdir(data_split_path):
+                label_path = join(data_split_path, label)
+                for image_name in listdir(label_path):
+                    image_file_path = join(label_path, image_name)
+                    image = imread(image_file_path)
+                    
+                    with build_holistic_model() as model:
                         features = to_feature_vector(model, image)
                         matrix.append([*features, Technique[label].value])
-            
-            df = DataFrame(data=matrix, columns=column_names)
-            df.to_pickle(join(df_path, f"{data_split}.pkl"))
+        
+        df = DataFrame(data=matrix, columns=column_names)
+        df.to_pickle(join(df_path, f"{data_split}.pkl"))
