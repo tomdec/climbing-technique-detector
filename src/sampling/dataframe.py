@@ -12,7 +12,7 @@ def generate_hpe_feature_df(data_path,
         dataset_name = "techniques"):
 
     feature_names = get_feature_labels()
-    column_names = [*feature_names, "technique"]
+    column_names = [*feature_names, "technique", "image_path"]
     
     img_path = join(data_path, "img", dataset_name)
     df_path = join(data_path, "df", dataset_name)
@@ -31,7 +31,7 @@ def generate_hpe_feature_df(data_path,
                     
                     with build_holistic_model() as model:
                         features = to_feature_vector(model, image)
-                        matrix.append([*features, Technique[label].value])
+                        matrix.append([*features, Technique[label].value, image_file_path])
         
         df = DataFrame(data=matrix, columns=column_names)
         df.to_pickle(join(df_path, f"{data_split}.pkl"))

@@ -12,35 +12,18 @@ from keras._tf_keras.keras.models import load_model
 from typing import Mapping
 from enum import Enum
 
-from src.common import get_split_limits
-
-__data_location_from_notebook = "../data/df/hpe-dnn-data.pkl"
-
-def read_data(location) -> DataFrame:
+def read_data(location, verbose=False) -> DataFrame:
     data_frame = read_pickle(location)
-    print(data_frame.head())
+    if verbose:
+        print(data_frame.head())
     return data_frame
-
-def split_data(data: DataFrame, data_split):
-    '''
-    data_split = (train, val, test)
-    returns tuple with splits of data in same order
-    '''
-    data_length = len(data)
-    train_limit, val_limit = get_split_limits(data_split)
-
-    train, val, test = split(data.sample(frac=1), [int(train_limit*data_length), int(val_limit*data_length)])
-
-    print(len(train), 'training examples')
-    print(len(val), 'validation examples')
-    print(len(test), 'test examples')
-
-    return train, val, test
 
 def df_to_dataset(dataframe: DataFrame, shuffle=True, batch_size=32) -> tf.data.Dataset:
     df = dataframe.copy()
     labels = df.pop("technique")
-
+    _ = df.pop("image_path")
+    #TODO: add augmentation
+    
     imp = SimpleImputer(missing_values=nan, strategy='mean')
     df = DataFrame(imp.fit_transform(df), columns=df.keys())
     df = {key: value.to_numpy()[:,tf.newaxis] for key, value in df.items()}
@@ -90,15 +73,6 @@ def demo_batch(dataset: tf.data.Dataset):
     print('Every feature:', list(features.keys()))
     print('A batch of Nose x-coordinates:', features['NOSE_x'])
     print('A batch of techniques:', label_batch )
-
-def generate_split_datasets(data: DataFrame, split, batch_size=32) -> tuple[tf.data.Dataset]:
-    train, val, test = split_data(data, split)
-    
-    train_ds = df_to_dataset(train, batch_size=batch_size)
-    val_ds = df_to_dataset(val, shuffle=False, batch_size=batch_size)
-    test_ds = df_to_dataset(test, shuffle=False, batch_size=batch_size)
-
-    return train_ds, val_ds, test_ds
 
 def make_input_layer(train: tf.data.Dataset, normalize=True):
     numeric_features = ['NOSE_x', 'NOSE_y', 'NOSE_z', 'NOSE_visibility', 'LEFT_SHOULDER_x',
@@ -279,39 +253,6 @@ def train_model(model: Model,
 def evaluate(model: Model, data: tf.data.Dataset):
     results = model.evaluate(data, return_dict=True)
     print(results)
-
-def train_fresh_model(data_root_path) -> Model:
-    df = read_data(join(data_root_path, "df", "hpe-dnn-data.pkl"))
-    train_ds, val_ds, _ = generate_split_datasets(df, (0.7, 0.15, 0.15))
-    model = make_hpe_dnn_model(train_ds)
-    
-    train_model(model, train_ds, val_ds, data_root_path)
-
-    return model
-
-def get_last_model(train_run_path) -> Model:
-    models_path = join(train_run_path, "models")
-    models = listdir(models_path)
-    model_path = join(models_path, models[-1])
-
-    print(f"Using model loaded from: {model_path}")
-
-    return load_model(model_path)
-
-def get_best_model(data_root_path) -> Model:
-    hpe_dnn_path = join(data_root_path, "runs", "hpe_dnn")
-    last_train_run = get_last_train_run(hpe_dnn_path)
-    return get_last_model(join(hpe_dnn_path, last_train_run))
-
-def train_best_model(data_root_path) -> Model:
-    df = read_data(join(data_root_path, "df", "hpe-dnn-data.pkl"))
-    train_ds, val_ds, _ = generate_split_datasets(df, (0.7, 0.15, 0.15))
-
-    model = get_best_model(data_root_path)
-
-    train_model(model, train_ds, val_ds, data_root_path)
-    
-    return model
 
 from os.path import exists
 from typing import Optional
