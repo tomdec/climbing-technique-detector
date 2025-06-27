@@ -39,13 +39,12 @@ def __to_df_row(input: Series, xyz, vis, height, width):
 
     return Series(data=result_array, index=input.index)
 
-def augment(series):
-    print(series.index)
-    print(type(series))
+def augment_keypoints(series):
+    img_path = series["image_path"]
+    image = imread(img_path)
+    height, width, _ = image.shape
+    
+    xyz, vis = __to_augmenting_array(series, height, width)
+    transformed = __transform_pipeline(image=image, keypoints=xyz)
 
-    # img_path = input["image_path"]
-    # image = imread(img_path)
-    # heigth, width, _ = image.shape
-    # print(image.shape)
-
-    return series
+    return __to_df_row(series, transformed['keypoints'], vis, height, width)

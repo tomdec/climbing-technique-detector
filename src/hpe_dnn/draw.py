@@ -15,3 +15,6 @@ def draw_augmented_keypoints(image, keypoints):
     plt.figure(figsize=(8, 8))
     plt.axis("off")
     plt.imshow(image)
+
+def draw_df_dataset_row(series):
+    pass

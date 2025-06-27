@@ -12,17 +12,25 @@ from keras._tf_keras.keras.models import load_model
 from typing import Mapping
 from enum import Enum
 
+from src.hpe_dnn.augmentation import augment_keypoints
+
 def read_data(location, verbose=False) -> DataFrame:
     data_frame = read_pickle(location)
     if verbose:
         print(data_frame.head())
     return data_frame
 
-def df_to_dataset(dataframe: DataFrame, shuffle=True, batch_size=32) -> tf.data.Dataset:
+def df_to_dataset(dataframe: DataFrame, 
+        augment,
+        shuffle=True,
+        batch_size=32) -> tf.data.Dataset:
     df = dataframe.copy()
+    
+    if augment:
+        df = df.apply(augment_keypoints, axis=1)
+
     labels = df.pop("technique")
     _ = df.pop("image_path")
-    #TODO: add augmentation
     
     imp = SimpleImputer(missing_values=nan, strategy='mean')
     df = DataFrame(imp.fit_transform(df), columns=df.keys())
@@ -282,12 +290,12 @@ class HpeDnn:
         else:
             self.__fresh_model(arch, normalize, dropout_rate)
     
-    def train_model(self):
+    def train_model(self, augment=False):
         if (self.model is None):
             raise Exception("Cannot train before model is initialized")
         
-        train_ds = self.__get_data_from_split("train")
-        val_ds = self.__get_data_from_split("val")
+        train_ds = self.__get_data_from_split("train", augment=augment)
+        val_ds = self.__get_data_from_split("val", augment=False)
 
         checkpoint_dir = self.__get_checkpoint_dir()
         log_dir = self.__get_tensorboard_log_dir()
@@ -343,11 +351,11 @@ class HpeDnn:
     def __fresh_model(self, arch: DnnArch, normalize, dropout_rate):
         print(f"loading a fresh model '{self.name}'")
 
-        train_ds = self.__get_data_from_split("train")
+        train_ds = self.__get_data_from_split("train", False)
         debugging = False
         model_func = _arch_mapping[arch]
         self.model = model_func(train_ds, normalize, debugging, dropout_rate)
     
-    def __get_data_from_split(self, split: str) -> tf.data.Dataset:
+    def __get_data_from_split(self, split: str, augment) -> tf.data.Dataset:
         df = read_data(join(self.__get_dataset_dir(), f"{split}.pkl"))
-        return df_to_dataset(df)
+        return df_to_dataset(df, augment=augment)
