@@ -4,9 +4,7 @@ from itertools import zip_longest
 from numpy import array
 from albumentations import Compose, ShiftScaleRotate, HorizontalFlip, Erasing, Perspective, \
     RandomBrightnessContrast, KeypointParams
-from math import isnan
-from numbers import Number
-
+from math import isnan, nan
 
 __transform_pipeline = Compose([
     #A.RandomCrop(width=300, height=300),
@@ -42,6 +40,38 @@ def __to_df_row(input: Series, xyz, vis, height, width):
 
     return Series(data=result_array, index=input.index)
 
+def __all_are(array, value):
+    return all([x == value for x in array])
+
+def __get_color_at_keypoint(image, keypoint):
+    x = keypoint[0]
+    y = keypoint[1]
+    
+    if (isnan(x) or isnan(y)):
+        return [-1, -1, -1]
+    
+    if (x < 0 or y < 0 or image.shape[1] < x or image.shape[0] < y):
+        return [-2, -2, -2]
+
+    return image[int(y), int(x)]
+
+def __mark_removed_keypoints(keypoints, vis, image):
+    new_keypoints = []
+    new_vis = [ *vis ]
+    
+    for idx, keypoint in enumerate(keypoints):
+        color = __get_color_at_keypoint(image, keypoint)
+
+        if __all_are(color, -2) or __all_are(color, 0):
+            new_keypoints.append([nan, nan, nan])
+            if idx < len(new_vis):
+                new_vis[idx] = 0
+        else:
+            new_keypoints.append(keypoint)
+
+    return new_keypoints, new_vis
+
+
 def augment_keypoints(series):
     img_path = series["image_path"]
     image = imread(img_path)
@@ -49,5 +79,7 @@ def augment_keypoints(series):
     
     xyz, vis = __to_augmenting_array(series, height, width)
     transformed = __transform_pipeline(image=image, keypoints=xyz)
+    
+    xyz, vis = __mark_removed_keypoints(transformed['keypoints'], vis, transformed['image'])
 
-    return __to_df_row(series, transformed['keypoints'], vis, height, width)
+    return __to_df_row(series, xyz, vis, height, width)
