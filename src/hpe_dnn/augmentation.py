@@ -4,6 +4,9 @@ from itertools import zip_longest
 from numpy import array
 from albumentations import Compose, ShiftScaleRotate, HorizontalFlip, Erasing, Perspective, \
     RandomBrightnessContrast, KeypointParams
+from math import isnan
+from numbers import Number
+
 
 __transform_pipeline = Compose([
     #A.RandomCrop(width=300, height=300),

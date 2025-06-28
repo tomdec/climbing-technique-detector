@@ -1,9 +1,10 @@
 from os.path import exists
 from pandas import Series
 from math import isnan
+from cv2 import imread
 
 from src.hpe_dnn.model import read_data
-from src.hpe_dnn.augmentation import __to_augmenting_array, __to_df_row
+from src.hpe_dnn.augmentation import __to_augmenting_array, __to_df_row, __transform_pipeline
 
 def __get_train_df():
     df_path = "data/df/techniques/train.pkl"
@@ -12,8 +13,8 @@ def __get_train_df():
 
     return read_data(df_path)
 
-def test_transformations():
-    train = __get_train_df()
+def test_identity_transformations():
+    test_data = __get_train_df().sample(10)
 
     def assert_indentity_transformation(input: Series):
         xyz, vis = __to_augmenting_array(input, 480, 640)
@@ -23,4 +24,23 @@ def test_transformations():
             assert (input[header] == output[header]) or \
                 (isnan(input[header]) and isnan(output[header]))
 
-    train.head().apply(assert_indentity_transformation, axis=1)
+    test_data.apply(assert_indentity_transformation, axis=1)
+
+def test_tranformations():
+    test_data = __get_train_df().sample(1)
+
+    def assert_transformation(input: Series):
+        img_path = input["image_path"]
+        image = imread(img_path)
+        height, width, _ = image.shape
+
+        xyz, vis = __to_augmenting_array(input, height, width)
+        transformed = __transform_pipeline(image=image, keypoints=xyz)
+        output = __to_df_row(input, transformed['keypoints'], vis, height, width)
+
+        for header in input.index:
+            if header.endswith('visibility'):
+                assert (input[header] == output[header]) or \
+                    (isnan(input[header]) and isnan(output[header]))
+
+    test_data.apply(assert_transformation, axis=1)
