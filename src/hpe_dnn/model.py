@@ -6,7 +6,7 @@ import tensorflow as tf
 from keras import layers, Input, Model, losses, utils
 from os.path import join
 from os import listdir
-from keras._tf_keras.keras.callbacks import ModelCheckpoint, TensorBoard
+from keras._tf_keras.keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 from os import makedirs
 from keras._tf_keras.keras.models import load_model
 from typing import Mapping
@@ -311,8 +311,10 @@ class HpeDnn:
         
         tb_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
 
+        csv_callback = CSVLogger(filename=self.__get_results_file_path())
+
         self.model.fit(train_ds, epochs=20, validation_data=val_ds, 
-            callbacks=[cp_callback, tb_callback])
+            callbacks=[cp_callback, tb_callback, csv_callback])
 
     def __get_latest_train_dir(self):
         model_dir = self.__get_model_dir()
@@ -329,6 +331,10 @@ class HpeDnn:
     def __get_tensorboard_log_dir(self):
         train_dir = self.__get_latest_train_dir()
         return join(train_dir, "logs")
+
+    def __get_results_file_path(self):
+        train_dir = self.__get_latest_train_dir()
+        return join(train_dir, "results.csv")
 
     def __get_model_dir(self):
         return join(self.data_root_path, "runs", "hpe_dnn", self.name)
