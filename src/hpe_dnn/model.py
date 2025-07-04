@@ -262,6 +262,10 @@ def evaluate(model: Model, data: tf.data.Dataset):
     results = model.evaluate(data, return_dict=True)
     print(results)
 
+def make_file(filepath):
+    with open(filepath, 'w'):
+        pass
+
 from os.path import exists
 from typing import Optional
 
@@ -299,8 +303,11 @@ class HpeDnn:
 
         checkpoint_dir = self.__get_checkpoint_dir()
         log_dir = self.__get_tensorboard_log_dir()
+        results_file = self.__get_results_file_path()
+
         makedirs(checkpoint_dir)
         makedirs(log_dir)
+        make_file(results_file)
         
         checkpoint_path = join(checkpoint_dir, "epoch_{epoch:02d}__val_accuracy_{val_accuracy:.4f}.keras")
         cp_callback = ModelCheckpoint(checkpoint_path, 
@@ -311,7 +318,7 @@ class HpeDnn:
         
         tb_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-        csv_callback = CSVLogger(filename=self.__get_results_file_path())
+        csv_callback = CSVLogger(filename=results_file)
 
         self.model.fit(train_ds, epochs=20, validation_data=val_ds, 
             callbacks=[cp_callback, tb_callback, csv_callback])
