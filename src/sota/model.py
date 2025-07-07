@@ -3,6 +3,8 @@ from os.path import join, exists
 from os import listdir
 from typing import Optional
 
+from src.sota.balancing import WeightedTrainer
+
 class SOTA:
 
     data_root_path: str
@@ -27,19 +29,21 @@ class SOTA:
         else:
             self.__fresh_model(name)
 
-    def train_model(self, optimizer: str = "auto", lr0: float = 0.01):
+    def train_model(self, optimizer: str = "auto", lr0: float = 0.01, epochs=20):
         if (self.model is None):
             raise Exception("Cannot train before model is initialized")
         
         project_path = self.__get_project_dir()
         dataset_path = self.__get_dataset_dir()
-        results = self.model.train(data=dataset_path, 
-            epochs=20,
+        results = self.model.train(trainer=WeightedTrainer,
+            data=dataset_path, 
+            epochs=epochs,
             imgsz=640,
             project=project_path,
             optimizer=optimizer,
             lr0=lr0)
         
+        print(self.model.trainer.train_loader.dataset)
         print(results)
 
     def __get_model_dir(self):
