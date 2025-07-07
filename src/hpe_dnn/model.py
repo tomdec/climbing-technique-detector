@@ -11,12 +11,14 @@ from os import makedirs
 from keras._tf_keras.keras.models import load_model
 from typing import Mapping
 from enum import Enum
+from os.path import exists
+from typing import Optional
 
 from src.hpe_dnn.augmentation import augment_keypoints
 
 def read_data(location, verbose=False) -> DataFrame:
     data_frame = read_pickle(location)
-    if verbose:
+    if verbose and (data_frame is DataFrame):
         print(data_frame.head())
     return data_frame
 
@@ -265,9 +267,6 @@ def evaluate(model: Model, data: tf.data.Dataset):
 def make_file(filepath):
     with open(filepath, 'w'):
         pass
-
-from os.path import exists
-from typing import Optional
 
 class HpeDnn:
 
