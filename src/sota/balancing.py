@@ -1,7 +1,10 @@
 from ultralytics.data.dataset import ClassificationDataset
 from ultralytics.models.yolo.classify import ClassificationTrainer
+from typing import List
 
 class WeightedDataset(ClassificationDataset):
+
+    counts: List[int]
 
     def __init__(self, root, args, augment=False, prefix=""):
         super(WeightedDataset, self).__init__(root, args, augment, prefix)
@@ -9,14 +12,16 @@ class WeightedDataset(ClassificationDataset):
         print("Inject reporting lines")
 
         self.train_mode = "train" in self.prefix
+
+        self.count_instances()
         pass
 
     def count_instances(self):
-        pass        
+        print(self.base.classes)
+        pass
 
     
     def __getitem__(self, index):
-        print(f"getting item at: {index}")
         return super(WeightedDataset, self).__getitem__(index)
     
 class WeightedTrainer(ClassificationTrainer):

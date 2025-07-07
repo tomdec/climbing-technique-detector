@@ -29,13 +29,16 @@ class SOTA:
         else:
             self.__fresh_model(name)
 
-    def train_model(self, optimizer: str = "auto", lr0: float = 0.01, epochs=20):
+    def train_model(self, optimizer: str = "auto", lr0: float = 0.01, epochs=20, 
+            balanced=False):
         if (self.model is None):
             raise Exception("Cannot train before model is initialized")
         
+        trainer = WeightedTrainer if balanced else None
+
         project_path = self.__get_project_dir()
         dataset_path = self.__get_dataset_dir()
-        results = self.model.train(trainer=WeightedTrainer,
+        results = self.model.train(trainer=trainer,
             data=dataset_path, 
             epochs=epochs,
             imgsz=640,
