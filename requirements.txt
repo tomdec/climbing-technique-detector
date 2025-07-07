@@ -1,4 +1,7 @@
 absl-py==2.1.0
+albucore==0.0.24
+albumentations==2.0.8
+annotated-types==0.7.0
 asttokens==3.0.0
 astunparse==1.6.3
 attrs==24.3.0
@@ -82,6 +85,9 @@ ptyprocess==0.7.0
 pure_eval==0.2.3
 py-cpuinfo==9.0.0
 pycparser==2.22
+pydantic==2.11.5
+pydantic_core==2.33.2
+pydot==3.0.4
 Pygments==2.19.1
 pyparsing==3.2.1
 pytest==8.3.4
@@ -97,9 +103,11 @@ scipy==1.14.1
 seaborn==0.13.2
 sentencepiece==0.2.0
 setuptools==75.8.0
+simsimd==6.4.7
 six==1.17.0
 sounddevice==0.5.1
 stack-data==0.6.3
+stringzilla==3.12.5
 sympy==1.13.1
 tensorboard==2.18.0
 tensorboard-data-server==0.7.2
@@ -112,6 +120,7 @@ tornado==6.4.2
 tqdm==4.67.1
 traitlets==5.14.3
 triton==3.2.0
+typing-inspection==0.4.1
 typing_extensions==4.12.2
 tzdata==2025.1
 ultralytics==8.3.78

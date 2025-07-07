@@ -6,39 +6,32 @@ import tensorflow as tf
 from keras import layers, Input, Model, losses, utils
 from os.path import join
 from os import listdir
-from keras._tf_keras.keras.callbacks import ModelCheckpoint, TensorBoard
+from keras._tf_keras.keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 from os import makedirs
 from keras._tf_keras.keras.models import load_model
+from typing import Mapping
+from enum import Enum
 
-from common import get_split_limits
+from src.hpe_dnn.augmentation import augment_keypoints
 
-__data_location_from_notebook = "../data/df/hpe-dnn-data.pkl"
-
-def read_data(location) -> DataFrame:
+def read_data(location, verbose=False) -> DataFrame:
     data_frame = read_pickle(location)
-    print(data_frame.head())
+    if verbose:
+        print(data_frame.head())
     return data_frame
 
-def split_data(data: DataFrame, data_split):
-    '''
-    data_split = (train, val, test)
-    returns tuple with splits of data in same order
-    '''
-    data_length = len(data)
-    train_limit, val_limit = get_split_limits(data_split)
-
-    train, val, test = split(data.sample(frac=1), [int(train_limit*data_length), int(val_limit*data_length)])
-
-    print(len(train), 'training examples')
-    print(len(val), 'validation examples')
-    print(len(test), 'test examples')
-
-    return train, val, test
-
-def df_to_dataset(dataframe: DataFrame, shuffle=True, batch_size=32) -> tf.data.Dataset:
+def df_to_dataset(dataframe: DataFrame, 
+        augment,
+        shuffle=True,
+        batch_size=32) -> tf.data.Dataset:
     df = dataframe.copy()
-    labels = df.pop("technique")
+    
+    if augment:
+        df = df.apply(augment_keypoints, axis=1)
 
+    labels = df.pop("technique")
+    _ = df.pop("image_path")
+    
     imp = SimpleImputer(missing_values=nan, strategy='mean')
     df = DataFrame(imp.fit_transform(df), columns=df.keys())
     df = {key: value.to_numpy()[:,tf.newaxis] for key, value in df.items()}
@@ -89,15 +82,6 @@ def demo_batch(dataset: tf.data.Dataset):
     print('A batch of Nose x-coordinates:', features['NOSE_x'])
     print('A batch of techniques:', label_batch )
 
-def generate_split_datasets(data: DataFrame, split, batch_size=32) -> tuple[tf.data.Dataset]:
-    train, val, test = split_data(data, split)
-    
-    train_ds = df_to_dataset(train, batch_size=batch_size)
-    val_ds = df_to_dataset(val, shuffle=False, batch_size=batch_size)
-    test_ds = df_to_dataset(test, shuffle=False, batch_size=batch_size)
-
-    return train_ds, val_ds, test_ds
-
 def make_input_layer(train: tf.data.Dataset, normalize=True):
     numeric_features = ['NOSE_x', 'NOSE_y', 'NOSE_z', 'NOSE_visibility', 'LEFT_SHOULDER_x',
        'LEFT_SHOULDER_y', 'LEFT_SHOULDER_z', 'LEFT_SHOULDER_visibility',
@@ -147,17 +131,24 @@ def make_input_layer(train: tf.data.Dataset, normalize=True):
 
     return all_inputs, layers.concatenate(encoded_feature)
 
-def make_hpe_dnn_model(train: tf.data.Dataset, normalize=True, debugging=False) -> Model:
+def make_hpe_dnn_model(train: tf.data.Dataset, 
+        normalize=True, 
+        debugging=False,
+        dropout_rate=0.1) -> Model:
+    """
+        Arch1.
+        Don't change, make new DnnArch and function.
+    """
 
     input_dict, all_features = make_input_layer(train, normalize=normalize)
     intermediate = layers.Dense(256, activation="relu")(all_features)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     intermediate = layers.Dense(128, activation="relu")(intermediate)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     intermediate = layers.Dense(64, activation="relu")(intermediate)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     intermediate = layers.Dense(32, activation="relu")(intermediate)
-    intermediate = layers.Dropout(0.1)(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
     output = layers.Dense(7, activation="softmax")(intermediate)
 
     model = Model(input_dict, output)
@@ -168,6 +159,69 @@ def make_hpe_dnn_model(train: tf.data.Dataset, normalize=True, debugging=False) 
         run_eagerly=debugging)
     
     return model
+
+def make_hpe_dnn_model2(train: tf.data.Dataset, 
+        normalize=True, 
+        debugging=False,
+        dropout_rate=0.1) -> Model:
+    """
+        Arch2.
+        Don't change, make new DnnArch and function.
+    """
+
+    input_dict, all_features = make_input_layer(train, normalize=normalize)
+    intermediate = layers.Dense(128, activation="relu")(all_features)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(64, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(32, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    output = layers.Dense(7, activation="softmax")(intermediate)
+
+    model = Model(input_dict, output)
+
+    model.compile(optimizer='adam', 
+        loss=losses.BinaryCrossentropy(), 
+        metrics=['accuracy'], 
+        run_eagerly=debugging)
+    
+    return model
+
+def make_hpe_dnn_model3(train: tf.data.Dataset, 
+        normalize=True, 
+        debugging=False,
+        dropout_rate=0.1) -> Model:
+    """
+        Arch3.
+        Don't change, make new DnnArch and function.
+    """
+
+    input_dict, all_features = make_input_layer(train, normalize=normalize)
+    intermediate = layers.Dense(64, activation="relu")(all_features)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(32, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    output = layers.Dense(7, activation="softmax")(intermediate)
+
+    model = Model(input_dict, output)
+
+    model.compile(optimizer='adam', 
+        loss=losses.BinaryCrossentropy(), 
+        metrics=['accuracy'], 
+        run_eagerly=debugging)
+    
+    return model
+
+class DnnArch(Enum):
+    ARCH1 = 0
+    ARCH2 = 1
+    ARCH3 = 2
+
+_arch_mapping: Mapping[DnnArch, object] = {
+    DnnArch.ARCH1: make_hpe_dnn_model,
+    DnnArch.ARCH2: make_hpe_dnn_model2,
+    DnnArch.ARCH3: make_hpe_dnn_model3
+}
 
 def plot_model(model: Model):
     utils.plot_model(model, show_shapes=True, show_layer_names=True, rankdir="TB")
@@ -180,7 +234,9 @@ def get_last_train_run(hpe_dnn_run_path):
     train_runs = [dir for dir in listdir(hpe_dnn_run_path) if "train" in dir]
     return train_runs[-1]
 
-def train_model(model: Model, train: tf.data.Dataset, val: tf.data.Dataset,
+def train_model(model: Model, 
+        train: tf.data.Dataset, 
+        val: tf.data.Dataset,
         data_root_path: str):
     
     hpe_dnn_run_path = join(data_root_path, "runs", "hpe_dnn")
@@ -206,35 +262,113 @@ def evaluate(model: Model, data: tf.data.Dataset):
     results = model.evaluate(data, return_dict=True)
     print(results)
 
-def train_fresh_model(data_root_path) -> Model:
-    df = read_data(join(data_root_path, "df", "hpe-dnn-data.pkl"))
-    train_ds, val_ds, _ = generate_split_datasets(df, (0.7, 0.15, 0.15))
-    model = make_hpe_dnn_model(train_ds)
+def make_file(filepath):
+    with open(filepath, 'w'):
+        pass
+
+from os.path import exists
+from typing import Optional
+
+class HpeDnn:
+
+    data_root_path: str
+    name: str
+    dataset_name: str 
+    model: Optional[Model]
+
+    def __init__(self, data_root_path: str, name: str, 
+            dataset_name: str = "techniques"):
+        
+        if (name == ""):
+            raise Exception(f"'{name}' is not a valid name")
+        
+        self.data_root_path = data_root_path
+        self.name = name
+        self.dataset_name = dataset_name
     
-    train_model(model, train_ds, val_ds, data_root_path)
-
-    return model
-
-def get_last_model(train_run_path) -> Model:
-    models_path = join(train_run_path, "models")
-    models = listdir(models_path)
-    model_path = join(models_path, models[-1])
-
-    print(f"Using model loaded from: {model_path}")
-
-    return load_model(model_path)
-
-def get_best_model(data_root_path) -> Model:
-    hpe_dnn_path = join(data_root_path, "runs", "hpe_dnn")
-    last_train_run = get_last_train_run(hpe_dnn_path)
-    return get_last_model(join(hpe_dnn_path, last_train_run))
-
-def train_best_model(data_root_path) -> Model:
-    df = read_data(join(data_root_path, "df", "hpe-dnn-data.pkl"))
-    train_ds, val_ds, _ = generate_split_datasets(df, (0.7, 0.15, 0.15))
-
-    model = get_best_model(data_root_path)
-
-    train_model(model, train_ds, val_ds, data_root_path)
+    def initialize_model(self, arch: DnnArch = DnnArch.ARCH1, normalize: bool = True,
+            dropout_rate = 0.1):
+        if (exists(self.__get_model_dir())):
+            model_path = self.__get_best_model_path()
+            self.__load_model(model_path)
+        else:
+            self.__fresh_model(arch, normalize, dropout_rate)
     
-    return model
+    def train_model(self, augment=False):
+        if (self.model is None):
+            raise Exception("Cannot train before model is initialized")
+        
+        train_ds = self.__get_data_from_split("train", augment=augment)
+        val_ds = self.__get_data_from_split("val", augment=False)
+
+        checkpoint_dir = self.__get_checkpoint_dir()
+        log_dir = self.__get_tensorboard_log_dir()
+        results_file = self.__get_results_file_path()
+
+        makedirs(checkpoint_dir)
+        makedirs(log_dir)
+        make_file(results_file)
+        
+        checkpoint_path = join(checkpoint_dir, "epoch_{epoch:02d}__val_accuracy_{val_accuracy:.4f}.keras")
+        cp_callback = ModelCheckpoint(checkpoint_path, 
+            save_best_only=True, 
+            save_weights_only=False, 
+            verbose=1,
+            monitor="val_accuracy")
+        
+        tb_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
+
+        csv_callback = CSVLogger(filename=results_file)
+
+        self.model.fit(train_ds, epochs=20, validation_data=val_ds, 
+            callbacks=[cp_callback, tb_callback, csv_callback])
+
+    def __get_latest_train_dir(self):
+        model_dir = self.__get_model_dir()
+        if (exists(model_dir)):
+            train_runs = [dir for dir in listdir(model_dir) if "train" in dir]
+            return join(model_dir, f"train{len(train_runs)+1}")
+        else:
+            return join(model_dir, "train1")
+
+    def __get_checkpoint_dir(self):
+        train_dir = self.__get_latest_train_dir()
+        return join(train_dir, "models")
+
+    def __get_tensorboard_log_dir(self):
+        train_dir = self.__get_latest_train_dir()
+        return join(train_dir, "logs")
+
+    def __get_results_file_path(self):
+        train_dir = self.__get_latest_train_dir()
+        return join(train_dir, "results.csv")
+
+    def __get_model_dir(self):
+        return join(self.data_root_path, "runs", "hpe_dnn", self.name)
+    
+    def __get_dataset_dir(self):
+        return join(self.data_root_path, "df", self.dataset_name)
+
+    def __get_best_model_path(self):
+        model_dir = self.__get_model_dir()
+        train_list = listdir(model_dir)
+        model_path = join(model_dir, train_list[-1], "models")
+        model_list = listdir(model_path)
+
+        return join(model_path, model_list[-1])
+
+    def __load_model(self, best_model_path):
+        print(f"loading the model '{self.name}' from '{best_model_path}'")
+        self.model = load_model(best_model_path)
+
+    def __fresh_model(self, arch: DnnArch, normalize, dropout_rate):
+        print(f"loading a fresh model '{self.name}'")
+
+        train_ds = self.__get_data_from_split("train", False)
+        debugging = False
+        model_func = _arch_mapping[arch]
+        self.model = model_func(train_ds, normalize, debugging, dropout_rate)
+    
+    def __get_data_from_split(self, split: str, augment) -> tf.data.Dataset:
+        df = read_data(join(self.__get_dataset_dir(), f"{split}.pkl"))
+        return df_to_dataset(df, augment=augment)
