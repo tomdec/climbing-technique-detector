@@ -17,7 +17,10 @@ class WeightedDataset(ClassificationDataset):
         pass
 
     def count_instances(self):
-        print(self.base.classes)
+        self.counts = {}
+        for cls in self.base.classes:
+            self.counts[cls] = 0
+
         pass
 
     
