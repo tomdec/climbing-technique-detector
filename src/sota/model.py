@@ -36,8 +36,8 @@ class SOTA:
         
         trainer = WeightedTrainer if balanced else None
 
-        project_path = self.__get_project_dir()
         dataset_path = self.__get_dataset_dir()
+        project_path = self.__get_project_dir()
         results = self.model.train(trainer=trainer,
             data=dataset_path, 
             epochs=epochs,
@@ -46,7 +46,6 @@ class SOTA:
             optimizer=optimizer,
             lr0=lr0)
         
-        print(self.model.trainer.train_loader.dataset)
         print(results)
 
     def __get_model_dir(self):
