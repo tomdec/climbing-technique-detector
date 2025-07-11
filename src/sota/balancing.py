@@ -5,6 +5,7 @@ from numpy import sum, where, zeros, int32, random
 
 class WeightedDataset(ClassificationDataset):
 
+    train_mode: bool
     classes: List[str]
     class_counts: List[int]
     sample_classes: List[int]
@@ -16,6 +17,8 @@ class WeightedDataset(ClassificationDataset):
 
     def __init__(self, root, args, augment=False, prefix=""):
         super(WeightedDataset, self).__init__(root, args, augment, prefix)
+
+        self.train_mode = "train" in self.prefix
 
         self.classes = self.base.classes
         self.count_instances()
@@ -61,10 +64,11 @@ class WeightedDataset(ClassificationDataset):
         self.sample_probabilities = self.sample_weights / sum(self.sample_weights)
 
     def __getitem__(self, index):
-        index = random.choice(len(self.sample_probabilities), p=self.sample_probabilities)
+        if self.train_mode:
+            index = random.choice(len(self.sample_probabilities), p=self.sample_probabilities)
 
-        new_class_idx = self.sample_classes[index]
-        self.balanced_class_counts[new_class_idx] += 1
+            new_class_idx = self.sample_classes[index]
+            self.balanced_class_counts[new_class_idx] += 1
         
         return super(WeightedDataset, self).__getitem__(index)
     

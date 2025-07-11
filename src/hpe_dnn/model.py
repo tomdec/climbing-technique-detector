@@ -13,6 +13,7 @@ from typing import Mapping
 from enum import Enum
 from os.path import exists
 from typing import Optional
+from src.hpe_dnn.balancing import balance_func_factory
 
 from src.hpe_dnn.augmentation import augment_keypoints
 
@@ -30,10 +31,8 @@ def df_to_dataset(dataframe: DataFrame,
     df = dataframe.copy()
     
     if balance:
-        if (not augment):
-            print("Warning: avoid reusing the exact same image multiple times by also enabling augmentation when balancing the dataset")
-        
-        
+        balance_func = balance_func_factory(df)
+        df = df.apply(balance_func, axis=1)
 
     if augment:
         df = df.apply(augment_keypoints, axis=1)
@@ -292,6 +291,12 @@ class HpeDnn:
         self.name = name
         self.dataset_name = dataset_name
     
+    def execute_train_runs(self, runs=1, epochs=20, augment=False, balanced=False):
+        for run in range(runs):
+            print(f"starting run #{run}")
+            self.initialize_model()
+            self.train_model(epochs=epochs, augment=augment, balanced=balanced)    
+
     def initialize_model(self, arch: DnnArch = DnnArch.ARCH1, normalize: bool = True,
             dropout_rate = 0.1):
         if (exists(self.__get_model_dir())):
@@ -300,12 +305,15 @@ class HpeDnn:
         else:
             self.__fresh_model(arch, normalize, dropout_rate)
     
-    def train_model(self, augment=False):
+    def train_model(self, epochs=20, augment=False, balanced=False):
         if (self.model is None):
             raise Exception("Cannot train before model is initialized")
         
-        train_ds = self.__get_data_from_split("train", augment=augment)
-        val_ds = self.__get_data_from_split("val", augment=False)
+        if (balanced and not augment):
+            print("Warning: avoid reusing the exact same image multiple times by also enabling augmentation when balancing the dataset")
+        
+        train_ds = self.__get_data_from_split("train", augment=augment, balance=balanced)
+        val_ds = self.__get_data_from_split("val", augment=False, balance=False)
 
         checkpoint_dir = self.__get_checkpoint_dir()
         log_dir = self.__get_tensorboard_log_dir()
@@ -326,7 +334,7 @@ class HpeDnn:
 
         csv_callback = CSVLogger(filename=results_file)
 
-        self.model.fit(train_ds, epochs=20, validation_data=val_ds, 
+        self.model.fit(train_ds, epochs=epochs, validation_data=val_ds, 
             callbacks=[cp_callback, tb_callback, csv_callback])
 
     def __get_latest_train_dir(self):
@@ -370,11 +378,11 @@ class HpeDnn:
     def __fresh_model(self, arch: DnnArch, normalize, dropout_rate):
         print(f"loading a fresh model '{self.name}'")
 
-        train_ds = self.__get_data_from_split("train", False)
+        train_ds = self.__get_data_from_split("train", augment=False, balance=False)
         debugging = False
         model_func = _arch_mapping[arch]
         self.model = model_func(train_ds, normalize, debugging, dropout_rate)
     
-    def __get_data_from_split(self, split: str, augment) -> tf.data.Dataset:
+    def __get_data_from_split(self, split: str, augment, balance) -> tf.data.Dataset:
         df = read_data(join(self.__get_dataset_dir(), f"{split}.pkl"))
-        return df_to_dataset(df, augment=augment)
+        return df_to_dataset(df, augment=augment, balance=balance)

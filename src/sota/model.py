@@ -29,12 +29,12 @@ class SOTA:
         else:
             self.__fresh_model(name)
 
-    def execute_train_runs(self, runs=1, optimizer: str = "auto", lr0: float = 0.01, 
+    def execute_train_runs(self, model, runs=1, optimizer: str = "auto", lr0: float = 0.01, 
             epochs=20, balanced=False):
         
         for run in range(runs):
             print(f"starting run #{run}")
-            self.initialize_model()
+            self.initialize_model(name=model)
             self.train_model(optimizer=optimizer, lr0=lr0, epochs=epochs, balanced=balanced)    
 
     def train_model(self, optimizer: str = "auto", lr0: float = 0.01, epochs=20, 
