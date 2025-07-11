@@ -23,11 +23,18 @@ def read_data(location, verbose=False) -> DataFrame:
     return data_frame
 
 def df_to_dataset(dataframe: DataFrame, 
-        augment,
+        balance=False,
+        augment=False,
         shuffle=True,
         batch_size=32) -> tf.data.Dataset:
     df = dataframe.copy()
     
+    if balance:
+        if (not augment):
+            print("Warning: avoid reusing the exact same image multiple times by also enabling augmentation when balancing the dataset")
+        
+        
+
     if augment:
         df = df.apply(augment_keypoints, axis=1)
 
