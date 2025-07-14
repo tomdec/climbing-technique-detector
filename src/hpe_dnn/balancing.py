@@ -13,7 +13,7 @@ def balance_func_factory(df: DataFrame) -> Callable:
     print(dict(zip(classes, class_counts)))
 
     class_weights = sum(class_counts) / class_counts
-    sample_weights = df['technique'].map(lambda x: class_weights[list(classes).index(x)])  #class_weights[list(classes).index(df['technique'].values)]
+    sample_weights = df['technique'].map(lambda x: class_weights[list(classes).index(x)])
 
     sample_probabilities = sample_weights / sum(sample_weights)
 
