@@ -82,5 +82,5 @@ class WeightedDataset(ClassificationDataset):
     
 class WeightedTrainer(ClassificationTrainer):
     
-    def build_dataset(self, img_path: str, mode: str = "train", batch=None):
+    def build_dataset(self, img_path: str, mode: str = "train"):
         return WeightedDataset(root=img_path, args=self.args, augment=mode == "train", prefix=mode)
