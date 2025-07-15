@@ -41,6 +41,15 @@ sudo apt update
 sudo apt install ffmpeg
 ```
 
+## Weights and biases
+To integrate with a weights and biases server to log training, validation and evaluation of model, 
+add your api key as the `WANDB_API_KEY` environment variable, or use another method described [here](https://docs.wandb.ai/guides/integrations/add-wandb-to-any-library/#install-the-wandb-library-and-log-in).
+
+To enable logging from ultralytics, run this command in the cli:
+```
+yolo settings wandb=True
+```
+
 # Structure
 
 ## root folder
