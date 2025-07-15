@@ -2,9 +2,6 @@ from pandas import DataFrame
 from numpy import random
 from src.hpe_dnn.balancing import balance_func_factory
 
-from os.path import exists
-from src.hpe_dnn.model import read_data
-
 def __get_test_df():
     data = zip([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [1, 2, 2, 3, 3, 3, 4, 4, 4, 4])
     return DataFrame(data, columns=['feature1', 'technique'])
