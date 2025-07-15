@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+        "ms-toolsai.datawrangler",
+        "donjayamanne.git-extension-pack",
+        "ms-toolsai.jupyter",
+        "ms-python.python"
+    ]
+}
