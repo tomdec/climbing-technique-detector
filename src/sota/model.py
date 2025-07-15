@@ -2,6 +2,8 @@ from ultralytics import YOLO
 from os.path import join, exists
 from os import listdir
 from typing import Optional
+from wandb import finish, init
+from wandb.integration.ultralytics import add_wandb_callback
 
 from src.sota.balancing import WeightedTrainer
 
@@ -46,6 +48,18 @@ class SOTA:
 
         dataset_path = self.__get_dataset_dir()
         project_path = self.__get_project_dir()
+
+        config = {
+            'name': self.name,
+            'dataset_name': self.dataset_name,
+            'optimizer': optimizer,
+            'lr0': lr0,
+            'balanced': balanced,
+            'augmented': True
+        }
+        init(project="detect-climbing-technique", job_type="train", group="sota", config=config, dir=self.data_root_path)
+        add_wandb_callback(self.model, enable_model_checkpointing=True)
+
         results = self.model.train(trainer=trainer,
             data=dataset_path, 
             epochs=epochs,
@@ -53,6 +67,8 @@ class SOTA:
             project=project_path,
             optimizer=optimizer,
             lr0=lr0)
+        
+        finish()
         
         print(results)
 
@@ -87,7 +103,18 @@ class SOTA:
         
         print(f"Make sure to swap val and test splits for {self.dataset_name}, otherwise validation data will be used.")
         
+        config = {
+            'name': self.name,
+            'dataset_name': self.dataset_name,
+            'balanced': False,
+            'augmented': False
+        }
+        init(project="detect-climbing-technique", job_type="eval", group="sota", config=config, dir=self.data_root_path)
+        add_wandb_callback(self.model, enable_model_checkpointing=True)
+        
         self.model.val()
+
+        finish()
     
 # results = model.predict(img, verbose = False)
 # result = results[0]
