@@ -37,7 +37,7 @@ class SOTA:
         for run in range(runs):
             print(f"starting run #{run}")
             self.initialize_model(name=model)
-            self.train_model(optimizer=optimizer, lr0=lr0, epochs=epochs, balanced=balanced)    
+            self.train_model(optimizer=optimizer, lr0=lr0, epochs=epochs, balanced=balanced)
 
     def train_model(self, optimizer: str = "auto", lr0: float = 0.01, epochs=20, 
             balanced=False):
@@ -55,9 +55,11 @@ class SOTA:
             'optimizer': optimizer,
             'lr0': lr0,
             'balanced': balanced,
-            'augmented': True
+            'augmented': True,
+            'run': self._get_next_train_run()
         }
-        init(project="detect-climbing-technique", job_type="train", group="sota", config=config, dir=self.data_root_path)
+        init(project="detect-climbing-technique", job_type="train", group="sota", name=self.name, 
+            config=config, dir=self.data_root_path)
         add_wandb_callback(self.model, enable_model_checkpointing=True)
 
         results = self.model.train(trainer=trainer,
@@ -77,6 +79,14 @@ class SOTA:
 
     def __get_dataset_dir(self):
         return join(self.data_root_path, "img", self.dataset_name)
+
+    def _get_next_train_run(self):
+        model_dir = self.__get_model_dir()
+        if not exists(model_dir):
+            return "train1"
+        
+        train_runs = [dir for dir in listdir(self.__get_model_dir()) if "train" in dir]
+        return f"train{len(train_runs)+1}"
 
     def __get_project_dir(self):
         return join(self.data_root_path, "runs", "sota", self.name)
@@ -109,7 +119,8 @@ class SOTA:
             'balanced': False,
             'augmented': False
         }
-        init(project="detect-climbing-technique", job_type="eval", group="sota", config=config, dir=self.data_root_path)
+        init(project="detect-climbing-technique", job_type="eval", group="sota", name=self.name, 
+            config=config, dir=self.data_root_path)
         add_wandb_callback(self.model, enable_model_checkpointing=True)
         
         self.model.val()
