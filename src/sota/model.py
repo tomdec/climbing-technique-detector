@@ -56,7 +56,7 @@ class SOTA:
             'lr0': lr0,
             'balanced': balanced,
             'augmented': True,
-            'run': self._get_next_train_run()
+            'run': self.__get_next_train_run()
         }
         init(project="detect-climbing-technique", job_type="train", group="sota", name=self.name, 
             config=config, dir=self.data_root_path)
@@ -80,7 +80,7 @@ class SOTA:
     def __get_dataset_dir(self):
         return join(self.data_root_path, "img", self.dataset_name)
 
-    def _get_next_train_run(self):
+    def __get_next_train_run(self):
         model_dir = self.__get_model_dir()
         if not exists(model_dir):
             return "train1"
