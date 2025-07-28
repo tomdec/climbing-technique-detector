@@ -46,8 +46,23 @@ To integrate with a weights and biases server to log training, validation and ev
 add your api key as the `WANDB_API_KEY` environment variable, or use another method described [here](https://docs.wandb.ai/guides/integrations/add-wandb-to-any-library/#install-the-wandb-library-and-log-in).
 
 To enable logging from ultralytics, run this command in the cli:
-```
+```bash
 yolo settings wandb=True
+```
+
+### Troubleshooting
+
+#### `AttributeError: 'PosixPath' object has no attribute 'split'`
+The first time after installing the wandb package you might run into some issues when training a yolov11 model, specifically.
+The [issue](https://github.com/wandb/wandb/issues/10177#issuecomment-3102982507) has been reported with the developers on GitHub.
+
+If there is still no fix for this in a more recent version of `wandb`, change this line 147 in [wandb/integration/ultralytics/callback.py](.venv/lib/python3.12/site-packages/wandb/integration/ultralytics/callback.py#L147) from:
+```python
+model.overrides["model"].split('.')[0]
+```
+to:
+```python
+f"{model.overrides["model"]}".split('.')[0]
 ```
 
 # Structure
