@@ -50,7 +50,7 @@ def __generate_image_dataset(video_path,
     '''
     Generate the 'maximum' amount of images from the segment video.
 
-    Algorithm: 
+    Algorithm:
         Each 10th frame from the video is sampled, starting with a random offset between [0, 9]
 
     Args:
