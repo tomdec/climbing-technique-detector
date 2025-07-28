@@ -1,6 +1,6 @@
 from ultralytics import YOLO
 from os.path import join, exists
-from os import listdir
+from os import listdir, rename
 from typing import Optional
 from wandb import finish, init
 from wandb.integration.ultralytics import add_wandb_callback
@@ -12,7 +12,7 @@ class SOTA:
     data_root_path: str
     name: str
     dataset_name: str 
-    model: Optional[YOLO]
+    model: Optional[YOLO] = None
 
     def __init__(self, data_root_path: str, name: str, 
             dataset_name: str = "techniques"):
@@ -85,7 +85,7 @@ class SOTA:
         if not exists(model_dir):
             return "train1"
         
-        train_runs = [dir for dir in listdir(self.__get_model_dir()) if "train" in dir]
+        train_runs = [dir for dir in listdir(model_dir) if "train" in dir]
         return f"train{len(train_runs)+1}"
 
     def __get_project_dir(self):
@@ -93,7 +93,7 @@ class SOTA:
 
     def __get_best_weights_path(self):
         model_dir = self.__get_model_dir()
-        train_list = listdir(model_dir)
+        train_list = [dir for dir in listdir(model_dir) if "train" in dir]
         return join(model_dir, train_list[-1], "weights", "best.pt")
 
     def __fresh_model(self, name):
@@ -109,23 +109,31 @@ class SOTA:
 
     def test_model(self):
         if (self.model is None):
-            raise Exception("Cannot test before model is initialized")
+            self.initialize_model()
         
-        print(f"Make sure to swap val and test splits for {self.dataset_name}, otherwise validation data will be used.")
-        
-        config = {
-            'name': self.name,
-            'dataset_name': self.dataset_name,
-            'balanced': False,
-            'augmented': False
-        }
-        init(project="detect-climbing-technique", job_type="eval", group="sota", name=self.name, 
-            config=config, dir=self.data_root_path)
-        add_wandb_callback(self.model, enable_model_checkpointing=True)
-        
-        self.model.val()
+        dataset_path = self.__get_dataset_dir()
+        project_path = self.__get_project_dir()
 
-        finish()
+        rename(join(dataset_path, "val"), join(dataset_path, "val_temp"))
+        rename(join(dataset_path, "test"), join(dataset_path, "val"))
+        try:
+            config = {
+                'name': self.name,
+                'dataset_name': self.dataset_name,
+                'balanced': False,
+                'augmented': False,
+                'run': 'test'
+            }
+            init(project="detect-climbing-technique", job_type="eval", group="sota", name=self.name, 
+                config=config, dir=self.data_root_path)
+            add_wandb_callback(self.model, enable_model_checkpointing=True)
+            
+            self.model.val(project=project_path, name="test", save_json=True)
+
+            finish()
+        finally:
+            rename(join(dataset_path, "val"), join(dataset_path, "test"))
+            rename(join(dataset_path, "val_temp"), join(dataset_path, "val"))
     
 # results = model.predict(img, verbose = False)
 # result = results[0]
