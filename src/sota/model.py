@@ -2,6 +2,8 @@ from ultralytics import YOLO
 from os.path import join, exists
 from os import listdir
 from typing import Optional
+from wandb import finish, init
+from wandb.integration.ultralytics import add_wandb_callback
 
 from src.sota.balancing import WeightedTrainer
 
@@ -35,7 +37,7 @@ class SOTA:
         for run in range(runs):
             print(f"starting run #{run}")
             self.initialize_model(name=model)
-            self.train_model(optimizer=optimizer, lr0=lr0, epochs=epochs, balanced=balanced)    
+            self.train_model(optimizer=optimizer, lr0=lr0, epochs=epochs, balanced=balanced)
 
     def train_model(self, optimizer: str = "auto", lr0: float = 0.01, epochs=20, 
             balanced=False):
@@ -46,6 +48,20 @@ class SOTA:
 
         dataset_path = self.__get_dataset_dir()
         project_path = self.__get_project_dir()
+
+        config = {
+            'name': self.name,
+            'dataset_name': self.dataset_name,
+            'optimizer': optimizer,
+            'lr0': lr0,
+            'balanced': balanced,
+            'augmented': True,
+            'run': self.__get_next_train_run()
+        }
+        init(project="detect-climbing-technique", job_type="train", group="sota", name=self.name, 
+            config=config, dir=self.data_root_path)
+        add_wandb_callback(self.model, enable_model_checkpointing=True)
+
         results = self.model.train(trainer=trainer,
             data=dataset_path, 
             epochs=epochs,
@@ -54,6 +70,8 @@ class SOTA:
             optimizer=optimizer,
             lr0=lr0)
         
+        finish()
+        
         print(results)
 
     def __get_model_dir(self):
@@ -61,6 +79,14 @@ class SOTA:
 
     def __get_dataset_dir(self):
         return join(self.data_root_path, "img", self.dataset_name)
+
+    def __get_next_train_run(self):
+        model_dir = self.__get_model_dir()
+        if not exists(model_dir):
+            return "train1"
+        
+        train_runs = [dir for dir in listdir(self.__get_model_dir()) if "train" in dir]
+        return f"train{len(train_runs)+1}"
 
     def __get_project_dir(self):
         return join(self.data_root_path, "runs", "sota", self.name)
@@ -87,7 +113,19 @@ class SOTA:
         
         print(f"Make sure to swap val and test splits for {self.dataset_name}, otherwise validation data will be used.")
         
+        config = {
+            'name': self.name,
+            'dataset_name': self.dataset_name,
+            'balanced': False,
+            'augmented': False
+        }
+        init(project="detect-climbing-technique", job_type="eval", group="sota", name=self.name, 
+            config=config, dir=self.data_root_path)
+        add_wandb_callback(self.model, enable_model_checkpointing=True)
+        
         self.model.val()
+
+        finish()
     
 # results = model.predict(img, verbose = False)
 # result = results[0]

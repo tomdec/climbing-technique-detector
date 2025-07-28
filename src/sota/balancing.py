@@ -69,7 +69,8 @@ class WeightedDataset(ClassificationDataset):
 
             new_class_idx = self.sample_classes[index]
             self.balanced_class_counts[new_class_idx] += 1
-        
+            #TODO: write mappings to local file
+            
         return super(WeightedDataset, self).__getitem__(index)
     
     def report_balancing(self):

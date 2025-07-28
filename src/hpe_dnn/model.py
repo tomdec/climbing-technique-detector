@@ -13,9 +13,12 @@ from typing import Mapping
 from enum import Enum
 from os.path import exists
 from typing import Optional
-from src.hpe_dnn.balancing import balance_func_factory
+from wandb import init, finish
+from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 
+from src.hpe_dnn.balancing import balance_func_factory
 from src.hpe_dnn.augmentation import augment_keypoints
+from src.common import get_next_train_run
 
 def read_data(location, verbose=False) -> DataFrame:
     data_frame = read_pickle(location)
@@ -291,11 +294,13 @@ class HpeDnn:
         self.name = name
         self.dataset_name = dataset_name
     
-    def execute_train_runs(self, runs=1, epochs=20, augment=False, balanced=False):
+    def execute_train_runs(self, arch: DnnArch = DnnArch.ARCH1, runs=1, epochs=20, 
+            augment=False, balanced=False):
+        
         for run in range(runs):
             print(f"starting run #{run}")
-            self.initialize_model()
-            self.train_model(epochs=epochs, augment=augment, balanced=balanced)    
+            self.initialize_model(arch=arch)
+            self.train_model(epochs=epochs, augment=augment, balanced=balanced)
 
     def initialize_model(self, arch: DnnArch = DnnArch.ARCH1, normalize: bool = True,
             dropout_rate = 0.1):
@@ -319,6 +324,19 @@ class HpeDnn:
         log_dir = self.__get_tensorboard_log_dir()
         results_file = self.__get_results_file_path()
 
+        config = {
+            'name': self.name,
+            'dataset_name': self.dataset_name,
+            #'optimizer': optimizer,
+            #'lr0': lr0,
+            #'architecture': f"{arch}",
+            'balanced': balanced,
+            'augmented': augment,
+            'run': self.__get_next_train_run()
+        }
+        init(project="detect-climbing-technique", job_type="train", group="hpe_dnn", name=self.name, 
+            config=config, dir=self.data_root_path)
+
         makedirs(checkpoint_dir)
         makedirs(log_dir)
         make_file(results_file)
@@ -335,26 +353,29 @@ class HpeDnn:
         csv_callback = CSVLogger(filename=results_file)
 
         self.model.fit(train_ds, epochs=epochs, validation_data=val_ds, 
-            callbacks=[cp_callback, tb_callback, csv_callback])
+            callbacks=[cp_callback, tb_callback, csv_callback, WandbMetricsLogger(), 
+                WandbModelCheckpoint(join(checkpoint_dir, "wandb.keras"))])
+        
+        finish()
 
-    def __get_latest_train_dir(self):
+    def __get_next_train_run(self):
         model_dir = self.__get_model_dir()
-        if (exists(model_dir)):
-            train_runs = [dir for dir in listdir(model_dir) if "train" in dir]
-            return join(model_dir, f"train{len(train_runs)+1}")
-        else:
-            return join(model_dir, "train1")
+        return get_next_train_run(model_dir)
+
+    def __get_next_train_dir(self):
+        model_dir = self.__get_model_dir()
+        return join(model_dir, get_next_train_run(model_dir))
 
     def __get_checkpoint_dir(self):
-        train_dir = self.__get_latest_train_dir()
+        train_dir = self.__get_next_train_dir()
         return join(train_dir, "models")
 
     def __get_tensorboard_log_dir(self):
-        train_dir = self.__get_latest_train_dir()
+        train_dir = self.__get_next_train_dir()
         return join(train_dir, "logs")
 
     def __get_results_file_path(self):
-        train_dir = self.__get_latest_train_dir()
+        train_dir = self.__get_next_train_dir()
         return join(train_dir, "results.csv")
 
     def __get_model_dir(self):
