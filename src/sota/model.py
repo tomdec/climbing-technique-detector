@@ -4,6 +4,7 @@ from os import listdir, rename
 from typing import Optional
 from wandb import finish, init
 from wandb.integration.ultralytics import add_wandb_callback
+from json import dump, load
 
 from src.sota.balancing import WeightedTrainer
 
@@ -107,16 +108,20 @@ class SOTA:
         print(f"loading the model '{self.name}' with the weights at '{best_weights_path}'")
         self.model = YOLO(best_weights_path)
 
-    def test_model(self):
-        if (self.model is None):
-            self.initialize_model()
+    def get_test_metrics(self):
+        with open(join(self.__get_project_dir(), "test", "metrics.json"), "r") as file:
+            return load(file)
+
+    def test_model(self, write_to_wandb = True):
+        self.initialize_model()
         
         dataset_path = self.__get_dataset_dir()
         project_path = self.__get_project_dir()
 
         rename(join(dataset_path, "val"), join(dataset_path, "val_temp"))
         rename(join(dataset_path, "test"), join(dataset_path, "val"))
-        try:
+        #try:
+        if write_to_wandb:
             config = {
                 'name': self.name,
                 'dataset_name': self.dataset_name,
@@ -127,13 +132,25 @@ class SOTA:
             init(project="detect-climbing-technique", job_type="eval", group="sota", name=self.name, 
                 config=config, dir=self.data_root_path)
             add_wandb_callback(self.model, enable_model_checkpointing=True)
-            
-            self.model.val(project=project_path, name="test", save_json=True)
+        
+        metrics = self.model.val(project=project_path, name="test")
 
+        with open(join(project_path, "test", "metrics.json"), "w") as file:
+            dump(metrics.results_dict, file)
+
+        if write_to_wandb:
             finish()
-        finally:
-            rename(join(dataset_path, "val"), join(dataset_path, "test"))
-            rename(join(dataset_path, "val_temp"), join(dataset_path, "val"))
+
+        rename(join(dataset_path, "val"), join(dataset_path, "test"))
+        rename(join(dataset_path, "val_temp"), join(dataset_path, "val"))
+
+        return metrics
+        
+        # except Exception as ex:
+        #     print(f"stopped with error: {ex.message}")
+        # finally:
+            # rename(join(dataset_path, "val"), join(dataset_path, "test"))
+            # rename(join(dataset_path, "val_temp"), join(dataset_path, "val"))
     
 # results = model.predict(img, verbose = False)
 # result = results[0]
