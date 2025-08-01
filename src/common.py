@@ -1,7 +1,10 @@
 from os import listdir
 from os.path import splitext, split, exists
-from numpy import array
+from numpy import array, ndarray
 from sklearn.model_selection import KFold
+from random import sample
+from typing import Tuple
+
 
 def get_filename(path: str):
     _, tail = split(path)
@@ -91,7 +94,7 @@ class AbstractFoldCrossValidation:
     def get_full_data_list(self):
         raise_not_implemented_error(self.__class__.__name__, self.get_full_data_list.__name__)
 
-    def build_fold(self, fold_num, train, test, full_data):
+    def build_fold(self, fold_num, train, val, test, full_data):
         raise_not_implemented_error(self.__class__.__name__, self.build_fold.__name__)
 
     def init_fold_model(self, fold_num) -> ClassificationModel:
@@ -106,12 +109,20 @@ class AbstractFoldCrossValidation:
     def print_box_plot(self):
         raise_not_implemented_error(self.__class__.__name__, self.print_box_plot.__name__)
 
+    def __split_val(train, test) -> Tuple[ndarray, ndarray, ndarray]:
+        val_set = set(sample(list(train), len(test)))
+        train = array(list(set(train) - val_set))
+        val = array(list(val_set))
+
+        return (train, val, test)
+
     def train_folds(self):
         full_data = self.get_full_data_list()
 
         for i, (train, test) in enumerate(self._kf.split(full_data)):
             fold_num = i + 1
-            self.build_fold(fold_num, train, test, full_data)
+            (train, val, test) = self.__split_val(train, test)
+            self.build_fold(fold_num, train, val, test, full_data)
             
             model = self.init_fold_model(fold_num)
             self.execute_train_runs(model)
@@ -119,9 +130,5 @@ class AbstractFoldCrossValidation:
             model.test_model()
 
             self.clear_fold()
-
-            #TEMP
-            if i == 1:
-                break
 
         self.print_box_plot()

@@ -61,28 +61,28 @@ class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
         path_to_all = join(self.__get_fold_dataset_path(), "all")
         return glob(path_to_all + "/**/*.*", recursive=True)
 
-    def build_fold(self, fold_num, train, test, full_data):
+    def build_fold(self, fold_num, train, val, test, full_data):
         path_to_current = join(self.__get_fold_dataset_path(), "current_fold")
         build_image_dirs(path_to_current)
         
         print(f"Building fold {fold_num} ...")
+        print(f"Fold {fold_num}: Train size = {len(train)}, Val size = {len(val)}, Test size = {len(test)}")
 
         for filename_idx in train:
             src = full_data[filename_idx]
-            dest = src.replace("/all/", "/current_fold/train/") \
-                if random() < self._train_ratio \
-                else src.replace("/all/", "/current_fold/val/")
+            dest = src.replace("/all/", "/current_fold/train/")
             copy(src, dest)
-            
+
+        for filename_idx in val:
+            src = full_data[filename_idx]
+            dest = src.replace("/all/", "/current_fold/val/")
+            copy(src, dest)
+        
         for filename_idx in test:
             src = full_data[filename_idx]
             dest = src.replace("/all/", "/current_fold/test/")
             copy(src, dest)
-
-        train_len = len(glob(path_to_current + "/train/**/*.*", recursive=True))
-        val_len = len(glob(path_to_current + "/val/**/*.*", recursive=True))
-        test_len = len(glob(path_to_current + "/test/**/*.*", recursive=True))
-        print(f"Fold {fold_num}: Train size = {train_len}, Val size = {val_len}, Test size = {test_len}")
+        
         
     def init_fold_model(self, fold_num) -> ClassificationModel:
         return SOTA(self._data_root, f"{self._model_name}-fold{fold_num}", dataset_name=join(self._dataset_name, "current_fold"))
