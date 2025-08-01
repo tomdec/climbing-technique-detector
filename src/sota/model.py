@@ -6,18 +6,17 @@ from typing import Optional
 from wandb import finish, init
 from wandb.integration.ultralytics import add_wandb_callback
 from json import dump, load
-from sklearn.model_selection import KFold
 from glob import glob
 from random import random
 from shutil import rmtree, copy
 from numpy import average
 import matplotlib.pyplot as plt
 
-
+from src.common import TrainArgs, MultiRunTrainArgs, ClassificationModel, AbstractFoldCrossValidation
 from src.sota.balancing import WeightedTrainer
 from src.sampling.images import build_image_dirs
 
-class SOTATrainArgs:
+class SOTATrainArgs(TrainArgs):
 
     @property
     def optimizer(self) -> str:
@@ -29,100 +28,31 @@ class SOTATrainArgs:
         """Initial learing rate for each training run"""
         return self._lr0
 
-    @property
-    def epochs(self) -> int:
-        """Amount of epochs to train during each run"""
-        return self._epochs
+    def __init__(self, epochs=20, balanced=False,
+            optimizer: str = "auto", lr0: float = 0.01):
+        TrainArgs.__init__(self, epochs, balanced)
 
-    @property
-    def balanced(self) -> bool:
-        """Indicates if the training data is balanced between labels"""
-        return self._balanced
-    
-    def __init__(self, optimizer: str = "auto", lr0: float = 0.01, 
-            epochs=20, balanced=False):
         self._optimizer = optimizer
         self._lr0 = lr0
-        self._epochs = epochs
-        self._balanced = balanced
 
-class MultiRunSOTATrainArgs(SOTATrainArgs):
-        
-    @property
-    def runs(self) -> int:
-        """Amount of different runs to train the model"""
-        return self._runs
+class MultiRunSOTATrainArgs(MultiRunTrainArgs):
     
-    def __init__(self, runs=5, optimizer: str = "auto", lr0: float = 0.01, 
-            epochs=10, balanced=False):
-        SOTATrainArgs.__init__(self, optimizer, lr0, epochs, balanced)
-        self._runs = runs
-
-
-def raise_not_implemented_error(class_name, function_name):
-    raise NotImplementedError(f"Invalid use of the class '{class_name}', it needs to implement the function 'f{function_name}'.")
-
-class AbstractFoldCrossValidation:
-
-    def __init__(self, data_root):
-        n_splits = 10
-        self._kf = KFold(n_splits=n_splits, shuffle=True)
-        self._train_ratio = (n_splits - 2) / (n_splits - 1)
-
-        self._data_root = data_root
-
-    def get_full_data_list(self):
-        raise_not_implemented_error(self.__class__.__name__, self.get_full_data_list.__name__)
-
-    def build_fold(self, fold_num, train, test, full_data):
-        raise_not_implemented_error(self.__class__.__name__, self.build_fold.__name__)
-
-    def init_fold_model(self, fold_num) -> object:
-        raise_not_implemented_error(self.__class__.__name__, self.init_fold_model.__name__)
-
-    def execute_train_runs(self, model):
-        raise_not_implemented_error(self.__class__.__name__, self.execute_train_runs.__name__)
-        
-    def test_model(self, model):
-        raise_not_implemented_error(self.__class__.__name__, self.test_model.__name__)
-        
-    def clear_fold(self):
-        raise_not_implemented_error(self.__class__.__name__, self.clear_fold.__name__)
-        
-    def print_box_plot(self):
-        raise_not_implemented_error(self.__class__.__name__, self.print_box_plot.__name__)
-
-    def train_folds(self):
-        full_data = self.get_full_data_list()
-
-        for i, (train, test) in enumerate(self._kf.split(full_data)):
-            fold_num = i + 1
-            self.build_fold(fold_num, train, test, full_data)
-            
-            model = self.init_fold_model(fold_num)
-            self.execute_train_runs(model)
-
-            self.test_model(model)
-
-            self.clear_fold()
-
-        self.print_box_plot()
+    def __init__(self, model="yolo11m-cls", runs=5, train_args: SOTATrainArgs = SOTATrainArgs()):
+        MultiRunTrainArgs.__init__(self, model, runs, train_args)
 
 class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
 
-    def __init__(self, data_root, model_name, train_run_args: MultiRunSOTATrainArgs, 
-            dataset_name: str = "techniques", yolo_model = None):
+    def __init__(self, data_root, model_name, 
+            train_run_args: MultiRunSOTATrainArgs, 
+            dataset_name: str = "techniques"):
         
         AbstractFoldCrossValidation.__init__(self, data_root=data_root)
         self._model_name = model_name
         self._train_run_args = train_run_args
-
+        
         self._dataset_name = dataset_name \
             if dataset_name.endswith('_kf') \
             else dataset_name + '_kf'
-        self._yolo_model = yolo_model \
-            if yolo_model is not None \
-            else model_name
 
     def __get_fold_dataset_path(self):
         return join(self._data_root, "img", self._dataset_name)
@@ -154,17 +84,11 @@ class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
         test_len = len(glob(path_to_current + "/test/**/*.*", recursive=True))
         print(f"Fold {fold_num}: Train size = {train_len}, Val size = {val_len}, Test size = {test_len}")
         
-    def init_fold_model(self, fold_num) -> object:
+    def init_fold_model(self, fold_num) -> ClassificationModel:
         return SOTA(self._data_root, f"{self._model_name}-fold{fold_num}", dataset_name=join(self._dataset_name, "current_fold"))
 
     def execute_train_runs(self, model):
-        model.execute_train_runs(model=self._yolo_model, 
-            runs=self._train_run_args.runs, 
-            epochs=self._train_run_args.epochs, 
-            balanced=self._train_run_args.balanced)
-        
-    def test_model(self, model):
-        model.test_model()
+        model.execute_train_runs(args=self._train_run_args)
         
     def clear_fold(self):
         rmtree(join(self.__get_fold_dataset_path(), "current_fold"))
@@ -183,7 +107,7 @@ class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
         plt.boxplot(metrics)
         plt.show()
 
-class SOTA:
+class SOTA(ClassificationModel):
 
     data_root_path: str
     name: str
@@ -207,20 +131,18 @@ class SOTA:
         else:
             self.__fresh_model(name)
 
-    def execute_train_runs(self, model, runs=1, optimizer: str = "auto", lr0: float = 0.01, 
-            epochs=20, balanced=False):
+    def execute_train_runs(self, args: MultiRunSOTATrainArgs):
         
-        for run in range(runs):
+        for run in range(args.runs):
             print(f"starting run #{run}")
-            self.initialize_model(name=model)
-            self.train_model(optimizer=optimizer, lr0=lr0, epochs=epochs, balanced=balanced)
+            self.initialize_model(name=args.model)
+            self.train_model(args.train_args)
 
-    def train_model(self, optimizer: str = "auto", lr0: float = 0.01, epochs=20, 
-            balanced=False):
+    def train_model(self, args: SOTATrainArgs):
         if (self.model is None):
             raise Exception("Cannot train before model is initialized")
         
-        trainer = WeightedTrainer if balanced else None
+        trainer = WeightedTrainer if args.balanced else None
 
         dataset_path = self.__get_dataset_dir()
         project_path = self.__get_project_dir()
@@ -228,9 +150,9 @@ class SOTA:
         config = {
             'name': self.name,
             'dataset_name': self.dataset_name,
-            'optimizer': optimizer,
-            'lr0': lr0,
-            'balanced': balanced,
+            'optimizer': args.optimizer,
+            'lr0': args.lr0,
+            'balanced': args.balanced,
             'augmented': True,
             'run': self.__get_next_train_run()
         }
@@ -240,11 +162,11 @@ class SOTA:
 
         results = self.model.train(trainer=trainer,
             data=dataset_path, 
-            epochs=epochs,
+            epochs=args.epochs,
             imgsz=640,
             project=project_path,
-            optimizer=optimizer,
-            lr0=lr0)
+            optimizer=args.optimizer,
+            lr0=args.lr0)
         
         finish()
         
