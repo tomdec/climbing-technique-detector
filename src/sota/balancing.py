@@ -13,8 +13,6 @@ class WeightedDataset(ClassificationDataset):
     sample_weights: List[float]
     sample_probabilities: List[float]
 
-    balanced_class_counts: List[int]
-
     def __init__(self, root, args, augment=False, prefix=""):
         super(WeightedDataset, self).__init__(root, args, augment, prefix)
 
@@ -27,7 +25,6 @@ class WeightedDataset(ClassificationDataset):
 
     def count_instances(self):
         self.class_counts = zeros(len(self.classes), dtype=int32)
-        self.balanced_class_counts = zeros(len(self.classes), dtype=int32)
         self.sample_classes = []
 
         for sample in self.samples:
@@ -68,17 +65,13 @@ class WeightedDataset(ClassificationDataset):
             index = random.choice(len(self.sample_probabilities), p=self.sample_probabilities)
 
             new_class_idx = self.sample_classes[index]
-            self.balanced_class_counts[new_class_idx] += 1
-            #TODO: write mappings to local file
+            #TODO: write mappings to local file, first to global variable
             
         return super(WeightedDataset, self).__getitem__(index)
     
     def report_balancing(self):
         print("Original distribution:")
         print(dict(zip(self.classes, self.class_counts)))
-
-        print("Balanced distribution")
-        print(dict(zip(self.classes, self.balanced_class_counts)))
 
     
 class WeightedTrainer(ClassificationTrainer):
