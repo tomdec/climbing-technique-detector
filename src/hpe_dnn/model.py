@@ -1,5 +1,5 @@
 from pandas import DataFrame, read_pickle
-from numpy import split, nan
+from numpy import nan
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import LabelBinarizer
 import tensorflow as tf
