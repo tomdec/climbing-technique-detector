@@ -3,7 +3,7 @@ from pandas import Series
 from math import isnan
 from cv2 import imread
 
-from src.hpe_dnn.model import read_data
+from src.hpe_dnn.model import read_dataframe
 from src.hpe_dnn.augmentation import __to_augmenting_array, __to_df_row, __transform_pipeline
 
 def __get_train_df():
@@ -11,7 +11,7 @@ def __get_train_df():
     if (not exists(df_path)):
         raise FileNotFoundError('Make sure to generate the hpe dataset before running this test.')
 
-    return read_data(df_path)
+    return read_dataframe(df_path)
 
 def test_identity_transformations():
     test_data = __get_train_df().sample(10)
