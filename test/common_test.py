@@ -7,7 +7,7 @@ this_dir = dirname( __file__ )
 mymodule_dir = join( this_dir, '..', 'src' )
 path.append( mymodule_dir )
 
-from common import get_filename
+from src.common.helpers import get_filename
 
 @pytest.mark.parametrize("input,expected", [
     ("file.ext", "file"),

@@ -3,7 +3,7 @@ from os import makedirs, listdir
 from cv2 import VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_POS_FRAMES, VideoWriter_fourcc, VideoWriter
 
 from src.labels import get_labels_as_dataframe, Technique
-from src.common import get_filename
+from src.helpers import get_filename
 
 def build_segment_dirs(rootpath):
     samples_dir = join(rootpath, "samples")

@@ -18,7 +18,7 @@ from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 
 from src.hpe_dnn.balancing import balance_func_factory
 from src.hpe_dnn.augmentation import augment_keypoints
-from src.common import get_next_train_run
+from src.common.helpers import get_next_train_run
 
 def read_data(location, verbose=False) -> DataFrame:
     data_frame = read_pickle(location)

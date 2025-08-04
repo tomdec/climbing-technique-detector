@@ -6,7 +6,7 @@ from matplotlib.pyplot import subplots, subplots_adjust, Axes
 from numpy import mean
 
 from src.labels import Technique
-from src.common import get_filename, get_split_limits
+from src.common.helpers import get_filename, get_split_limits
 
 def build_image_dirs(dataset_dir):
     

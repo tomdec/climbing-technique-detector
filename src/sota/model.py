@@ -12,7 +12,7 @@ from shutil import rmtree, copy
 from numpy import average
 import matplotlib.pyplot as plt
 
-from src.common import TrainArgs, MultiRunTrainArgs, ClassificationModel, AbstractFoldCrossValidation
+from src.common.helpers import TrainArgs, MultiRunTrainArgs, ClassificationModel, AbstractFoldCrossValidation
 from src.sota.balancing import WeightedTrainer
 from src.sampling.images import build_image_dirs
 
