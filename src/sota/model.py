@@ -1,8 +1,9 @@
+from pyclbr import Class
 from ultralytics import YOLO
 from ultralytics.utils.metrics import DetMetrics
 from os.path import join, exists
 from os import listdir, rename
-from typing import Optional
+from typing import Optional, override
 from wandb import finish, init
 from wandb.integration.ultralytics import add_wandb_callback
 from json import dump, load
@@ -12,7 +13,8 @@ from shutil import rmtree, copy
 from numpy import average
 import matplotlib.pyplot as plt
 
-from src.common.helpers import TrainArgs, MultiRunTrainArgs, ClassificationModel, AbstractFoldCrossValidation
+from src.common.model import ModelInitializeArgs, TrainArgs, MultiRunTrainArgs, ClassificationModel
+from src.common.kfold import AbstractFoldCrossValidation
 from src.sota.balancing import WeightedTrainer
 from src.sampling.images import build_image_dirs
 
@@ -35,15 +37,28 @@ class SOTATrainArgs(TrainArgs):
         self._optimizer = optimizer
         self._lr0 = lr0
 
-class MultiRunSOTATrainArgs(MultiRunTrainArgs):
+class SOTAModelInitializeArgs(ModelInitializeArgs):
+
+    @override
+    @property
+    def model(self) -> str:
+        """Name of yolo model to use when initializing the model"""
+        return self._model
     
-    def __init__(self, model="yolo11m-cls", runs=5, train_args: SOTATrainArgs = SOTATrainArgs()):
-        MultiRunTrainArgs.__init__(self, model, runs, train_args)
+    def __init__(self, model: str = ""):
+        self._model = model
+    
+class SOTAMultiRunTrainArgs(MultiRunTrainArgs):
+    
+    def __init__(self, model_initialize_args: SOTAModelInitializeArgs = SOTAModelInitializeArgs(), 
+            runs: int = 5, 
+            train_args: SOTATrainArgs = SOTATrainArgs()):
+        MultiRunTrainArgs.__init__(self, model_initialize_args, runs, train_args)
 
 class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
 
-    def __init__(self, data_root, model_name, 
-            train_run_args: MultiRunSOTATrainArgs, 
+    def __init__(self, data_root: str, model_name: str, 
+            train_run_args: SOTAMultiRunTrainArgs, 
             dataset_name: str = "techniques"):
         
         AbstractFoldCrossValidation.__init__(self, data_root=data_root)
@@ -56,11 +71,13 @@ class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
 
     def __get_fold_dataset_path(self):
         return join(self._data_root, "img", self._dataset_name)
-
+    
+    @override
     def get_full_data_list(self):
         path_to_all = join(self.__get_fold_dataset_path(), "all")
         return glob(path_to_all + "/**/*.*", recursive=True)
 
+    @override
     def build_fold(self, fold_num, train, val, test, full_data):
         path_to_current = join(self.__get_fold_dataset_path(), "current_fold")
         build_image_dirs(path_to_current)
@@ -82,17 +99,20 @@ class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
             src = full_data[filename_idx]
             dest = src.replace("/all/", "/current_fold/test/")
             copy(src, dest)
-        
-        
+    
+    @override
     def init_fold_model(self, fold_num) -> ClassificationModel:
         return SOTA(self._data_root, f"{self._model_name}-fold{fold_num}", dataset_name=join(self._dataset_name, "current_fold"))
-
+    
+    @override
     def execute_train_runs(self, model):
         model.execute_train_runs(args=self._train_run_args)
-        
+
+    @override
     def clear_fold(self):
         rmtree(join(self.__get_fold_dataset_path(), "current_fold"))
-        
+
+    @override        
     def print_box_plot(self):
         model_root = join(self._data_root, "runs", "sota")
         fold_models = [model_name for model_name in listdir(model_root) if f"{self._model_name}-fold" in model_name]
@@ -109,35 +129,17 @@ class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
 
 class SOTA(ClassificationModel):
 
-    data_root_path: str
-    name: str
-    dataset_name: str 
     model: Optional[YOLO] = None
 
-    def __init__(self, data_root_path: str, name: str, 
-            dataset_name: str = "techniques"):
-    
-        if (name == ""):
-            raise Exception(f"name cannot be an empty string")
-        
-        self.data_root_path = data_root_path
-        self.name = name
-        self.dataset_name = dataset_name
+    @override
+    def execute_train_runs(self, args: SOTAMultiRunTrainArgs):
+        ClassificationModel.execute_train_runs(self, args)
 
-    def initialize_model(self, name = ""):
-        if (exists(self.__get_model_dir())):
-            weights_path = self.__get_best_weights_path()
-            self.__load_model(weights_path)
-        else:
-            self.__fresh_model(name)
+    @override
+    def initialize_model(self, args: SOTAModelInitializeArgs):
+        ClassificationModel.initialize_model(self, args)
 
-    def execute_train_runs(self, args: MultiRunSOTATrainArgs):
-        
-        for run in range(args.runs):
-            print(f"starting run #{run}")
-            self.initialize_model(name=args.model)
-            self.train_model(args.train_args)
-
+    @override
     def train_model(self, args: SOTATrainArgs):
         if (self.model is None):
             raise Exception("Cannot train before model is initialized")
@@ -172,43 +174,31 @@ class SOTA(ClassificationModel):
         
         print(results)
 
-    def __get_model_dir(self):
+    @override
+    def _get_model_dir(self):
         return join(self.data_root_path, "runs", "sota", self.name)
 
-    def __get_dataset_dir(self):
-        return join(self.data_root_path, "img", self.dataset_name)
-
-    def __get_next_train_run(self):
-        model_dir = self.__get_model_dir()
-        if not exists(model_dir):
-            return "train1"
-        
-        train_runs = [dir for dir in listdir(model_dir) if "train" in dir]
-        return f"train{len(train_runs)+1}"
-
-    def __get_project_dir(self):
-        return join(self.data_root_path, "runs", "sota", self.name)
-
-    def __get_best_weights_path(self):
+    @override
+    def _get_best_model_path(self):
         model_dir = self.__get_model_dir()
         train_list = [dir for dir in listdir(model_dir) if "train" in dir]
         return join(model_dir, train_list[-1], "weights", "best.pt")
 
-    def __fresh_model(self, name):
+    @override
+    def _load_model(self, best_weights_path):
+        print(f"loading the model '{self.name}' with the weights at '{best_weights_path}'")
+        self.model = YOLO(best_weights_path)
+
+    @override
+    def _fresh_model(self, args: SOTAModelInitializeArgs):
+        name = args.name
         if (name == ""):
             name = self.name + ".yaml"
 
         print(f"loading a fresh model '{name}'")
         self.model = YOLO(name)
     
-    def __load_model(self, best_weights_path):
-        print(f"loading the model '{self.name}' with the weights at '{best_weights_path}'")
-        self.model = YOLO(best_weights_path)
-
-    def get_test_metrics(self):
-        with open(join(self.__get_project_dir(), "test", "metrics.json"), "r") as file:
-            return load(file)
-
+    @override
     def test_model(self, write_to_wandb = True) -> DetMetrics:
         self.initialize_model()
         
@@ -250,6 +240,24 @@ class SOTA(ClassificationModel):
             rename(join(dataset_path, "val"), join(dataset_path, "test"))
             rename(join(dataset_path, "val_temp"), join(dataset_path, "val"))
     
+    def __get_dataset_dir(self):
+        return join(self.data_root_path, "img", self.dataset_name)
+
+    def __get_next_train_run(self):
+        model_dir = self.__get_model_dir()
+        if not exists(model_dir):
+            return "train1"
+        
+        train_runs = [dir for dir in listdir(model_dir) if "train" in dir]
+        return f"train{len(train_runs)+1}"
+
+    def __get_project_dir(self):
+        return join(self.data_root_path, "runs", "sota", self.name)
+
+    def get_test_metrics(self):
+        with open(join(self.__get_project_dir(), "test", "metrics.json"), "r") as file:
+            return load(file)
+
 # results = model.predict(img, verbose = False)
 # result = results[0]
 # idx = result.probs.top1
