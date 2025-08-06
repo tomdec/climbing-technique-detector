@@ -1,4 +1,3 @@
-from pyclbr import Class
 from ultralytics import YOLO
 from ultralytics.utils.metrics import DetMetrics
 from os.path import join, exists
@@ -7,16 +6,9 @@ from typing import Optional, override
 from wandb import finish, init
 from wandb.integration.ultralytics import add_wandb_callback
 from json import dump, load
-from glob import glob
-from random import random
-from shutil import rmtree, copy
-from numpy import average
-import matplotlib.pyplot as plt
 
 from src.common.model import ModelInitializeArgs, TrainArgs, MultiRunTrainArgs, ClassificationModel
-from src.common.kfold import AbstractFoldCrossValidation
 from src.sota.balancing import WeightedTrainer
-from src.sampling.images import build_image_dirs
 
 class SOTATrainArgs(TrainArgs):
 
@@ -50,82 +42,11 @@ class SOTAModelInitializeArgs(ModelInitializeArgs):
     
 class SOTAMultiRunTrainArgs(MultiRunTrainArgs):
     
-    def __init__(self, model_initialize_args: SOTAModelInitializeArgs = SOTAModelInitializeArgs(), 
+    def __init__(self, 
+            model_initialize_args: SOTAModelInitializeArgs = SOTAModelInitializeArgs(), 
             runs: int = 5, 
             train_args: SOTATrainArgs = SOTATrainArgs()):
         MultiRunTrainArgs.__init__(self, model_initialize_args, runs, train_args)
-
-class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
-
-    def __init__(self, data_root: str, model_name: str, 
-            train_run_args: SOTAMultiRunTrainArgs, 
-            dataset_name: str = "techniques"):
-        
-        AbstractFoldCrossValidation.__init__(self, data_root=data_root)
-        self._model_name = model_name
-        self._train_run_args = train_run_args
-        
-        self._dataset_name = dataset_name \
-            if dataset_name.endswith('_kf') \
-            else dataset_name + '_kf'
-
-    def __get_fold_dataset_path(self):
-        return join(self._data_root, "img", self._dataset_name)
-    
-    @override
-    def get_full_data_list(self):
-        path_to_all = join(self.__get_fold_dataset_path(), "all")
-        return glob(path_to_all + "/**/*.*", recursive=True)
-
-    @override
-    def build_fold(self, fold_num, train, val, test, full_data):
-        path_to_current = join(self.__get_fold_dataset_path(), "current_fold")
-        build_image_dirs(path_to_current)
-        
-        print(f"Building fold {fold_num} ...")
-        print(f"Fold {fold_num}: Train size = {len(train)}, Val size = {len(val)}, Test size = {len(test)}")
-
-        for filename_idx in train:
-            src = full_data[filename_idx]
-            dest = src.replace("/all/", "/current_fold/train/")
-            copy(src, dest)
-
-        for filename_idx in val:
-            src = full_data[filename_idx]
-            dest = src.replace("/all/", "/current_fold/val/")
-            copy(src, dest)
-        
-        for filename_idx in test:
-            src = full_data[filename_idx]
-            dest = src.replace("/all/", "/current_fold/test/")
-            copy(src, dest)
-    
-    @override
-    def init_fold_model(self, fold_num) -> ClassificationModel:
-        return SOTA(self._data_root, f"{self._model_name}-fold{fold_num}", dataset_name=join(self._dataset_name, "current_fold"))
-    
-    @override
-    def execute_train_runs(self, model):
-        model.execute_train_runs(args=self._train_run_args)
-
-    @override
-    def clear_fold(self):
-        rmtree(join(self.__get_fold_dataset_path(), "current_fold"))
-
-    @override        
-    def print_box_plot(self):
-        model_root = join(self._data_root, "runs", "sota")
-        fold_models = [model_name for model_name in listdir(model_root) if f"{self._model_name}-fold" in model_name]
-        metrics = []
-        for fold_model in fold_models:
-            sota = SOTA("data", fold_model, dataset_name=join(self._dataset_name, "current_fold"))
-            metrics.append(sota.get_test_metrics()["metrics/accuracy_top1"])
-
-        print(f"Average Top 1 accuracy: {average(metrics)}")
-        
-        plt.figure()
-        plt.boxplot(metrics)
-        plt.show()
 
 class SOTA(ClassificationModel):
 
@@ -191,7 +112,7 @@ class SOTA(ClassificationModel):
 
     @override
     def _fresh_model(self, args: SOTAModelInitializeArgs):
-        name = args.name
+        name = args.model
         if (name == ""):
             name = self.name + ".yaml"
 

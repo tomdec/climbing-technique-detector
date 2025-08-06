@@ -1,23 +1,19 @@
+from json import dump, load
 import tensorflow as tf
 from keras import Model
 from os.path import join
-from os import listdir
+from os import listdir, mkdir
 from keras._tf_keras.keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
 from os import makedirs
 from keras._tf_keras.keras.models import load_model
-from os.path import exists
 from typing import Optional, override
 from wandb import init, finish
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 
 from src.common.model import ClassificationModel, ModelInitializeArgs, TrainArgs, MultiRunTrainArgs
-from src.common.helpers import read_dataframe, make_file, get_next_train_run
+from src.common.helpers import get_current_test_run, get_next_test_run, read_dataframe, make_file, get_next_train_run
 from src.hpe_dnn.architecture import DnnArch, get_model_factory
 from src.hpe_dnn.helpers import df_to_dataset
-
-def evaluate(model: Model, data: tf.data.Dataset):
-    results = model.evaluate(data, return_dict=True)
-    print(results)
 
 class HpeDnnTrainArgs(TrainArgs):
 
@@ -130,7 +126,7 @@ class HpeDnn(ClassificationModel):
     
     @override
     def _get_best_model_path(self):
-        model_dir = self.__get_model_dir()
+        model_dir = self._get_model_dir()
         train_list = listdir(model_dir)
         model_path = join(model_dir, train_list[-1], "models")
         model_list = listdir(model_path)
@@ -151,12 +147,37 @@ class HpeDnn(ClassificationModel):
         print(f"loading the model '{self.name}' from '{best_model_path}'")
         self.model = load_model(best_model_path)
 
+    @override
+    def test_model(self):
+        model_path = self._get_model_dir()
+        test_run = get_next_test_run(model_path)
+        test_run_path = join(model_path, test_run)
+        mkdir(test_run_path)
+
+        test_data = self.__get_data_from_split(split="test", augment=False, balance=False)
+        results = self.model.evaluate(test_data, return_dict=True)
+
+        results_file = join(test_run_path, "metics.json")
+        with open(join(results_file), "w") as file:
+            dump(results, file)
+        
+        return results
+
+    def get_test_metrics(self):
+        model_path = self._get_model_dir()
+        test_run = get_current_test_run(model_path)
+        test_run_path = join(model_path, test_run)
+        
+        results_file = join(test_run_path, "metics.json")
+        with open(results_file, 'r') as file:
+            return load(file)
+
     def __get_next_train_run(self):
-        model_dir = self.__get_model_dir()
+        model_dir = self._get_model_dir()
         return get_next_train_run(model_dir)
 
     def __get_next_train_dir(self):
-        model_dir = self.__get_model_dir()
+        model_dir = self._get_model_dir()
         return join(model_dir, get_next_train_run(model_dir))
 
     def __get_checkpoint_dir(self):

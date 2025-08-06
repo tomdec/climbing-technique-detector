@@ -24,6 +24,7 @@ class ModelConstructorArgs:
         Name of the dataset to use.
         Default: "techniques", most general and complete dataset. 
         """
+        return self._dataset_name
 
     def __init__(self, name: str, data_root_path: str = "data",
             dataset_name: str = "techniques"):
@@ -121,8 +122,8 @@ class ClassificationModel:
     def execute_train_runs(self, args: MultiRunTrainArgs):
         for run in range(args.runs):
             print(f"starting run #{run}")
-            self.initialize_model(arch=args.model_initialize_args)
-            self.train_model(args=args.train_args)
+            self.initialize_model(args.model_initialize_args)
+            self.train_model(args.train_args)
 
     def test_model(self):
         raise_not_implemented_error(self.__class__.__name__, self.test_model.__name__)

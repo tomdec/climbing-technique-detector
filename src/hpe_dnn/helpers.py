@@ -1,10 +1,13 @@
 from keras import Model, utils
 import tensorflow as tf
 from numpy import nan
-from pandas import DataFrame
+from pandas import DataFrame, concat
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import LabelBinarizer
+from os import mkdir
+from os.path import join, exists
 
+from src.common.helpers import read_dataframe
 from src.hpe_dnn.balancing import balance_func_factory
 from src.hpe_dnn.augmentation import augment_keypoints
 
@@ -48,3 +51,17 @@ def df_to_dataset(dataframe: DataFrame,
     ds = ds.batch(batch_size)
     ds = ds.prefetch(batch_size)
     return ds
+
+def combine_dataset(data_root, dataset_name):
+    og_dataset_path = join(data_root, "df", dataset_name)
+    train = read_dataframe(join(og_dataset_path, "train.pkl"))
+    test = read_dataframe(join(og_dataset_path, "test.pkl"))
+    val = read_dataframe(join(og_dataset_path, "val.pkl"))
+
+    all = concat([train, test, val], ignore_index=True)
+
+    kf_dataset_path = join(data_root, "df", dataset_name + '_kf')
+    if not exists(kf_dataset_path):
+        mkdir(kf_dataset_path)
+    
+    all.to_pickle(join(kf_dataset_path, "all.pkl"))
