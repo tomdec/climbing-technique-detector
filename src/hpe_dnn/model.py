@@ -11,7 +11,7 @@ from wandb import init, finish
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 
 from src.common.model import ClassificationModel, ModelInitializeArgs, TrainArgs, MultiRunTrainArgs
-from src.common.helpers import get_current_test_run, get_next_test_run, read_dataframe, make_file, get_next_train_run
+from src.common.helpers import get_current_test_run, get_current_train_run, get_next_test_run, read_dataframe, make_file, get_next_train_run
 from src.hpe_dnn.architecture import DnnArch, get_model_factory
 from src.hpe_dnn.helpers import df_to_dataset
 
@@ -116,7 +116,7 @@ class HpeDnn(ClassificationModel):
 
         self.model.fit(train_ds, epochs=args.epochs, validation_data=val_ds, 
             callbacks=[cp_callback, tb_callback, csv_callback, WandbMetricsLogger(), 
-                WandbModelCheckpoint(join(checkpoint_dir, "wandb.keras"))])
+                WandbModelCheckpoint(join(log_dir, "wandb.keras"))])
         
         finish()
 
@@ -127,8 +127,8 @@ class HpeDnn(ClassificationModel):
     @override
     def _get_best_model_path(self):
         model_dir = self._get_model_dir()
-        train_list = listdir(model_dir)
-        model_path = join(model_dir, train_list[-1], "models")
+        train_run = get_current_train_run(model_dir)
+        model_path = join(model_dir, train_run, "models")
         model_list = listdir(model_path)
 
         return join(model_path, model_list[-1])

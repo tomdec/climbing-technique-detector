@@ -50,7 +50,7 @@ def __get_color_at_keypoint(image, keypoint):
     if (isnan(x) or isnan(y)):
         return [-1, -1, -1]
     
-    if (x < 0 or y < 0 or image.shape[1] < x or image.shape[0] < y):
+    if (x < 0 or y < 0 or image.shape[1] <= x or image.shape[0] <= y):
         return [-2, -2, -2]
 
     return image[int(y), int(x)]
