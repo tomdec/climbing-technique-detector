@@ -104,5 +104,5 @@ class AbstractFoldCrossValidation:
         self.print_box_plot()
 
     def test_folds(self):
-        #TODO: build folds and test each model without training
+        #TODO: build folds (only test split) and test each model without training
         pass
