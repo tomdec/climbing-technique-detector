@@ -9,11 +9,13 @@ from keras._tf_keras.keras.models import load_model
 from typing import Optional, override
 from wandb import init, finish
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
+from numpy import concatenate
 
 from src.common.model import ClassificationModel, ModelInitializeArgs, TrainArgs, MultiRunTrainArgs
 from src.common.helpers import get_current_test_run, get_current_train_run, get_next_test_run, read_dataframe, make_file, get_next_train_run
 from src.hpe_dnn.architecture import DnnArch, get_model_factory
 from src.hpe_dnn.helpers import df_to_dataset
+from src.common.plot import plot_confusion_matrix
 
 class HpeDnnTrainArgs(TrainArgs):
 
@@ -155,8 +157,12 @@ class HpeDnn(ClassificationModel):
         mkdir(test_run_path)
 
         test_data = self.__get_data_from_split(split="test", augment=False, balance=False)
-        results = self.model.evaluate(test_data, return_dict=True)
+        
+        predictions = self.model.predict(test_data)
+        labels = concatenate([y for _, y in test_data], axis=0)
+        plot_confusion_matrix(labels, predictions, join(test_run_path, "confusion_matrix.png"))
 
+        results = self.model.evaluate(test_data, return_dict=True)
         results_file = join(test_run_path, "metics.json")
         with open(join(results_file), "w") as file:
             dump(results, file)

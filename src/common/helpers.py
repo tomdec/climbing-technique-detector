@@ -34,7 +34,7 @@ def __get_next_run(root_path: str, run_type: str):
     return f"{run_type}{len(runs)+1}"
 
 def __get_current_run(root_path: str, run_type: str):
-    runs = get_runs(root_path, run_type)
+    runs = get_runs(root_path, run_type) 
     return runs[-1]
 
 def get_next_train_run(root_path: str):
