@@ -20,7 +20,7 @@ def get_split_limits(data_split_ratios):
     val_limit = normalized_split_ratios[0] + normalized_split_ratios[1]
     return train_limit, val_limit
 
-def __get_runs(root_path: str, run_type: str):
+def get_runs(root_path: str, run_type: str):
     return [dir for dir in listdir(root_path) if dir.startswith(run_type)]
 
 def __get_next_run(root_path: str, run_type: str):
@@ -30,11 +30,11 @@ def __get_next_run(root_path: str, run_type: str):
     if not exists(root_path):
         return run_type
     
-    runs = __get_runs(root_path, run_type)
+    runs = get_runs(root_path, run_type)
     return f"{run_type}{len(runs)+1}"
 
 def __get_current_run(root_path: str, run_type: str):
-    runs = __get_runs(root_path, run_type)
+    runs = get_runs(root_path, run_type)
     return runs[-1]
 
 def get_next_train_run(root_path: str):

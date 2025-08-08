@@ -1,7 +1,7 @@
 from typing import Any
 from os.path import exists
 
-from src.common.helpers import raise_not_implemented_error
+from src.common.helpers import get_runs, raise_not_implemented_error
 
 class ModelConstructorArgs:
 
@@ -112,8 +112,13 @@ class ClassificationModel:
     def _fresh_model(self, args: ModelInitializeArgs):
         raise_not_implemented_error(self.__class__.__name__, self._fresh_model.__name__)
 
+    def __has_trained(self) -> bool:
+        model_dir = self._get_model_dir()
+        train_runs = get_runs(model_dir, "train")
+        return exists(model_dir) and len(train_runs) > 0
+
     def initialize_model(self, args: ModelInitializeArgs):
-        if (exists(self._get_model_dir())):
+        if (self.__has_trained()):
             model_path = self._get_best_model_path()
             self._load_model(model_path)
         else:
