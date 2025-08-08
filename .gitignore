@@ -5,6 +5,7 @@ data/runs/**
 data/df/**
 data/wandb/**
 **.pt
+test/sota/data/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

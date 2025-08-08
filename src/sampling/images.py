@@ -6,9 +6,9 @@ from matplotlib.pyplot import subplots, subplots_adjust, Axes
 from numpy import mean
 
 from src.labels import Technique
-from src.common import get_filename, get_split_limits
+from src.common.helpers import get_filename, get_split_limits
 
-def __build_image_dirs(dataset_dir):
+def build_image_dirs(dataset_dir):
     
     if not exists(dataset_dir):
         makedirs(dataset_dir)
@@ -50,7 +50,7 @@ def __generate_image_dataset(video_path,
     '''
     Generate the 'maximum' amount of images from the segment video.
 
-    Algorithm: 
+    Algorithm:
         Each 10th frame from the video is sampled, starting with a random offset between [0, 9]
 
     Args:
@@ -162,7 +162,7 @@ def generate_image_dataset_from_samples(data_root,
         dataset_name += "_balanced"
     dataset_dir = join(data_root, "img", dataset_name)
     
-    __build_image_dirs(dataset_dir)
+    build_image_dirs(dataset_dir)
 
     for label in listdir(samples_root):
         label_path = join(samples_root, label)
