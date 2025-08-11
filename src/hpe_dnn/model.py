@@ -11,11 +11,26 @@ from wandb import init, finish
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 from numpy import concatenate
 
-from src.common.model import ClassificationModel, ModelInitializeArgs, TrainArgs, MultiRunTrainArgs
+from src.common.model import ClassificationModel, ModelConstructorArgs, ModelInitializeArgs, TrainArgs, MultiRunTrainArgs
 from src.common.helpers import get_current_test_run, get_current_train_run, get_next_test_run, read_dataframe, make_file, get_next_train_run
 from src.hpe_dnn.architecture import DnnArch, get_model_factory
 from src.hpe_dnn.helpers import df_to_dataset
 from src.common.plot import plot_confusion_matrix
+
+class HpeDnnConstructorArgs(ModelConstructorArgs):
+    
+    @override
+    @property
+    def model_arch(self) -> DnnArch:
+        """Enum value specifying the architecture of the neural network model."""
+        return self._model_arch
+    
+    def __init__(self, name: str, 
+            model_arch: DnnArch = DnnArch.ARCH1,
+            data_root_path: str = "data",
+            dataset_name: str = "techniques"):
+        ModelConstructorArgs.__init__(self, name, model_arch, data_root_path, dataset_name)
+
 
 class HpeDnnTrainArgs(TrainArgs):
 
@@ -33,12 +48,6 @@ class HpeDnnTrainArgs(TrainArgs):
         
 class HpeDnnModelInitializeArgs(ModelInitializeArgs):
 
-    @override
-    @property
-    def model(self) -> DnnArch:
-        """Enum value specifying the architecture of the neural network model."""
-        return self._model
-    
     @property
     def normalize(self) -> bool:
         """Normalize the numeric columns of the input data."""
@@ -49,10 +58,8 @@ class HpeDnnModelInitializeArgs(ModelInitializeArgs):
         """Dropout rate to use between each layer."""
         return self._dropout_rate
 
-    def __init__(self, model: DnnArch = DnnArch.ARCH1,
-            normalize: bool = True,
+    def __init__(self, normalize: bool = True,
             dropout_rate = 0.1):
-        self._model = model
         self._normalize = normalize
         self._dropout_rate = dropout_rate
     
@@ -67,6 +74,16 @@ class HpeDnn(ClassificationModel):
 
     model: Optional[Model] = None
     
+    @override
+    @property
+    def model_arch(self) -> DnnArch:
+        """Enum that is mapped to a factory function"""
+        return self._model_arch
+
+    @override
+    def __init__(self, args: HpeDnnConstructorArgs):
+        ClassificationModel.__init__(self, args)
+
     @override
     def execute_train_runs(self, args: HpeDnnMultiRunTrainArgs):
         ClassificationModel.execute_train_runs(self, args)
@@ -89,7 +106,7 @@ class HpeDnn(ClassificationModel):
         results_file = self.__get_results_file_path()
 
         config = {
-            'name': self.name,
+            'model_arch': self.model_arch,
             'dataset_name': self.dataset_name,
             #'optimizer': optimizer,
             #'lr0': lr0,
@@ -138,11 +155,11 @@ class HpeDnn(ClassificationModel):
 
     @override
     def _fresh_model(self, args: HpeDnnModelInitializeArgs):
-        print(f"loading a fresh model '{self.name}'")
+        print(f"loading a fresh model '{self.model_arch}'")
 
         train_ds = self.__get_data_from_split("train", augment=False, balance=False)
         debugging = False
-        model_func = get_model_factory(args.model)
+        model_func = get_model_factory(self.model_arch)
         self.model = model_func(train_ds, args.normalize, debugging, args.dropout_rate)
     
     @override

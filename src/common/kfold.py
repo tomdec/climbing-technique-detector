@@ -26,6 +26,7 @@ class AbstractFoldCrossValidation:
             if model_args.dataset_name.endswith('_kf') \
             else ModelConstructorArgs(
                 name=model_args.name,
+                model_arch=model_args.model_arch,
                 data_root_path=model_args.data_root_path,
                 dataset_name=model_args.dataset_name + '_kf')
 
@@ -41,6 +42,7 @@ class AbstractFoldCrossValidation:
     def __init_fold_model(self, fold_num) -> ClassificationModel:
         adapted_args = ModelConstructorArgs(
             name=f"{self._model_args.name}-fold{fold_num}",
+            model_arch=self._model_args.model_arch,
             data_root_path=self._model_args.data_root_path,
             dataset_name=join(self._model_args.dataset_name, "current_fold"))
         

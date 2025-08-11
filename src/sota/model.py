@@ -7,8 +7,25 @@ from wandb import finish, init
 from wandb.integration.ultralytics import add_wandb_callback
 from json import dump, load
 
-from src.common.model import ModelInitializeArgs, TrainArgs, MultiRunTrainArgs, ClassificationModel
+from src.common.model import ModelConstructorArgs, ModelInitializeArgs, TrainArgs, MultiRunTrainArgs, ClassificationModel
 from src.sota.balancing import WeightedTrainer
+
+class SOTAConstructorArgs(ModelConstructorArgs):
+    
+    @override
+    @property
+    def model_arch(self) -> str:
+        """Name of yolo model to use when initializing the model"""
+        return self._model_arch
+
+    def __init__(self, name: str, 
+            model_arch: str = "",
+            data_root_path: str = "data",
+            dataset_name: str = "techniques"):
+        
+        if (model_arch == ""):
+            model_arch = name + ".yaml"
+        ModelConstructorArgs.__init__(self, name, model_arch, data_root_path, dataset_name)
 
 class SOTATrainArgs(TrainArgs):
 
@@ -29,36 +46,30 @@ class SOTATrainArgs(TrainArgs):
         self._optimizer = optimizer
         self._lr0 = lr0
 
-class SOTAModelInitializeArgs(ModelInitializeArgs):
-
-    @override
-    @property
-    def model(self) -> str:
-        """Name of yolo model to use when initializing the model"""
-        return self._model
-    
-    def __init__(self, model: str = ""):
-        self._model = model
-    
 class SOTAMultiRunTrainArgs(MultiRunTrainArgs):
     
     def __init__(self, 
-            model_initialize_args: SOTAModelInitializeArgs = SOTAModelInitializeArgs(), 
-            runs: int = 5, 
+            runs: int = 5,
             train_args: SOTATrainArgs = SOTATrainArgs()):
-        MultiRunTrainArgs.__init__(self, model_initialize_args, runs, train_args)
+        MultiRunTrainArgs.__init__(self, ModelInitializeArgs(), runs, train_args)
 
 class SOTA(ClassificationModel):
 
     model: Optional[YOLO] = None
 
     @override
-    def execute_train_runs(self, args: SOTAMultiRunTrainArgs):
-        ClassificationModel.execute_train_runs(self, args)
+    @property
+    def model_arch(self) -> str:
+        """Name of yolo model to use when initializing the model"""
+        return self._model_arch
 
     @override
-    def initialize_model(self, args: SOTAModelInitializeArgs):
-        ClassificationModel.initialize_model(self, args)
+    def __init__(self, args: SOTAConstructorArgs):
+        ClassificationModel.__init__(self, args)
+
+    @override
+    def execute_train_runs(self, args: SOTAMultiRunTrainArgs):
+        ClassificationModel.execute_train_runs(self, args)
 
     @override
     def train_model(self, args: SOTATrainArgs):
@@ -71,7 +82,7 @@ class SOTA(ClassificationModel):
         project_path = self.__get_project_dir()
 
         config = {
-            'name': self.name,
+            'model_arch': self.model_arch,
             'dataset_name': self.dataset_name,
             'optimizer': args.optimizer,
             'lr0': args.lr0,
@@ -111,13 +122,9 @@ class SOTA(ClassificationModel):
         self.model = YOLO(best_weights_path)
 
     @override
-    def _fresh_model(self, args: SOTAModelInitializeArgs):
-        name = args.model
-        if (name == ""):
-            name = self.name + ".yaml"
-
-        print(f"loading a fresh model '{name}'")
-        self.model = YOLO(name)
+    def _fresh_model(self, _: ModelInitializeArgs):
+        print(f"loading a fresh model '{self.model_arch}'")
+        self.model = YOLO(self.model_arch)
     
     @override
     def test_model(self, write_to_wandb = True) -> DetMetrics:

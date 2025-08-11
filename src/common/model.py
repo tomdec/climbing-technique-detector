@@ -11,6 +11,11 @@ class ModelConstructorArgs:
         return self._name
 
     @property
+    def model_arch(self) -> Any:
+        """Key to determine the structure of the model when initializing."""
+        return self._model_arch
+    
+    @property
     def data_root_path(self) -> str:
         """
         Path to the `data` folder relative to the directory where to code is executed.
@@ -26,13 +31,16 @@ class ModelConstructorArgs:
         """
         return self._dataset_name
 
-    def __init__(self, name: str, data_root_path: str = "data",
+    def __init__(self, name: str, 
+            model_arch: Any,
+            data_root_path: str = "data",
             dataset_name: str = "techniques"):
         
         if (name == ""):
             raise Exception(f"name cannot be an empty string")
         
         self._name = name
+        self._model_arch = model_arch
         self._data_root_path = data_root_path
         self._dataset_name = dataset_name
 
@@ -65,13 +73,8 @@ class TrainArgs:
 
 class ModelInitializeArgs:
     
-    @property
-    def model(self) -> Any:
-        """Key to determine the structure of the model when initializing."""
-        return self._model
-    
-    def __init__(self, model: Any):
-        self._model = model
+    def __init__(self):
+        pass
 
 class MultiRunTrainArgs:
 
@@ -100,12 +103,19 @@ class MultiRunTrainArgs:
 class ClassificationModel:
     
     name: str
+
+    @property
+    def model_arch(self) -> Any:
+        """Architecture of the AI model"""
+        return self._model_arch
+
     data_root_path: str
     dataset_name: str
     
     def __init__(self, args: ModelConstructorArgs):
-        self.data_root_path = args.data_root_path
         self.name = args.name
+        self._model_arch = args.model_arch
+        self.data_root_path = args.data_root_path
         self.dataset_name = args.dataset_name
     
     def train_model(self, args: TrainArgs):
