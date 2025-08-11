@@ -47,10 +47,21 @@ class TrainArgs:
     def balanced(self) -> bool:
         """Indicates if the training data is balanced between labels"""
         return self._balanced
+
+    @property    
+    def additional_config(self) -> dict:
+        """Optional configuration to add to the config dictionary for weights and biases"""
+        return self._additional_config
     
-    def __init__(self, epochs=20, balanced=False):
+    @additional_config.setter
+    def additional_config(self, value: dict):
+        self._additional_config = value
+
+    def __init__(self, epochs=20, balanced=False, additional_config={}):
         self._epochs = epochs
         self._balanced = balanced
+        self._additional_config = additional_config
+
 
 class ModelInitializeArgs:
     

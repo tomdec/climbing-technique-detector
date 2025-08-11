@@ -4,6 +4,7 @@ from typing import Tuple, Type
 from numpy import ndarray, array, save, load
 from random import sample
 from os.path import join, exists
+from copy import deepcopy
 
 from src.common.helpers import raise_not_implemented_error
 from src.common.model import ClassificationModel, ModelConstructorArgs, MultiRunTrainArgs
@@ -95,7 +96,11 @@ class AbstractFoldCrossValidation:
             
             self.build_fold(fold_num, train, val, test, full_data)
             
-            model.execute_train_runs(self._train_run_args)
+            train_run_args = deepcopy(self._train_run_args)
+            train_run_args.train_args.additional_config = {
+                "fold": fold_num
+            }
+            model.execute_train_runs(train_run_args)
 
             model.test_model()
 

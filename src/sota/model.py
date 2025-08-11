@@ -22,9 +22,9 @@ class SOTATrainArgs(TrainArgs):
         """Initial learing rate for each training run"""
         return self._lr0
 
-    def __init__(self, epochs=20, balanced=False,
+    def __init__(self, epochs=20, balanced=False, additional_config={},
             optimizer: str = "auto", lr0: float = 0.01):
-        TrainArgs.__init__(self, epochs, balanced)
+        TrainArgs.__init__(self, epochs, balanced, additional_config)
 
         self._optimizer = optimizer
         self._lr0 = lr0
@@ -78,7 +78,7 @@ class SOTA(ClassificationModel):
             'balanced': args.balanced,
             'augmented': True,
             'run': self.__get_next_train_run()
-        }
+        } | args.additional_config
         init(project="detect-climbing-technique", job_type="train", group="sota", name=self.name, 
             config=config, dir=self.data_root_path)
         add_wandb_callback(self.model, enable_model_checkpointing=True)

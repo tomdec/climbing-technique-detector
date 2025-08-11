@@ -24,8 +24,8 @@ class HpeDnnTrainArgs(TrainArgs):
         """Indicates if the training data will be augmented"""
         return self._augment
     
-    def __init__(self, epochs=20, balanced=False, augment=False):
-        TrainArgs.__init__(self, epochs, balanced)
+    def __init__(self, epochs=20, balanced=False, additional_config={}, augment=False):
+        TrainArgs.__init__(self, epochs, balanced, additional_config)
         self._augment = augment
 
         if (balanced and not augment):
@@ -97,7 +97,8 @@ class HpeDnn(ClassificationModel):
             'balanced': args.balanced,
             'augmented': args.augment,
             'run': self.__get_next_train_run()
-        }
+        } | args.additional_config
+
         init(project="detect-climbing-technique", job_type="train", group="hpe_dnn", name=self.name, 
             config=config, dir=self.data_root_path)
 
