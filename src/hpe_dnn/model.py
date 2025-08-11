@@ -11,7 +11,7 @@ from wandb import init, finish
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 from numpy import concatenate
 
-from src.common.model import ClassificationModel, ModelConstructorArgs, ModelInitializeArgs, TrainArgs, MultiRunTrainArgs
+from src.common.model import ClassificationModel, ModelConstructorArgs, ModelInitializeArgs, TestArgs, TrainArgs, MultiRunTrainArgs
 from src.common.helpers import get_current_test_run, get_current_train_run, get_next_test_run, read_dataframe, make_file, get_next_train_run
 from src.hpe_dnn.architecture import DnnArch, get_model_factory
 from src.hpe_dnn.helpers import df_to_dataset
@@ -92,6 +92,27 @@ class HpeDnn(ClassificationModel):
     def initialize_model(self, args: HpeDnnModelInitializeArgs):
         ClassificationModel.initialize_model(self, args)
     
+    def __get_common_wandb_config(self) -> dict:
+        return {
+            'model_arch': self.model_arch,
+            'dataset_name': self.dataset_name
+        }
+    
+    def __get_train_wandb_config(self, args: HpeDnnTrainArgs) -> dict:
+        return self.__get_common_wandb_config() | {
+            'balanced': args.balanced,
+            'augmented': args.augment,
+            'run': self.__get_next_train_run(),
+            #'optimizer': optimizer,
+            #'lr0': lr0,
+        } | args.additional_config
+
+    def __get_test_wandb_config(self, args: TestArgs) -> dict:
+        return self.__get_common_wandb_config() | {
+            'balanced': False,
+            'augmented': False,
+        } | args.additional_config
+
     @override
     def train_model(self, args: HpeDnnTrainArgs):
 
@@ -105,17 +126,7 @@ class HpeDnn(ClassificationModel):
         log_dir = self.__get_tensorboard_log_dir()
         results_file = self.__get_results_file_path()
 
-        config = {
-            'model_arch': self.model_arch,
-            'dataset_name': self.dataset_name,
-            #'optimizer': optimizer,
-            #'lr0': lr0,
-            #'architecture': f"{arch}",
-            'balanced': args.balanced,
-            'augmented': args.augment,
-            'run': self.__get_next_train_run()
-        } | args.additional_config
-
+        config = self.__get_train_wandb_config(args)
         init(project="detect-climbing-technique", job_type="train", group="hpe_dnn", name=self.name, 
             config=config, dir=self.data_root_path)
 
@@ -168,7 +179,9 @@ class HpeDnn(ClassificationModel):
         self.model = load_model(best_model_path)
 
     @override
-    def test_model(self):
+    def test_model(self, args: TestArgs):
+        self._load_best_model()
+    
         model_path = self._get_model_dir()
         test_run = get_next_test_run(model_path)
         test_run_path = join(model_path, test_run)
@@ -180,7 +193,19 @@ class HpeDnn(ClassificationModel):
         labels = concatenate([y for _, y in test_data], axis=0)
         plot_confusion_matrix(labels, predictions, join(test_run_path, "confusion_matrix.png"))
 
-        results = self.model.evaluate(test_data, return_dict=True)
+        callbacks = []
+
+        if args.write_to_wandb:
+            config = self.__get_test_wandb_config(args)
+            init(project="detect-climbing-technique", job_type="test", group="hpe_dnn", name=self.name, 
+                config=config, dir=self.data_root_path)
+            callbacks.append(WandbMetricsLogger())
+
+        results = self.model.evaluate(test_data, return_dict=True, callbacks=callbacks)
+
+        if args.write_to_wandb: 
+            finish()
+
         results_file = join(test_run_path, "metics.json")
         with open(join(results_file), "w") as file:
             dump(results, file)

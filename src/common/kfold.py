@@ -7,9 +7,11 @@ from os.path import join, exists
 from copy import deepcopy
 
 from src.common.helpers import raise_not_implemented_error
-from src.common.model import ClassificationModel, ModelConstructorArgs, MultiRunTrainArgs
+from src.common.model import ClassificationModel, ModelConstructorArgs, MultiRunTrainArgs, TestArgs
 
 class AbstractFoldCrossValidation:
+
+    __N_SPLITS = 10
 
     _model_args: ModelConstructorArgs
     _train_run_args: MultiRunTrainArgs
@@ -18,9 +20,9 @@ class AbstractFoldCrossValidation:
     def __init__(self, model_args: ModelConstructorArgs,
             train_run_args: MultiRunTrainArgs,
             model_type: Type[ClassificationModel]):
-        n_splits = 10
-        self._kf = KFold(n_splits=n_splits, shuffle=True)
-        self._train_ratio = (n_splits - 2) / (n_splits - 1)
+        
+        self._kf = KFold(n_splits=self.__N_SPLITS, shuffle=True)
+        self._train_ratio = (self.__N_SPLITS - 2) / (self.__N_SPLITS - 1)
         
         self._model_args = model_args \
             if model_args.dataset_name.endswith('_kf') \
@@ -104,12 +106,36 @@ class AbstractFoldCrossValidation:
             }
             model.execute_train_runs(train_run_args)
 
-            model.test_model()
+            model.test_model(args=TestArgs(write_to_wandb=True, 
+                additional_config={
+                    "fold": fold_num
+                }))
 
             self.clear_fold()
 
         self.print_box_plot()
 
     def test_folds(self):
-        #TODO: build folds (only test split) and test each model without training
-        pass
+        full_data = self.get_full_data_list()
+
+        for i in range(self.__N_SPLITS):
+            fold_num = i + 1
+            
+            model = self.__init_fold_model(fold_num)
+            model_dir = model._get_model_dir()
+            
+            if self.__split_files_exist(model_dir):
+                (train, val, test) = self.__load_split(model_dir)
+            else:
+                raise Exception("split files should already exist when just testing the models")
+            
+            self.build_fold(fold_num, train, val, test, full_data)
+            
+            model.test_model(args=TestArgs(write_to_wandb=True, 
+                additional_config={
+                    "fold": fold_num
+                }))
+
+            self.clear_fold()
+
+        self.print_box_plot()

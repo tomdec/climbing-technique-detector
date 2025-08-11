@@ -7,7 +7,7 @@ from wandb import finish, init
 from wandb.integration.ultralytics import add_wandb_callback
 from json import dump, load
 
-from src.common.model import ModelConstructorArgs, ModelInitializeArgs, TrainArgs, MultiRunTrainArgs, ClassificationModel
+from src.common.model import ModelConstructorArgs, ModelInitializeArgs, TestArgs, TrainArgs, MultiRunTrainArgs, ClassificationModel
 from src.sota.balancing import WeightedTrainer
 
 class SOTAConstructorArgs(ModelConstructorArgs):
@@ -71,6 +71,27 @@ class SOTA(ClassificationModel):
     def execute_train_runs(self, args: SOTAMultiRunTrainArgs):
         ClassificationModel.execute_train_runs(self, args)
 
+    def __get_common_wandb_config(self) -> dict:
+        return {
+            'model_arch': self.model_arch,
+            'dataset_name': self.dataset_name
+        }
+    
+    def __get_train_wandb_config(self, args: SOTATrainArgs) -> dict:
+        return self.__get_common_wandb_config() | {
+            'augmented': True,
+            'balanced': args.balanced,
+            'optimizer': args.optimizer,
+            'lr0': args.lr0,
+            'run': self.__get_next_train_run()
+        } | args.additional_config
+
+    def __get_test_wandb_config(self, args: TrainArgs) -> dict:
+        return self.__get_common_wandb_config() | {
+            'balanced': False,
+            'augmented': False,
+        } | args.additional_config
+
     @override
     def train_model(self, args: SOTATrainArgs):
         if (self.model is None):
@@ -81,15 +102,7 @@ class SOTA(ClassificationModel):
         dataset_path = self.__get_dataset_dir()
         project_path = self.__get_project_dir()
 
-        config = {
-            'model_arch': self.model_arch,
-            'dataset_name': self.dataset_name,
-            'optimizer': args.optimizer,
-            'lr0': args.lr0,
-            'balanced': args.balanced,
-            'augmented': True,
-            'run': self.__get_next_train_run()
-        } | args.additional_config
+        config = self.__get_train_wandb_config(args)
         init(project="detect-climbing-technique", job_type="train", group="sota", name=self.name, 
             config=config, dir=self.data_root_path)
         add_wandb_callback(self.model, enable_model_checkpointing=True)
@@ -127,8 +140,8 @@ class SOTA(ClassificationModel):
         self.model = YOLO(self.model_arch)
     
     @override
-    def test_model(self, write_to_wandb = True) -> DetMetrics:
-        self.initialize_model()
+    def test_model(self, args: TestArgs) -> DetMetrics:
+        self._load_best_model()
         
         dataset_path = self.__get_dataset_dir()
         project_path = self.__get_project_dir()
@@ -137,28 +150,22 @@ class SOTA(ClassificationModel):
         rename(join(dataset_path, "test"), join(dataset_path, "val"))
         try:
             
-            if write_to_wandb:
-                config = {
-                    'name': self.name,
-                    'dataset_name': self.dataset_name,
-                    'balanced': False,
-                    'augmented': False,
-                    'run': 'test'
-                }
-                init(project="detect-climbing-technique", job_type="eval", group="sota", name=self.name, 
-                    config=config, dir=self.data_root_path)
+            if args.write_to_wandb:
+                config = self.__get_test_wandb_config(args)
+                init(project="detect-climbing-technique", job_type="eval", group="sota", 
+                    name=self.name, config=config, dir=self.data_root_path)
                 add_wandb_callback(self.model, enable_model_checkpointing=True)
             
             metrics = self.model.val(project=project_path, name="test")
+            
+            if args.write_to_wandb:
+                finish()
             
             saved_metrics = metrics.results_dict.copy()
             saved_metrics['speed'] = metrics.speed.copy()
             
             with open(join(project_path, "test", "metrics.json"), "w") as file:
                 dump(saved_metrics, file)
-
-            if write_to_wandb:
-                finish()
 
             return metrics
             

@@ -1,6 +1,8 @@
 from typing import Any
 from os.path import exists
 
+from cv2 import add
+
 from src.common.helpers import get_runs, raise_not_implemented_error
 
 class ModelConstructorArgs:
@@ -70,6 +72,23 @@ class TrainArgs:
         self._balanced = balanced
         self._additional_config = additional_config
 
+class TestArgs:
+
+    @property
+    def write_to_wandb(self) -> bool:
+        """Write test results to Weigths and Biases"""
+        return self._write_to_wandb
+    
+    @property    
+    def additional_config(self) -> dict:
+        """Optional configuration to add to the config dictionary for weights and biases"""
+        return self._additional_config
+    
+
+    def __init__(self, write_to_wandb = False, 
+            additional_config={}):
+        self._write_to_wandb = write_to_wandb
+        self._additional_config = additional_config
 
 class ModelInitializeArgs:
     
@@ -138,10 +157,13 @@ class ClassificationModel:
         train_runs = get_runs(model_dir, "train")
         return exists(model_dir) and len(train_runs) > 0
 
+    def _load_best_model(self):
+        model_path = self._get_best_model_path()
+        self._load_model(model_path)
+
     def initialize_model(self, args: ModelInitializeArgs):
         if (self.__has_trained()):
-            model_path = self._get_best_model_path()
-            self._load_model(model_path)
+            self._load_best_model()
         else:
             self._fresh_model(args)
 
@@ -151,6 +173,6 @@ class ClassificationModel:
             self.initialize_model(args.model_initialize_args)
             self.train_model(args.train_args)
 
-    def test_model(self):
+    def test_model(self, args: TestArgs):
         raise_not_implemented_error(self.__class__.__name__, self.test_model.__name__)
 
