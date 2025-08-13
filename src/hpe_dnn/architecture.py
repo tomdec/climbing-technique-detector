@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Mapping
 from typing import Callable
-from keras import Model, layers, losses, Input
+from keras import Model, layers, losses, metrics, optimizers, Input
 import tensorflow as tf
 
 class DnnArch(Enum):
@@ -109,11 +109,16 @@ def __arch1_factory(train: tf.data.Dataset,
 
     model = Model(input_dict, output)
 
-    model.compile(optimizer='adam', 
-        loss=losses.BinaryCrossentropy(), 
-        metrics=['accuracy'], 
-        run_eagerly=debugging)
+    # model.compile(optimizer='adam', 
+    #     loss=losses.BinaryCrossentropy(), 
+    #     metrics=['accuracy'], 
+    #     run_eagerly=debugging)
     
+    model.compile(optimizer=optimizers.Adam(),
+        loss=losses.CategoricalCrossentropy(), 
+        metrics=[metrics.CategoricalAccuracy()], 
+        run_eagerly=debugging)
+
     return model
 
 def __arch2_factory(train: tf.data.Dataset, 

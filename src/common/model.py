@@ -154,8 +154,11 @@ class ClassificationModel:
 
     def __has_trained(self) -> bool:
         model_dir = self._get_model_dir()
+        if not exists(model_dir):
+            return False
+        
         train_runs = get_runs(model_dir, "train")
-        return exists(model_dir) and len(train_runs) > 0
+        return len(train_runs) > 0
 
     def _load_best_model(self):
         model_path = self._get_best_model_path()

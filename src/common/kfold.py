@@ -41,7 +41,7 @@ class AbstractFoldCrossValidation:
     def build_fold(self, fold_num, train, val, test, full_data):
         raise_not_implemented_error(self.__class__.__name__, self.build_fold.__name__)
 
-    def __init_fold_model(self, fold_num) -> ClassificationModel:
+    def _init_fold_model(self, fold_num) -> ClassificationModel:
         adapted_args = ModelConstructorArgs(
             name=f"{self._model_args.name}-fold{fold_num}",
             model_arch=self._model_args.model_arch,
@@ -68,7 +68,7 @@ class AbstractFoldCrossValidation:
             exists(join(model_dir, "split", "val.npy")) and \
             exists(join(model_dir, "split", "test.npy"))
 
-    def __load_split(self, model_dir) -> Tuple[ndarray, ndarray, ndarray]:
+    def _load_split(self, model_dir) -> Tuple[ndarray, ndarray, ndarray]:
         return (
             load(join(model_dir, "split", "train.npy")),
             load(join(model_dir, "split", "val.npy")),
@@ -89,11 +89,11 @@ class AbstractFoldCrossValidation:
         for i, (train, test) in enumerate(self._kf.split(full_data)):
             fold_num = i + 1
             
-            model = self.__init_fold_model(fold_num)
+            model = self._init_fold_model(fold_num)
             model_dir = model._get_model_dir()
             
             if self.__split_files_exist(model_dir):
-                (train, val, test) = self.__load_split(model_dir)
+                (train, val, test) = self._load_split(model_dir)
             else:
                 (train, val, test) = self.__split_val(train, test)
                 self.__save_split(model_dir, (train, val, test))
@@ -121,11 +121,11 @@ class AbstractFoldCrossValidation:
         for i in range(self.__N_SPLITS):
             fold_num = i + 1
             
-            model = self.__init_fold_model(fold_num)
+            model = self._init_fold_model(fold_num)
             model_dir = model._get_model_dir()
             
             if self.__split_files_exist(model_dir):
-                (train, val, test) = self.__load_split(model_dir)
+                (train, val, test) = self._load_split(model_dir)
             else:
                 raise Exception("split files should already exist when just testing the models")
             

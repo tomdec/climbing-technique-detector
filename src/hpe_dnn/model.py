@@ -7,7 +7,7 @@ from keras._tf_keras.keras.callbacks import ModelCheckpoint, TensorBoard, CSVLog
 from os import makedirs
 from keras._tf_keras.keras.models import load_model
 from typing import Optional, override
-from wandb import init, finish
+from wandb import init, finish, log, Image
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 from numpy import concatenate
 
@@ -134,12 +134,12 @@ class HpeDnn(ClassificationModel):
         makedirs(log_dir)
         make_file(results_file)
         
-        checkpoint_path = join(checkpoint_dir, "epoch_{epoch:02d}__val_accuracy_{val_accuracy:.4f}.keras")
+        checkpoint_path = join(checkpoint_dir, "epoch_{epoch:02d}__val_accuracy_{val_categorical_accuracy:.4f}.keras")
         cp_callback = ModelCheckpoint(checkpoint_path, 
             save_best_only=True, 
             save_weights_only=False, 
             verbose=1,
-            monitor="val_accuracy")
+            monitor="val_categorical_accuracy")
         
         tb_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
 
@@ -193,18 +193,21 @@ class HpeDnn(ClassificationModel):
         labels = concatenate([y for _, y in test_data], axis=0)
         plot_confusion_matrix(labels, predictions, join(test_run_path, "confusion_matrix.png"))
 
+        wandb_run = None
         callbacks = []
 
         if args.write_to_wandb:
             config = self.__get_test_wandb_config(args)
-            init(project="detect-climbing-technique", job_type="test", group="hpe_dnn", name=self.name, 
+            wandb_run = init(project="detect-climbing-technique", job_type="test", group="hpe_dnn", name=self.name, 
                 config=config, dir=self.data_root_path)
             callbacks.append(WandbMetricsLogger())
 
         results = self.model.evaluate(test_data, return_dict=True, callbacks=callbacks)
 
-        if args.write_to_wandb: 
-            finish()
+        if wandb_run:
+            wandb_run.log(results)
+            wandb_run.log({'confusion_matrix': Image(join(test_run_path, "confusion_matrix.png"))})
+            wandb_run.finish()
 
         results_file = join(test_run_path, "metics.json")
         with open(join(results_file), "w") as file:
