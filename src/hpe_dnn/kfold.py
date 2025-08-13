@@ -59,9 +59,9 @@ class HpeDnnFoldCrossValidation(AbstractFoldCrossValidation):
                 data_root_path=self._model_args.data_root_path,
                 dataset_name=join(self._model_args.dataset_name, "current_fold")
             ))
-            metrics.append(model.get_test_metrics()["accuracy"])
+            metrics.append(model.get_test_metrics()["categorical_accuracy"])
 
-        print(f"Average Top 1 accuracy: {average(metrics)}")
+        print(f"Average Top 1 categorical accuracy: {average(metrics)}")
         
         plt.figure()
         plt.boxplot(metrics)

@@ -13,10 +13,7 @@ __TICKS = ["NONE", "FOOT_SWAP", "OUTSIDE_FLAG", "BACK_FLAG", "INSIDE_FLAG", "DRO
 def plot_confusion_matrix(labels: ndarray, predictions: ndarray,
         save_path: Optional[str] = None):
     
-    label_idx = argmax(labels, axis=1)
-    pred_idx = argmax(predictions, axis=1)
-    
-    cm = tf.math.confusion_matrix(labels=label_idx, predictions=pred_idx)
+    cm = tf.math.confusion_matrix(labels=labels, predictions=predictions, num_classes=len(__TICKS))
     cm = transpose(cm)
     df_cm = DataFrame(cm, index=__TICKS, columns=__TICKS)
     

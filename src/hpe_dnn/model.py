@@ -9,7 +9,7 @@ from keras._tf_keras.keras.models import load_model
 from typing import Optional, override
 from wandb import init, finish, log, Image
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
-from numpy import concatenate
+from numpy import concatenate, argmax
 
 from src.common.model import ClassificationModel, ModelConstructorArgs, ModelInitializeArgs, TestArgs, TrainArgs, MultiRunTrainArgs
 from src.common.helpers import get_current_test_run, get_current_train_run, get_next_test_run, read_dataframe, make_file, get_next_train_run
@@ -119,8 +119,8 @@ class HpeDnn(ClassificationModel):
         if self.model is None:
             raise Exception("Cannot train before model is initialized")
         
-        train_ds = self.__get_data_from_split("train", augment=args.augment, balance=args.balanced)
-        val_ds = self.__get_data_from_split("val", augment=False, balance=False)
+        train_ds = self.__get_data_from_split("train", augment=args.augment, balance=args.balanced, shuffle=True)
+        val_ds = self.__get_data_from_split("val", augment=False, balance=False, shuffle=False)
 
         checkpoint_dir = self.__get_checkpoint_dir()
         log_dir = self.__get_tensorboard_log_dir()
@@ -168,7 +168,7 @@ class HpeDnn(ClassificationModel):
     def _fresh_model(self, args: HpeDnnModelInitializeArgs):
         print(f"loading a fresh model '{self.model_arch}'")
 
-        train_ds = self.__get_data_from_split("train", augment=False, balance=False)
+        train_ds = self.__get_data_from_split("train", augment=False, balance=False, shuffle=False)
         debugging = False
         model_func = get_model_factory(self.model_arch)
         self.model = model_func(train_ds, args.normalize, debugging, args.dropout_rate)
@@ -187,10 +187,12 @@ class HpeDnn(ClassificationModel):
         test_run_path = join(model_path, test_run)
         mkdir(test_run_path)
 
-        test_data = self.__get_data_from_split(split="test", augment=False, balance=False)
+        test_data = self.__get_data_from_split(split="test", augment=False, balance=False, shuffle=False)
         
         predictions = self.model.predict(test_data)
         labels = concatenate([y for _, y in test_data], axis=0)
+        predictions = argmax(predictions, axis=1)
+        labels = argmax(labels, axis=1)
         plot_confusion_matrix(labels, predictions, join(test_run_path, "confusion_matrix.png"))
 
         wandb_run = None
@@ -247,6 +249,6 @@ class HpeDnn(ClassificationModel):
     def __get_dataset_dir(self):
         return join(self.data_root_path, "df", self.dataset_name)
 
-    def __get_data_from_split(self, split: str, augment, balance) -> tf.data.Dataset:
+    def __get_data_from_split(self, split: str, augment, balance, shuffle) -> tf.data.Dataset:
         df = read_dataframe(join(self.__get_dataset_dir(), f"{split}.pkl"))
-        return df_to_dataset(df, augment=augment, balance=balance)
+        return df_to_dataset(df, augment=augment, balance=balance, shuffle=shuffle)
