@@ -193,7 +193,13 @@ class HpeDnn(ClassificationModel):
         labels = concatenate([y for _, y in test_data], axis=0)
         predictions = argmax(predictions, axis=1)
         labels = argmax(labels, axis=1)
-        plot_confusion_matrix(labels, predictions, join(test_run_path, "confusion_matrix.png"))
+        
+        plot_confusion_matrix(labels, predictions, 
+            save_path=join(test_run_path, "confusion_matrix.png"),
+            normalized=False)
+        plot_confusion_matrix(labels, predictions, 
+            save_path=join(test_run_path, "confusion_matrix_normalized.png"),
+            normalized=True)
 
         wandb_run = None
         callbacks = []
@@ -208,7 +214,10 @@ class HpeDnn(ClassificationModel):
 
         if wandb_run:
             wandb_run.log(results)
-            wandb_run.log({'confusion_matrix': Image(join(test_run_path, "confusion_matrix.png"))})
+            wandb_run.log({
+                'confusion_matrix': Image(join(test_run_path, "confusion_matrix.png")),
+                'confusion_matrix_normalized': Image(join(test_run_path, "confusion_matrix_normalized.png")),
+            })
             wandb_run.finish()
 
         results_file = join(test_run_path, "metics.json")
