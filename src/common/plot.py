@@ -30,3 +30,10 @@ def plot_confusion_matrix(labels: ndarray, predictions: ndarray,
         plt.savefig(save_path, bbox_inches="tight")
     else:
         plt.show()
+
+def map_to_ticks_idx(path: str):
+    for idx, label in enumerate(__TICKS):
+        if path.__contains__(f"/{label}/"):
+            return idx
+        
+    raise Exception(f"did not find label in path: {path}")

@@ -1,13 +1,17 @@
 from ultralytics import YOLO
+from ultralytics.engine.results import Results
 from ultralytics.utils.metrics import DetMetrics
-from os.path import join, exists
-from os import listdir, rename
+from os.path import join
+from os import listdir, rename, remove
 from typing import Optional, override
-from wandb import finish, init
+from wandb import finish, init, Image
 from wandb.integration.ultralytics import add_wandb_callback
 from json import dump, load
+from glob import glob
 
 from src.common.model import ModelConstructorArgs, ModelInitializeArgs, TestArgs, TrainArgs, MultiRunTrainArgs, ClassificationModel
+from src.common.plot import map_to_ticks_idx, plot_confusion_matrix
+from src.common.helpers import get_next_train_run, get_current_test_run
 from src.sota.balancing import WeightedTrainer
 
 class SOTAConstructorArgs(ModelConstructorArgs):
@@ -125,7 +129,7 @@ class SOTA(ClassificationModel):
 
     @override
     def _get_best_model_path(self):
-        model_dir = self.__get_model_dir()
+        model_dir = self._get_model_dir()
         train_list = [dir for dir in listdir(model_dir) if "train" in dir]
         return join(model_dir, train_list[-1], "weights", "best.pt")
 
@@ -145,46 +149,73 @@ class SOTA(ClassificationModel):
         
         dataset_path = self.__get_dataset_dir()
         project_path = self.__get_project_dir()
+        
+        if args.write_to_wandb:
+            config = self.__get_test_wandb_config(args)
+            wandb_run = init(project="detect-climbing-technique", job_type="eval", group="sota", 
+                name=self.name, config=config, dir=self.data_root_path)
+            add_wandb_callback(self.model, enable_model_checkpointing=True)
 
+        # Calculate metrics
         rename(join(dataset_path, "val"), join(dataset_path, "val_temp"))
         rename(join(dataset_path, "test"), join(dataset_path, "val"))
         try:
-            
-            if args.write_to_wandb:
-                config = self.__get_test_wandb_config(args)
-                init(project="detect-climbing-technique", job_type="eval", group="sota", 
-                    name=self.name, config=config, dir=self.data_root_path)
-                add_wandb_callback(self.model, enable_model_checkpointing=True)
-            
-            metrics = self.model.val(project=project_path, name="test")
-            
-            if args.write_to_wandb:
-                finish()
-            
+        
+            metrics = self.model.val(
+                data=dataset_path, 
+                project=project_path,
+                name="test")
+        
             saved_metrics = metrics.results_dict.copy()
             saved_metrics['speed'] = metrics.speed.copy()
             
             with open(join(project_path, "test", "metrics.json"), "w") as file:
                 dump(saved_metrics, file)
-
-            return metrics
-            
+    
         except Exception as ex:
             print(f"stopped with error: {ex.message}")
+            raise ex
         finally:
             rename(join(dataset_path, "val"), join(dataset_path, "test"))
             rename(join(dataset_path, "val_temp"), join(dataset_path, "val"))
-    
+
+        # Override confusion matrices
+        image_paths = glob(join(dataset_path, "test") + "/**/*.*", recursive=True)
+        labels = [map_to_ticks_idx(image_path) for image_path in image_paths]
+        y_pred = self.model.predict(image_paths)
+        predictions = [self.__map_prediction_to_tick_idx(prediction) for prediction in y_pred]
+
+        test_run_path = self.__get_current_test_run_path()        
+        plot_confusion_matrix(labels, predictions, 
+            save_path=join(test_run_path, "confusion_matrix.png"),
+            normalized=False)
+        plot_confusion_matrix(labels, predictions, 
+            save_path=join(test_run_path, "confusion_matrix_normalized.png"),
+            normalized=True)
+
+        if args.write_to_wandb:
+            wandb_run.log({
+                'confusion_matrix': Image(join(test_run_path, "confusion_matrix.png")),
+                'confusion_matrix_normalized': Image(join(test_run_path, "confusion_matrix_normalized.png")),
+            })
+            wandb_run.finish()
+        
+        return metrics
+                
+    def __map_prediction_to_tick_idx(self, prediction: Results):
+        map_to_enum_order = [3, 6, 5, 1, 4, 0, 2]
+        return map_to_enum_order[prediction.probs.top1]
+
     def __get_dataset_dir(self):
         return join(self.data_root_path, "img", self.dataset_name)
 
     def __get_next_train_run(self):
-        model_dir = self.__get_model_dir()
-        if not exists(model_dir):
-            return "train1"
-        
-        train_runs = [dir for dir in listdir(model_dir) if "train" in dir]
-        return f"train{len(train_runs)+1}"
+        model_dir = self._get_model_dir()
+        return get_next_train_run(model_dir)
+
+    def __get_current_test_run_path(self):
+        model_dir = self._get_model_dir()
+        return join(model_dir, get_current_test_run(model_dir))
 
     def __get_project_dir(self):
         return join(self.data_root_path, "runs", "sota", self.name)

@@ -7,7 +7,7 @@ from keras._tf_keras.keras.callbacks import ModelCheckpoint, TensorBoard, CSVLog
 from os import makedirs
 from keras._tf_keras.keras.models import load_model
 from typing import Optional, override
-from wandb import init, finish, log, Image
+from wandb import init, finish, Image
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 from numpy import concatenate, argmax
 
