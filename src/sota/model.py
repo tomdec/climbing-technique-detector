@@ -160,7 +160,6 @@ class SOTA(ClassificationModel):
         rename(join(dataset_path, "val"), join(dataset_path, "val_temp"))
         rename(join(dataset_path, "test"), join(dataset_path, "val"))
         try:
-        
             metrics = self.model.val(
                 data=dataset_path, 
                 project=project_path,
@@ -172,6 +171,9 @@ class SOTA(ClassificationModel):
             with open(join(project_path, "test", "metrics.json"), "w") as file:
                 dump(saved_metrics, file)
     
+            if args.write_to_wandb:
+                wandb_run.log(saved_metrics)
+
         except Exception as ex:
             print(f"stopped with error: {ex.message}")
             raise ex

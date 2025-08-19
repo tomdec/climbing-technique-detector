@@ -6,7 +6,7 @@ from shutil import rmtree, copy
 from numpy import average
 import matplotlib.pyplot as plt
 
-from common.model import ModelConstructorArgs
+from src.common.model import ModelConstructorArgs
 from src.sampling.images import build_image_dirs
 from src.common.kfold import AbstractFoldCrossValidation
 from src.sota.model import SOTA, SOTAConstructorArgs, SOTAMultiRunTrainArgs
@@ -54,15 +54,15 @@ class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
 
     @override        
     def print_box_plot(self):
-        model_root = join(self._data_root, "runs", "sota")
-        fold_models = [model_name for model_name in listdir(model_root) if f"{self._model_name}-fold" in model_name]
+        model_root = join(self._model_args.data_root_path, "runs", "sota")
+        fold_models = [model_name for model_name in listdir(model_root) if f"{self._model_args.name}-fold" in model_name]
         metrics = []
         for fold_model in fold_models:
             sota = SOTA(args=SOTAConstructorArgs(
                 name=fold_model,
                 model_arch=self._model_args.model_arch,
                 data_root_path=self._model_args.data_root_path,
-                dataset_name=join(self._dataset_name, "current_fold")
+                dataset_name=join(self._model_args.dataset_name, "current_fold")
             ))
             metrics.append(sota.get_test_metrics()["metrics/accuracy_top1"])
 
