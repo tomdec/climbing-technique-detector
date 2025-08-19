@@ -13,6 +13,7 @@ python3 -m venv ./.venv
 ```
 
 Activate the virtual environment by running:
+
 On Windows:
 ```
 .venv\Scripts\Activate.ps1
@@ -73,19 +74,62 @@ Python files in the root folder are meant to be run as scripts from the command 
 python <file-name>.py
 ```
 
+### notebook.ipynb
+Jupyter notebook mean as experimentation tool to build/debug/test source code.
+Also contains code for training the models with all the used configurations.
+
 ## /data
 Contains all data files required in this project.
 Label files will be included source control to have back-ups of them, video files and images won't since they are too large and not mine
-to make publically available.
+to make publicly available.
+
+### /video
+Folder that contains the full, original, videos that are used as dataset for this project. 
+
+### /labels
+Labels for the video files in `/data/videos`. They should have the exact same names as the video files, but have the `.csv` extension.
+
+### /samples
+### /img
+### /df
+### /runs
 
 ## /src
 Contains the source code required in the project.
-
-### /src/notebook.ipynb
-Jupyter notebook mean as experimentation tool to build/debug/test source code.
 
 ## /test
 Contains tests for the source code, run by 
 ```
 pytest
 ```
+
+# Usage
+
+## 1. download videos
+By running
+```bash
+python build-database.py
+```
+the videos used as data source will be downloaded and saved in the `/data/videos` folder.
+These are just the public video's we collected from the internet, your own videos can also be added by pasting them inside this directory as well. 
+
+## 2. labelling videos
+By running
+```bash
+python play-video.py <n>
+```
+the n'th video in the `/data/videos` directory will be played with the current frame number also displayed. 
+Using the arrow keys you can walk through the video to find the relevant segment faster and more accurately.
+While the video is playing, the arrows will jump 1 second in their respective direction.
+While paused the video will jump only a single frame when pressing an arrow key.
+Press `q` the quit the player, closing it with the mouse will just reopen it on the next frame.
+
+Manually create a `.csv` file in the `/data/labels` directory with the same file name as the video your labelling.
+These csv files should contain 3 columns:
+Start Frame (inclusive) | End Frame (exclusive) | label index
+:---|:---:|---:
+271|419|1
+
+This would label the segment from frame 271 up to 419 as label 1.
+
+All gaps between the end frame and the start frame from the next line are segments labelled as label 0 (INVALID), indicating that part of the video cannot be used to train or test the models.
