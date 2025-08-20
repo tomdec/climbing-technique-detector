@@ -161,6 +161,34 @@ This would label the segment from frame 271 up to 419 as label 1.
 All gaps between the end frame and the start frame from the next line are segments labelled as label 0 (INVALID), indicating that part of the video cannot be used to train or test the models.
 
 ## 3. Extract labelled samples from videos
+When all videos in `/data/videos` are labelled by `.csv` files in the `/data/labels` directory, the samples can be generated.
+By running 
+```bash
+python generate-sample-dataset.py
+```
+Each labelled part of the videos will be copied and pasted to the `/data/samples` directory.
+Within this directory, a folder will be made for each label according to their name in the enum [Technique](/src/labels.py), except `INVALID`.
+Each sample will be named according to the pattern:
+```python
+filename = f"{video_file_name}__{start_frame}.mp4"
+```
+
+## 4. Building image dataset
+When training models that use single images (or data from single images) as input, the image dataset will need to be created.
+Do this by running: 
+```bash
+python generate-image-dataset.py
+```
+This script will walk through each video in `/data/samples` for each label and extract a set of images to build this image dataset.
+How these images are sampled is explained in the doc string of the [this function](src/sampling/images.py#46).
+All the sampled images will be divided in in either the train, validation or test dataset, this will be done according to a 70/15/15 split.
+
+At this stage, the dataset name `techniques` will be added in the file system structure, so the path for an image in train set will be found at:
+```python
+f"/data/img/techniques/train/{label_name}/{sample_name}__{frame_num}.png"
+```
+
+## 3. Extract labelled samples from videos
 By running 
 ```bash
 python generate-sample-dataset.py
