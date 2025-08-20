@@ -152,14 +152,11 @@ def __generate_balanced_image_dataset(video_path,
     sample_video.release()
 
 def generate_image_dataset_from_samples(data_root,
-        data_split = (0.7, 0.15, 0.15),
-        balanced = False):
+        data_split = (0.7, 0.15, 0.15)):
     
     samples_root = join(data_root, "samples")
 
     dataset_name = "techniques"
-    if (balanced):
-        dataset_name += "_balanced"
     dataset_dir = join(data_root, "img", dataset_name)
     
     build_image_dirs(dataset_dir)
@@ -168,12 +165,7 @@ def generate_image_dataset_from_samples(data_root,
         label_path = join(samples_root, label)
         for video in listdir(label_path):
             video_path = join(label_path, video)
-            if (balanced and label == "NONE"):
-                video_usage_rate = 50/265
-                frame_usage_rate = 155/146
-                __generate_balanced_image_dataset(video_path, dataset_dir, label, data_split, video_usage_rate * frame_usage_rate)
-            else:
-                __generate_image_dataset(video_path, dataset_dir, label, data_split)
+            __generate_image_dataset(video_path, dataset_dir, label, data_split)
 
 def plot_frame_count_distributions(samples_root_dir: str):
     frames_dict = {}

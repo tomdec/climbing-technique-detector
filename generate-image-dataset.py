@@ -7,8 +7,5 @@ if __name__ == '__main__':
     
     arguments = argv[1:]
 
-    balanced = "-b" in arguments
-    if balanced:
-        print("Generating balanced dataset")
-
-    generate_image_dataset_from_samples(__data_root, (0.7, 0.15, 0.15), balanced)
+    generate_image_dataset_from_samples(__data_root, 
+        data_split=(0.7, 0.15, 0.15))

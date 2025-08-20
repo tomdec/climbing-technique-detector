@@ -3,9 +3,9 @@ from os import makedirs, listdir
 from cv2 import VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_POS_FRAMES, VideoWriter_fourcc, VideoWriter
 
 from src.labels import get_labels_as_dataframe, Technique
-from src.helpers import get_filename
+from src.common.helpers import get_filename
 
-def build_segment_dirs(rootpath):
+def build_sample_dirs(rootpath):
     samples_dir = join(rootpath, "samples")
     if not exists(samples_dir):
         makedirs(samples_dir)
@@ -18,8 +18,8 @@ def build_segment_dirs(rootpath):
             makedirs(samples_label_path)
 
 def generate_from_labels(video_path, 
-                     path_to_samples,
-                     run_build_sample_dirs = True):
+        path_to_samples,
+        run_build_sample_dirs = True):
     original_video = VideoCapture(video_path)
     try: 
         if not original_video.isOpened():
@@ -36,7 +36,7 @@ def generate_from_labels(video_path,
         labels = get_labels_as_dataframe(label_path)
 
         if run_build_sample_dirs:
-            build_segment_dirs(path_to_samples)
+            build_sample_dirs(path_to_samples)
         
         for _, row in labels.iterrows():
             start = row["start"]
@@ -71,7 +71,7 @@ def generate_from_labels(video_path,
 def generate_all_segments(data_root):
     video_root = join(data_root, "videos")
 
-    build_segment_dirs(data_root)
+    build_sample_dirs(data_root)
 
     videos = listdir(video_root)
     for video in videos:
