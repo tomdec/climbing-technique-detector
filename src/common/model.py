@@ -1,6 +1,8 @@
 from typing import Any
 from os.path import exists
 
+from cv2 import add
+
 from src.common.helpers import get_runs, raise_not_implemented_error
 
 class ModelConstructorArgs:
@@ -10,6 +12,11 @@ class ModelConstructorArgs:
         """Name of the model. Will be used to store results under the `data/runs` folder."""
         return self._name
 
+    @property
+    def model_arch(self) -> Any:
+        """Key to determine the structure of the model when initializing."""
+        return self._model_arch
+    
     @property
     def data_root_path(self) -> str:
         """
@@ -26,13 +33,16 @@ class ModelConstructorArgs:
         """
         return self._dataset_name
 
-    def __init__(self, name: str, data_root_path: str = "data",
+    def __init__(self, name: str, 
+            model_arch: Any,
+            data_root_path: str = "data",
             dataset_name: str = "techniques"):
         
         if (name == ""):
             raise Exception(f"name cannot be an empty string")
         
         self._name = name
+        self._model_arch = model_arch
         self._data_root_path = data_root_path
         self._dataset_name = dataset_name
 
@@ -47,20 +57,43 @@ class TrainArgs:
     def balanced(self) -> bool:
         """Indicates if the training data is balanced between labels"""
         return self._balanced
+
+    @property    
+    def additional_config(self) -> dict:
+        """Optional configuration to add to the config dictionary for weights and biases"""
+        return self._additional_config
     
-    def __init__(self, epochs=20, balanced=False):
+    @additional_config.setter
+    def additional_config(self, value: dict):
+        self._additional_config = value
+
+    def __init__(self, epochs=20, balanced=False, additional_config={}):
         self._epochs = epochs
         self._balanced = balanced
+        self._additional_config = additional_config
+
+class TestArgs:
+
+    @property
+    def write_to_wandb(self) -> bool:
+        """Write test results to Weigths and Biases"""
+        return self._write_to_wandb
+    
+    @property    
+    def additional_config(self) -> dict:
+        """Optional configuration to add to the config dictionary for weights and biases"""
+        return self._additional_config
+    
+
+    def __init__(self, write_to_wandb = False, 
+            additional_config={}):
+        self._write_to_wandb = write_to_wandb
+        self._additional_config = additional_config
 
 class ModelInitializeArgs:
     
-    @property
-    def model(self) -> Any:
-        """Key to determine the structure of the model when initializing."""
-        return self._model
-    
-    def __init__(self, model: Any):
-        self._model = model
+    def __init__(self):
+        pass
 
 class MultiRunTrainArgs:
 
@@ -89,12 +122,19 @@ class MultiRunTrainArgs:
 class ClassificationModel:
     
     name: str
+
+    @property
+    def model_arch(self) -> Any:
+        """Architecture of the AI model"""
+        return self._model_arch
+
     data_root_path: str
     dataset_name: str
     
     def __init__(self, args: ModelConstructorArgs):
-        self.data_root_path = args.data_root_path
         self.name = args.name
+        self._model_arch = args.model_arch
+        self.data_root_path = args.data_root_path
         self.dataset_name = args.dataset_name
     
     def train_model(self, args: TrainArgs):
@@ -114,13 +154,19 @@ class ClassificationModel:
 
     def __has_trained(self) -> bool:
         model_dir = self._get_model_dir()
+        if not exists(model_dir):
+            return False
+        
         train_runs = get_runs(model_dir, "train")
-        return exists(model_dir) and len(train_runs) > 0
+        return len(train_runs) > 0
+
+    def _load_best_model(self):
+        model_path = self._get_best_model_path()
+        self._load_model(model_path)
 
     def initialize_model(self, args: ModelInitializeArgs):
         if (self.__has_trained()):
-            model_path = self._get_best_model_path()
-            self._load_model(model_path)
+            self._load_best_model()
         else:
             self._fresh_model(args)
 
@@ -130,6 +176,6 @@ class ClassificationModel:
             self.initialize_model(args.model_initialize_args)
             self.train_model(args.train_args)
 
-    def test_model(self):
+    def test_model(self, args: TestArgs):
         raise_not_implemented_error(self.__class__.__name__, self.test_model.__name__)
 

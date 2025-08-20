@@ -7,13 +7,30 @@ from keras._tf_keras.keras.callbacks import ModelCheckpoint, TensorBoard, CSVLog
 from os import makedirs
 from keras._tf_keras.keras.models import load_model
 from typing import Optional, override
-from wandb import init, finish
+from wandb import init, finish, Image
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
+from numpy import concatenate, argmax
 
-from src.common.model import ClassificationModel, ModelInitializeArgs, TrainArgs, MultiRunTrainArgs
+from src.common.model import ClassificationModel, ModelConstructorArgs, ModelInitializeArgs, TestArgs, TrainArgs, MultiRunTrainArgs
 from src.common.helpers import get_current_test_run, get_current_train_run, get_next_test_run, read_dataframe, make_file, get_next_train_run
 from src.hpe_dnn.architecture import DnnArch, get_model_factory
 from src.hpe_dnn.helpers import df_to_dataset
+from src.common.plot import plot_confusion_matrix
+
+class HpeDnnConstructorArgs(ModelConstructorArgs):
+    
+    @override
+    @property
+    def model_arch(self) -> DnnArch:
+        """Enum value specifying the architecture of the neural network model."""
+        return self._model_arch
+    
+    def __init__(self, name: str, 
+            model_arch: DnnArch = DnnArch.ARCH1,
+            data_root_path: str = "data",
+            dataset_name: str = "techniques"):
+        ModelConstructorArgs.__init__(self, name, model_arch, data_root_path, dataset_name)
+
 
 class HpeDnnTrainArgs(TrainArgs):
 
@@ -22,8 +39,8 @@ class HpeDnnTrainArgs(TrainArgs):
         """Indicates if the training data will be augmented"""
         return self._augment
     
-    def __init__(self, epochs=20, balanced=False, augment=False):
-        TrainArgs.__init__(self, epochs, balanced)
+    def __init__(self, epochs=20, balanced=False, additional_config={}, augment=False):
+        TrainArgs.__init__(self, epochs, balanced, additional_config)
         self._augment = augment
 
         if (balanced and not augment):
@@ -31,12 +48,6 @@ class HpeDnnTrainArgs(TrainArgs):
         
 class HpeDnnModelInitializeArgs(ModelInitializeArgs):
 
-    @override
-    @property
-    def model(self) -> DnnArch:
-        """Enum value specifying the architecture of the neural network model."""
-        return self._model
-    
     @property
     def normalize(self) -> bool:
         """Normalize the numeric columns of the input data."""
@@ -47,10 +58,8 @@ class HpeDnnModelInitializeArgs(ModelInitializeArgs):
         """Dropout rate to use between each layer."""
         return self._dropout_rate
 
-    def __init__(self, model: DnnArch = DnnArch.ARCH1,
-            normalize: bool = True,
+    def __init__(self, normalize: bool = True,
             dropout_rate = 0.1):
-        self._model = model
         self._normalize = normalize
         self._dropout_rate = dropout_rate
     
@@ -66,6 +75,16 @@ class HpeDnn(ClassificationModel):
     model: Optional[Model] = None
     
     @override
+    @property
+    def model_arch(self) -> DnnArch:
+        """Enum that is mapped to a factory function"""
+        return self._model_arch
+
+    @override
+    def __init__(self, args: HpeDnnConstructorArgs):
+        ClassificationModel.__init__(self, args)
+
+    @override
     def execute_train_runs(self, args: HpeDnnMultiRunTrainArgs):
         ClassificationModel.execute_train_runs(self, args)
 
@@ -73,29 +92,41 @@ class HpeDnn(ClassificationModel):
     def initialize_model(self, args: HpeDnnModelInitializeArgs):
         ClassificationModel.initialize_model(self, args)
     
+    def __get_common_wandb_config(self) -> dict:
+        return {
+            'model_arch': self.model_arch,
+            'dataset_name': self.dataset_name
+        }
+    
+    def __get_train_wandb_config(self, args: HpeDnnTrainArgs) -> dict:
+        return self.__get_common_wandb_config() | {
+            'balanced': args.balanced,
+            'augmented': args.augment,
+            'run': self.__get_next_train_run(),
+            #'optimizer': optimizer,
+            #'lr0': lr0,
+        } | args.additional_config
+
+    def __get_test_wandb_config(self, args: TestArgs) -> dict:
+        return self.__get_common_wandb_config() | {
+            'balanced': False,
+            'augmented': False,
+        } | args.additional_config
+
     @override
     def train_model(self, args: HpeDnnTrainArgs):
 
         if self.model is None:
             raise Exception("Cannot train before model is initialized")
         
-        train_ds = self.__get_data_from_split("train", augment=args.augment, balance=args.balanced)
-        val_ds = self.__get_data_from_split("val", augment=False, balance=False)
+        train_ds = self.__get_data_from_split("train", augment=args.augment, balance=args.balanced, shuffle=True)
+        val_ds = self.__get_data_from_split("val", augment=False, balance=False, shuffle=False)
 
         checkpoint_dir = self.__get_checkpoint_dir()
         log_dir = self.__get_tensorboard_log_dir()
         results_file = self.__get_results_file_path()
 
-        config = {
-            'name': self.name,
-            'dataset_name': self.dataset_name,
-            #'optimizer': optimizer,
-            #'lr0': lr0,
-            #'architecture': f"{arch}",
-            'balanced': args.balanced,
-            'augmented': args.augment,
-            'run': self.__get_next_train_run()
-        }
+        config = self.__get_train_wandb_config(args)
         init(project="detect-climbing-technique", job_type="train", group="hpe_dnn", name=self.name, 
             config=config, dir=self.data_root_path)
 
@@ -103,12 +134,12 @@ class HpeDnn(ClassificationModel):
         makedirs(log_dir)
         make_file(results_file)
         
-        checkpoint_path = join(checkpoint_dir, "epoch_{epoch:02d}__val_accuracy_{val_accuracy:.4f}.keras")
+        checkpoint_path = join(checkpoint_dir, "epoch_{epoch:02d}__val_accuracy_{val_categorical_accuracy:.4f}.keras")
         cp_callback = ModelCheckpoint(checkpoint_path, 
             save_best_only=True, 
             save_weights_only=False, 
             verbose=1,
-            monitor="val_accuracy")
+            monitor="val_categorical_accuracy")
         
         tb_callback = TensorBoard(log_dir=log_dir, histogram_freq=1)
 
@@ -135,11 +166,11 @@ class HpeDnn(ClassificationModel):
 
     @override
     def _fresh_model(self, args: HpeDnnModelInitializeArgs):
-        print(f"loading a fresh model '{self.name}'")
+        print(f"loading a fresh model '{self.model_arch}'")
 
-        train_ds = self.__get_data_from_split("train", augment=False, balance=False)
+        train_ds = self.__get_data_from_split("train", augment=False, balance=False, shuffle=False)
         debugging = False
-        model_func = get_model_factory(args.model)
+        model_func = get_model_factory(self.model_arch)
         self.model = model_func(train_ds, args.normalize, debugging, args.dropout_rate)
     
     @override
@@ -148,14 +179,46 @@ class HpeDnn(ClassificationModel):
         self.model = load_model(best_model_path)
 
     @override
-    def test_model(self):
+    def test_model(self, args: TestArgs):
+        self._load_best_model()
+    
         model_path = self._get_model_dir()
         test_run = get_next_test_run(model_path)
         test_run_path = join(model_path, test_run)
         mkdir(test_run_path)
 
-        test_data = self.__get_data_from_split(split="test", augment=False, balance=False)
-        results = self.model.evaluate(test_data, return_dict=True)
+        test_data = self.__get_data_from_split(split="test", augment=False, balance=False, shuffle=False)
+        
+        predictions = self.model.predict(test_data)
+        labels = concatenate([y for _, y in test_data], axis=0)
+        predictions = argmax(predictions, axis=1)
+        labels = argmax(labels, axis=1)
+        
+        plot_confusion_matrix(labels, predictions, 
+            save_path=join(test_run_path, "confusion_matrix.png"),
+            normalized=False)
+        plot_confusion_matrix(labels, predictions, 
+            save_path=join(test_run_path, "confusion_matrix_normalized.png"),
+            normalized=True)
+
+        wandb_run = None
+        callbacks = []
+
+        if args.write_to_wandb:
+            config = self.__get_test_wandb_config(args)
+            wandb_run = init(project="detect-climbing-technique", job_type="test", group="hpe_dnn", name=self.name, 
+                config=config, dir=self.data_root_path)
+            callbacks.append(WandbMetricsLogger())
+
+        results = self.model.evaluate(test_data, return_dict=True, callbacks=callbacks)
+
+        if wandb_run:
+            wandb_run.log(results)
+            wandb_run.log({
+                'confusion_matrix': Image(join(test_run_path, "confusion_matrix.png")),
+                'confusion_matrix_normalized': Image(join(test_run_path, "confusion_matrix_normalized.png")),
+            })
+            wandb_run.finish()
 
         results_file = join(test_run_path, "metics.json")
         with open(join(results_file), "w") as file:
@@ -195,6 +258,6 @@ class HpeDnn(ClassificationModel):
     def __get_dataset_dir(self):
         return join(self.data_root_path, "df", self.dataset_name)
 
-    def __get_data_from_split(self, split: str, augment, balance) -> tf.data.Dataset:
+    def __get_data_from_split(self, split: str, augment, balance, shuffle) -> tf.data.Dataset:
         df = read_dataframe(join(self.__get_dataset_dir(), f"{split}.pkl"))
-        return df_to_dataset(df, augment=augment, balance=balance)
+        return df_to_dataset(df, augment=augment, balance=balance, shuffle=shuffle)

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from src.common.helpers import read_dataframe
 from src.common.kfold import AbstractFoldCrossValidation
 from src.common.model import ModelConstructorArgs
-from src.hpe_dnn.model import HpeDnn, HpeDnnMultiRunTrainArgs
+from src.hpe_dnn.model import HpeDnn, HpeDnnConstructorArgs, HpeDnnMultiRunTrainArgs
 
 class HpeDnnFoldCrossValidation(AbstractFoldCrossValidation):
     
@@ -53,14 +53,15 @@ class HpeDnnFoldCrossValidation(AbstractFoldCrossValidation):
         fold_models = [model_name for model_name in listdir(model_root) if f"{self._model_args.name}-fold" in model_name]
         metrics = []
         for fold_model in fold_models:
-            model = HpeDnn(args=ModelConstructorArgs(
+            model = HpeDnn(args=HpeDnnConstructorArgs(
                 name=fold_model,
+                model_arch=self._model_args.model_arch,
                 data_root_path=self._model_args.data_root_path,
                 dataset_name=join(self._model_args.dataset_name, "current_fold")
             ))
-            metrics.append(model.get_test_metrics()["accuracy"])
+            metrics.append(model.get_test_metrics()["categorical_accuracy"])
 
-        print(f"Average Top 1 accuracy: {average(metrics)}")
+        print(f"Average Top 1 categorical accuracy: {average(metrics)}")
         
         plt.figure()
         plt.boxplot(metrics)

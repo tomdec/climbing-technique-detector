@@ -1,13 +1,10 @@
 from keras import Model, utils
 import tensorflow as tf
-from numpy import nan
-from pandas import DataFrame, concat
+from numpy import nan, ndarray
+from pandas import DataFrame, Series
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import LabelBinarizer
-from os import mkdir
-from os.path import join, exists
 
-from src.common.helpers import read_dataframe
 from src.hpe_dnn.balancing import balance_func_factory
 from src.hpe_dnn.augmentation import augment_keypoints
 
@@ -19,13 +16,18 @@ def demo_batch(dataset: tf.data.Dataset):
 
     print('Every feature:', list(features.keys()))
     print('A batch of Nose x-coordinates:', features['NOSE_x'])
-    print('A batch of techniques:', label_batch )
+    print('A batch of techniques:', label_batch)
+
+def __binarize_labels(labels: Series) -> ndarray:
+    encoder = LabelBinarizer()
+    return encoder.fit_transform(labels)
 
 def df_to_dataset(dataframe: DataFrame, 
         balance=False,
         augment=False,
         shuffle=True,
-        batch_size=32) -> tf.data.Dataset:
+        batch_size=32,
+        prefetch=True) -> tf.data.Dataset:
     df = dataframe.copy()
     
     if balance:
@@ -42,26 +44,17 @@ def df_to_dataset(dataframe: DataFrame,
     df = DataFrame(imp.fit_transform(df), columns=df.keys())
     df = {key: value.to_numpy()[:,tf.newaxis] for key, value in df.items()}
 
-    encoder = LabelBinarizer()
-    y = encoder.fit_transform(labels)
+    y = __binarize_labels(labels)
 
     ds = tf.data.Dataset.from_tensor_slices((dict(df), y))
+    
     if shuffle:
         ds = ds.shuffle(buffer_size=len(dataframe))
-    ds = ds.batch(batch_size)
-    ds = ds.prefetch(batch_size)
-    return ds
-
-def combine_dataset(data_root, dataset_name):
-    og_dataset_path = join(data_root, "df", dataset_name)
-    train = read_dataframe(join(og_dataset_path, "train.pkl"))
-    test = read_dataframe(join(og_dataset_path, "test.pkl"))
-    val = read_dataframe(join(og_dataset_path, "val.pkl"))
-
-    all = concat([train, test, val], ignore_index=True)
-
-    kf_dataset_path = join(data_root, "df", dataset_name + '_kf')
-    if not exists(kf_dataset_path):
-        mkdir(kf_dataset_path)
     
-    all.to_pickle(join(kf_dataset_path, "all.pkl"))
+    if batch_size:
+        ds = ds.batch(batch_size)
+    
+    if prefetch:
+        ds = ds.prefetch(batch_size)
+    
+    return ds
