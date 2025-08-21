@@ -5,11 +5,5 @@ __data_root = "./data"
 
 if __name__ == '__main__':
 
-    arguments = argv[1:]
-    balanced = "-b" in arguments
-    
-    if balanced:
-        print("Generating balanced dataset")
-
-    dataset_name = "techniques_balanced" if balanced else "techniques"
+    dataset_name = "techniques"
     generate_hpe_feature_df(__data_root, dataset_name)

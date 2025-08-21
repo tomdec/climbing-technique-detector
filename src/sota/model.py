@@ -50,6 +50,17 @@ class SOTATrainArgs(TrainArgs):
         self._optimizer = optimizer
         self._lr0 = lr0
 
+class SOTAModelInitializeArgs(ModelInitializeArgs):
+
+    @override
+    @property
+    def model(self) -> str:
+        """Name of yolo model (recognized by ultralytics) to use when initializing the model"""
+        return self._model
+    
+    def __init__(self, model: str = ""):
+        self._model = model
+    
 class SOTAMultiRunTrainArgs(MultiRunTrainArgs):
     
     def __init__(self, 
