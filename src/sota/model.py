@@ -40,7 +40,7 @@ class SOTATrainArgs(TrainArgs):
 
     @property
     def lr0(self) -> float:
-        """Initial learing rate for each training run"""
+        """Initial learning rate for each training run"""
         return self._lr0
 
     def __init__(self, epochs=20, balanced=False, additional_config={},
