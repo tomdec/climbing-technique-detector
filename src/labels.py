@@ -2,6 +2,7 @@ from enum import Enum
 from csv import writer as csv_writer, reader as csv_reader
 from os import listdir
 from os.path import join, split
+from typing import Iterator
 from pandas import read_csv
 
 class Technique(Enum):
@@ -15,7 +16,13 @@ class Technique(Enum):
     DROP_KNEE = 7
     CROSS_MIDLINE = 8
 
-def get_label(label_path: str, frame_number: int):
+def name_to_value(name: str) -> int:
+    return Technique[name].value
+
+def iterate_valid_labels() -> Iterator[str]:
+    return iter([label.name for label in Technique if label != Technique.INVALID])
+
+def get_label(label_path: str, frame_number: int) -> Technique:
     with open(label_path, 'r', newline='') as csvfile:
         reader = csv_reader(csvfile)
         for row in reader:

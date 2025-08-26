@@ -5,7 +5,7 @@ from cv2 import VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FPS, CAP_PROP_POS_F
 from matplotlib.pyplot import subplots, subplots_adjust, Axes
 from numpy import mean
 
-from src.labels import Technique
+from src.labels import iterate_valid_labels
 from src.common.helpers import get_filename, get_split_limits
 
 def build_image_dirs(dataset_dir):
@@ -18,10 +18,8 @@ def build_image_dirs(dataset_dir):
         if not exists(segment_dir):
             makedirs(segment_dir)
         
-        for value in Technique:
-            if value == Technique.INVALID:
-                continue
-            label_dir = join(segment_dir, value.name)
+        for name in iterate_valid_labels():
+            label_dir = join(segment_dir, name)
             if not exists(label_dir):
                 makedirs(label_dir)
 
