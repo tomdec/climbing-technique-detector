@@ -1,3 +1,4 @@
+from math import inf
 import pytest
 from os import makedirs
 from os.path import exists, join
@@ -8,44 +9,55 @@ from src.labels import Technique, get_label_name, iterate_valid_labels, make_lab
 __location = "./data/labels/How to Flag - A Climbing Technique for Achieving Balance.csv"
 
 @pytest.mark.parametrize("input,expected", [
-        (100, "INVALID"),
-        (500, "NONE"),
-        (1500, "NONE")
-    ])
+    (100, "INVALID"),
+    (500, "NONE"),
+    (1500, "NONE")
+])
 def test_get_label_name(input, expected):
     actual = get_label_name(__location, input)
 
     assert actual == expected
 
 @pytest.mark.parametrize("input,expected", [
-        ("INVALID", 0),
-        ("NONE", 1),
-        ("FOOT_SWAP", 2),
-        ("OUTSIDE_FLAG", 3),
-        ("BACK_FLAG", 4),
-        ("INSIDE_FLAG", 5),
-        ("DROP_KNEE", 7),
-        ("CROSS_MIDLINE", 8),
-    ])
+    ("INVALID", 0),
+    ("NONE", 1),
+    ("FOOT_SWAP", 2),
+    ("OUTSIDE_FLAG", 3),
+    ("BACK_FLAG", 4),
+    ("INSIDE_FLAG", 5),
+    ("DROP_KNEE", 7),
+    ("CROSS_MIDLINE", 8),
+])
 def test_name_to_value(input, expected):
     actual = name_to_value(input)
 
     assert actual == expected
 
+def test_name_to_value_with_invalid_name():
+    with pytest.raises(KeyError):
+        _ = name_to_value("incorrect value")
+
 @pytest.mark.parametrize("input,expected", [
-        (0, "INVALID"),
-        (1, "NONE"),
-        (2, "FOOT_SWAP"),
-        (3, "OUTSIDE_FLAG"),
-        (4, "BACK_FLAG"),
-        (5, "INSIDE_FLAG"),
-        (7, "DROP_KNEE"),
-        (8, "CROSS_MIDLINE")
-    ])
+    (0, "INVALID"),
+    (1, "NONE"),
+    (2, "FOOT_SWAP"),
+    (3, "OUTSIDE_FLAG"),
+    (4, "BACK_FLAG"),
+    (5, "INSIDE_FLAG"),
+    (7, "DROP_KNEE"),
+    (8, "CROSS_MIDLINE")
+])
 def test_value_to_name(input, expected):
     actual = value_to_name(input)
 
     assert actual == expected
+
+@pytest.mark.parametrize("input", [
+    -1, 10, inf, "NONE"
+])
+def test_value_to_name_with_invalid_input(input):
+    with pytest.raises(ValueError):
+        _ = value_to_name(input)
 
 def test_iterate_valid_labels():
     expected_names = ["NONE",
