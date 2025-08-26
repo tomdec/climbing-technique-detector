@@ -6,7 +6,6 @@ from typing import Iterator
 from pandas import DataFrame, read_csv
 
 __LABELS_PATH = "data/labels/labels.yml"
-
 __labels = None
 
 if __labels is None:
@@ -30,7 +29,7 @@ class Technique(Enum):
     CROSS_MIDLINE = 8
 
 def name_to_value(name: str) -> int:
-    return Technique[name].value
+    return __labels['values'][name]
 
 def value_to_name(value: int) -> str:
     return Technique(value).name
