@@ -38,7 +38,7 @@ def value_to_name(value: int) -> str:
     raise ValueError(f"Value '{value}' not found in labels.")
 
 def iterate_valid_labels() -> Iterator[str]:
-    return iter([label for label in __labels['values'].keys() if label != "INVALID"])
+    return iter([key for (key, value) in __labels['values'].items() if value > 0])
 
 def make_label_dirs(root: str):
     for name in iterate_valid_labels():
@@ -54,9 +54,9 @@ def get_label_name(label_path: str, frame_number: int) -> str:
             if current_stop <= frame_number:
                 continue
             elif current_start <= frame_number and frame_number < current_stop:
-                return Technique(int(row[2])).name
+                return value_to_name(int(row[2]))
             else:
-                return Technique.INVALID.name
+                return value_to_name(0)
 
 def get_label_from_path(path: str) -> Technique:
     head, tail = split(path)
