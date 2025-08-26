@@ -1,0 +1,10 @@
+name: "techniques"
+values:
+  INVALID: 0
+  NONE: 1
+  FOOT_SWAP: 2
+  OUTSIDE_FLAG: 3
+  BACK_FLAG: 4
+  INSIDE_FLAG: 5
+  DROP_KNEE: 7
+  CROSS_MIDLINE: 8

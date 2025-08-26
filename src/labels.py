@@ -3,7 +3,20 @@ from csv import writer as csv_writer, reader as csv_reader
 from os import listdir, makedirs
 from os.path import join, split, exists
 from typing import Iterator
-from pandas import read_csv
+from pandas import DataFrame, read_csv
+
+__LABELS_PATH = "data/labels/labels.yml"
+
+__labels = None
+
+if __labels is None:
+    if not exists(__LABELS_PATH):
+        print(f"Could not load labels, '{__LABELS_PATH}' was not found")
+    else:
+        from yaml import safe_load
+        with open(__LABELS_PATH, 'r') as file:
+            __labels = safe_load(file)
+            print("loaded labels")
 
 class Technique(Enum):
     INVALID = 0
@@ -43,7 +56,17 @@ def get_label_name(label_path: str, frame_number: int) -> str:
             else:
                 return Technique.INVALID.name
 
-def get_labels_as_dataframe(label_path):
+def get_label_from_path(path: str) -> Technique:
+    head, tail = split(path)
+    if head == '':
+        raise Exception("Could not find Technique")
+    
+    if tail in [label.name for label in Technique]:
+        return Technique[tail]
+    
+    return get_label_from_path(head)
+
+def get_labels_as_dataframe(label_path) -> DataFrame:
     return read_csv(label_path, header=None, names=["start", "stop", "label"])
 
 def validate_label(file_path):
@@ -72,10 +95,10 @@ def validate_label(file_path):
                 continue
             last_stop = int(row[1])
 
-def validate_all(root_dir):
-    files = listdir(root_dir)
+def validate_all(labels_path):
+    files = listdir(labels_path)
     for file in files:
-        file_path = join(root_dir, file)
+        file_path = join(labels_path, file)
         print(f'Validating: {file}')
         validate_label(file_path)
     print("Done validating")
@@ -98,13 +121,3 @@ def correct_fps(label_path, output_path):
                 stop = int(row[1])
                 label = int(row[2])
                 writer.writerow([int(start / current * actual), int(stop / current * actual), label])
-
-def get_label_from_path(path) -> Technique:
-    head, tail = split(path)
-    if head == '':
-        raise Exception("Could not find Technique")
-    
-    if tail in [label.name for label in Technique]:
-        return Technique[tail]
-    
-    return get_label_from_path(head)
