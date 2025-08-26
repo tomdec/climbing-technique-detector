@@ -1,6 +1,6 @@
 from cv2 import VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_COUNT, CAP_PROP_POS_FRAMES, imshow, waitKey, destroyAllWindows
 
-from src.labels import get_label
+from src.labels import get_label_name
 from src.video.edit import write_label, write_text
 
 def play_with_label(video_path: str):
@@ -19,7 +19,7 @@ def play_with_label(video_path: str):
             print(f"Could not read frame nr {frame_num}")
             break
 
-        label = get_label(label_path, frame_num)
+        label = get_label_name(label_path, frame_num)
         frame = write_label(frame, label)
 
         imshow(video_path, frame)

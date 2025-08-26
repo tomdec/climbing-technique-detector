@@ -30,7 +30,7 @@ def make_label_dirs(root: str):
             label_dir = join(root, name)
             makedirs(label_dir, exist_ok=True)
 
-def get_label(label_path: str, frame_number: int) -> Technique:
+def get_label_name(label_path: str, frame_number: int) -> str:
     with open(label_path, 'r', newline='') as csvfile:
         reader = csv_reader(csvfile)
         for row in reader:
@@ -39,9 +39,9 @@ def get_label(label_path: str, frame_number: int) -> Technique:
             if current_stop <= frame_number:
                 continue
             elif current_start <= frame_number and frame_number < current_stop:
-                return Technique(int(row[2]))
+                return Technique(int(row[2])).name
             else:
-                return Technique.INVALID
+                return Technique.INVALID.name
 
 def get_labels_as_dataframe(label_path):
     return read_csv(label_path, header=None, names=["start", "stop", "label"])

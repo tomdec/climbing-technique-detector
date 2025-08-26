@@ -3,17 +3,17 @@ from os import makedirs
 from os.path import exists, join
 from shutil import rmtree
 
-from src.labels import Technique, get_label, iterate_valid_labels, make_label_dirs, name_to_value, value_to_name
+from src.labels import Technique, get_label_name, iterate_valid_labels, make_label_dirs, name_to_value, value_to_name
 
 __location = "./data/labels/How to Flag - A Climbing Technique for Achieving Balance.csv"
 
 @pytest.mark.parametrize("input,expected", [
-        (100, Technique.INVALID),
-        (500, Technique.NONE),
-        (1500, Technique.NONE)
+        (100, "INVALID"),
+        (500, "NONE"),
+        (1500, "NONE")
     ])
-def test_get_labels(input, expected):
-    actual = get_label(__location, input)
+def test_get_label_name(input, expected):
+    actual = get_label_name(__location, input)
 
     assert actual == expected
 
