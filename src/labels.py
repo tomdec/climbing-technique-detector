@@ -113,8 +113,9 @@ def validate_all(labels_path) -> List[str]:
     print("Done validating")
     return errors
 
-def correct_fps(label_path, output_path):
+def __correct_fps(label_path, output_path):
     '''
+    One-time-use code. Can be ignored unless needed
     Example: 
         correct_fps("./data/labels/How to Flag - A Climbing Technique for Achieving Balance.csv", 
             "./data/labels/How to Flag - A Climbing Technique for Achieving Balance corrected.csv")
@@ -131,3 +132,21 @@ def correct_fps(label_path, output_path):
                 stop = int(row[1])
                 label = int(row[2])
                 writer.writerow([int(start / current * actual), int(stop / current * actual), label])
+
+def __correct_all_labelling(labels_path):
+    '''
+    One-time-use code. Can be ignored unless needed
+    '''
+    files = [file for file in listdir(labels_path) if file.endswith('.csv')]
+    for file_name in files:
+        file_path = join(labels_path, file_name)
+        __correct_labelling(file_path)
+
+def __correct_labelling(file_path):
+    '''
+    One-time-use code. Can be ignored unless needed
+    Still needs manual removal of trailing newline. Did not find how to tell pandas not to store that.
+    '''
+    label_df = get_labels_as_dataframe(file_path)
+    label_df['label'] = label_df['label'].replace({7: 6, 8: 7})
+    label_df.to_csv(file_path, header=False, index=False)

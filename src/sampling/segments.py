@@ -1,5 +1,5 @@
 from os.path import exists, join
-from os import makedirs, listdir
+from os import listdir
 from cv2 import VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_POS_FRAMES, VideoWriter_fourcc, VideoWriter
 
 from src.labels import get_labels_as_dataframe, make_label_dirs, value_to_name

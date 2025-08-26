@@ -26,8 +26,8 @@ def test_get_label_name(input, expected):
     ("OUTSIDE_FLAG", 3),
     ("BACK_FLAG", 4),
     ("INSIDE_FLAG", 5),
-    ("DROP_KNEE", 7),
-    ("CROSS_MIDLINE", 8),
+    ("DROP_KNEE", 6),
+    ("CROSS_MIDLINE", 7),
 ])
 def test_name_to_value(input, expected):
     actual = name_to_value(input)
@@ -45,8 +45,8 @@ def test_name_to_value_with_invalid_name():
     (3, "OUTSIDE_FLAG"),
     (4, "BACK_FLAG"),
     (5, "INSIDE_FLAG"),
-    (7, "DROP_KNEE"),
-    (8, "CROSS_MIDLINE")
+    (6, "DROP_KNEE"),
+    (7, "CROSS_MIDLINE")
 ])
 def test_value_to_name(input, expected):
     actual = value_to_name(input)
