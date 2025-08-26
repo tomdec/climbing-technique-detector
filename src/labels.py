@@ -58,16 +58,6 @@ def get_label_name(label_path: str, frame_number: int) -> str:
             else:
                 return value_to_name(0)
 
-def get_label_from_path(path: str) -> Technique:
-    head, tail = split(path)
-    if head == '':
-        raise Exception("Could not find Technique")
-    
-    if tail in [label.name for label in Technique]:
-        return Technique[tail]
-    
-    return get_label_from_path(head)
-
 def get_labels_as_dataframe(label_path) -> DataFrame:
     return read_csv(label_path, header=None, names=["start", "stop", "label"])
 
