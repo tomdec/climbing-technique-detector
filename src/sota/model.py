@@ -164,7 +164,7 @@ class SOTA(ClassificationModel):
         
         if args.write_to_wandb:
             config = self.__get_test_wandb_config(args)
-            wandb_run = init(project="detect-climbing-technique", job_type="eval", group="sota", 
+            wandb_run = init(project="detect-climbing-technique", job_type="test", group="sota", 
                 name=self.name, config=config, dir=self.data_root_path)
             add_wandb_callback(self.model, enable_model_checkpointing=True)
 

@@ -8,6 +8,7 @@ class DnnArch(Enum):
     ARCH1 = 0
     ARCH2 = 1
     ARCH3 = 2
+    ARCH4 = 3
 
 def __get_normalization_layer(name, dataset):
     # Create a Normalization layer for the feature.
@@ -93,6 +94,7 @@ def __arch1_factory(train: tf.data.Dataset,
         dropout_rate=0.1) -> Model:
     """
         Arch1.
+        4 layers, starting from 256 nodes, and each layer halving in size.
         Don't change, make new DnnArch and function.
     """
 
@@ -108,11 +110,6 @@ def __arch1_factory(train: tf.data.Dataset,
     output = layers.Dense(7, activation="softmax")(intermediate)
 
     model = Model(input_dict, output)
-
-    # model.compile(optimizer='adam', 
-    #     loss=losses.BinaryCrossentropy(), 
-    #     metrics=['accuracy'], 
-    #     run_eagerly=debugging)
     
     model.compile(optimizer=optimizers.Adam(),
         loss=losses.CategoricalCrossentropy(), 
@@ -127,11 +124,16 @@ def __arch2_factory(train: tf.data.Dataset,
         dropout_rate=0.1) -> Model:
     """
         Arch2.
+        5 layers, starting from 512 nodes, and each layer halving in size.
         Don't change, make new DnnArch and function.
     """
 
     input_dict, all_features = __make_input_layer(train, normalize=normalize)
-    intermediate = layers.Dense(128, activation="relu")(all_features)
+    intermediate = layers.Dense(512, activation="relu")(all_features)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(256, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(128, activation="relu")(intermediate)
     intermediate = layers.Dropout(dropout_rate)(intermediate)
     intermediate = layers.Dense(64, activation="relu")(intermediate)
     intermediate = layers.Dropout(dropout_rate)(intermediate)
@@ -142,8 +144,8 @@ def __arch2_factory(train: tf.data.Dataset,
     model = Model(input_dict, output)
 
     model.compile(optimizer='adam', 
-        loss=losses.BinaryCrossentropy(), 
-        metrics=['accuracy'], 
+        loss=losses.CategoricalCrossentropy(), 
+        metrics=[metrics.CategoricalAccuracy()], 
         run_eagerly=debugging)
     
     return model
@@ -154,11 +156,22 @@ def __arch3_factory(train: tf.data.Dataset,
         dropout_rate=0.1) -> Model:
     """
         Arch3.
+        Symmetrical V-shaped network of 7 layers, with the middle layer having 256 nodes.
         Don't change, make new DnnArch and function.
     """
 
     input_dict, all_features = __make_input_layer(train, normalize=normalize)
-    intermediate = layers.Dense(64, activation="relu")(all_features)
+    intermediate = layers.Dense(32, activation="relu")(all_features)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(64, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(128, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(256, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(128, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(64, activation="relu")(intermediate)
     intermediate = layers.Dropout(dropout_rate)(intermediate)
     intermediate = layers.Dense(32, activation="relu")(intermediate)
     intermediate = layers.Dropout(dropout_rate)(intermediate)
@@ -167,8 +180,42 @@ def __arch3_factory(train: tf.data.Dataset,
     model = Model(input_dict, output)
 
     model.compile(optimizer='adam', 
-        loss=losses.BinaryCrossentropy(), 
-        metrics=['accuracy'], 
+        loss=losses.CategoricalCrossentropy(), 
+        metrics=[metrics.CategoricalAccuracy()], 
+        run_eagerly=debugging)
+    
+    return model
+
+def __arch4_factory(train: tf.data.Dataset, 
+        normalize=True, 
+        debugging=False,
+        dropout_rate=0.1) -> Model:
+    """
+        Arch4.
+        Assymmetrical V-shaped network of 5 layers, with the middle layer having 256 nodes.
+        Starting at a layer with 128 nodes, so that we don't have less nodes in the first layer
+        than we have features. Only reduce dimensionality in the second half of the model.
+        Don't change, make new DnnArch and function.
+    """
+
+    input_dict, all_features = __make_input_layer(train, normalize=normalize)
+    intermediate = layers.Dense(128, activation="relu")(all_features)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(256, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(128, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(64, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    intermediate = layers.Dense(32, activation="relu")(intermediate)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    output = layers.Dense(7, activation="softmax")(intermediate)
+
+    model = Model(input_dict, output)
+
+    model.compile(optimizer='adam', 
+        loss=losses.CategoricalCrossentropy(), 
+        metrics=[metrics.CategoricalAccuracy()], 
         run_eagerly=debugging)
     
     return model
@@ -176,7 +223,8 @@ def __arch3_factory(train: tf.data.Dataset,
 _arch_mapping: Mapping[DnnArch, Callable[[tf.data.Dataset, bool, bool, float], Model]] = {
     DnnArch.ARCH1: __arch1_factory,
     DnnArch.ARCH2: __arch2_factory,
-    DnnArch.ARCH3: __arch3_factory
+    DnnArch.ARCH3: __arch3_factory,
+    DnnArch.ARCH4: __arch4_factory
 }
 
 def get_model_factory(architecture: DnnArch):
