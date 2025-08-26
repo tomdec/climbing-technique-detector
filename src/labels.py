@@ -32,10 +32,13 @@ def name_to_value(name: str) -> int:
     return __labels['values'][name]
 
 def value_to_name(value: int) -> str:
-    return Technique(value).name
+    for key, val in __labels['values'].items():
+        if (val == value):
+            return key
+    raise ValueError(f"Value '{value}' not found in labels.")
 
 def iterate_valid_labels() -> Iterator[str]:
-    return iter([label.name for label in Technique if label != Technique.INVALID])
+    return iter([label for label in __labels['values'].keys() if label != "INVALID"])
 
 def make_label_dirs(root: str):
     for name in iterate_valid_labels():
