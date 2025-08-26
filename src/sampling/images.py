@@ -1,27 +1,17 @@
-from os.path import exists, join
-from os import makedirs, listdir
+from os.path import join
+from os import listdir
 from random import randint, random
 from cv2 import VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FPS, CAP_PROP_POS_FRAMES, imwrite
 from matplotlib.pyplot import subplots, subplots_adjust, Axes
 from numpy import mean
 
-from src.labels import iterate_valid_labels
+from src.labels import make_label_dirs
 from src.common.helpers import get_filename, get_split_limits
 
 def build_image_dirs(dataset_dir):
-    
-    if not exists(dataset_dir):
-        makedirs(dataset_dir)
-    
     for segment in ["train", "test", "val"]:
         segment_dir = join(dataset_dir, segment)
-        if not exists(segment_dir):
-            makedirs(segment_dir)
-        
-        for name in iterate_valid_labels():
-            label_dir = join(segment_dir, name)
-            if not exists(label_dir):
-                makedirs(label_dir)
+        make_label_dirs(segment_dir)
 
 def random_init_skip(max):
     max_int = int(max)

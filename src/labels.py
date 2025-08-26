@@ -1,7 +1,7 @@
 from enum import Enum
 from csv import writer as csv_writer, reader as csv_reader
-from os import listdir
-from os.path import join, split
+from os import listdir, makedirs
+from os.path import join, split, exists
 from typing import Iterator
 from pandas import read_csv
 
@@ -19,8 +19,16 @@ class Technique(Enum):
 def name_to_value(name: str) -> int:
     return Technique[name].value
 
+def value_to_name(value: int) -> str:
+    return Technique(value).name
+
 def iterate_valid_labels() -> Iterator[str]:
     return iter([label.name for label in Technique if label != Technique.INVALID])
+
+def make_label_dirs(root: str):
+    for name in iterate_valid_labels():
+            label_dir = join(root, name)
+            makedirs(label_dir, exist_ok=True)
 
 def get_label(label_path: str, frame_number: int) -> Technique:
     with open(label_path, 'r', newline='') as csvfile:
