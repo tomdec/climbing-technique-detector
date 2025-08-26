@@ -1,10 +1,11 @@
 from math import inf
+from numpy import empty
 import pytest
 from os import makedirs
 from os.path import exists, join
 from shutil import rmtree
 
-from src.labels import Technique, get_label_name, iterate_valid_labels, make_label_dirs, name_to_value, value_to_name
+from src.labels import Technique, get_label_name, iterate_valid_labels, make_label_dirs, name_to_value, validate_all, validate_label, value_to_name
 
 __location = "./data/labels/How to Flag - A Climbing Technique for Achieving Balance.csv"
 
@@ -102,3 +103,13 @@ def test_make_label_dirs_when_they_do_exist():
         
     finally:
         rmtree(root)
+
+def test_validate_all_labels():
+    errors = validate_all("data/labels")
+
+    assert len(errors) == 0
+
+def test_validate_invalid_csv():
+    errors = validate_label("test/data/labels/invalid.csv")
+
+    assert len(errors) == 13

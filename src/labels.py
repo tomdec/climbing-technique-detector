@@ -2,7 +2,7 @@ from enum import Enum
 from csv import writer as csv_writer, reader as csv_reader
 from os import listdir, makedirs
 from os.path import join, split, exists
-from typing import Iterator
+from typing import Iterator, List
 from pandas import DataFrame, read_csv
 
 __LABELS_PATH = "data/labels/labels.yml"
@@ -61,39 +61,57 @@ def get_label_name(label_path: str, frame_number: int) -> str:
 def get_labels_as_dataframe(label_path) -> DataFrame:
     return read_csv(label_path, header=None, names=["start", "stop", "label"])
 
-def validate_label(file_path):
+def validate_label(file_path) -> List[str]:
+    errors = []
     with open(file_path, 'r', newline='') as csvfile:
         reader = csv_reader(csvfile)
         last_stop = -1
         for idx, row in enumerate(reader):
             #print(f'{idx}: {row}')
             if len(row) != 3:
-                print(f'Line {idx}: {row} - Expected three values')
+                error = f'Line {idx+1}: {row} - Expected three values'
+                errors.append(error) 
+                print(error)
                 continue
             if not row[0].isdigit() or not row[1].isdigit() or not row[2].isdigit():
-                print(f'Line {idx}: {row} - not a number')
+                error = f'Line {idx+1}: {row} - not a number'
+                errors.append(error) 
+                print(error)
                 continue
             if int(row[2]) == 0:
-                print(f'Line {idx}: {row} - unnecessary INVALID label found')
+                error = f'Line {idx+1}: {row} - unnecessary INVALID label found'
+                errors.append(error) 
+                print(error)
                 continue
-            if int(row[2]) not in Technique:
-                print(f'Line {idx}: {row} - third value not a valid technique')
+            if int(row[2]) not in __labels['values'].values():
+                error = f'Line {idx+1}: {row} - third value not a valid label, according to the yaml file.'
+                errors.append(error) 
+                print(error)
                 continue
             if int(row[0]) >= int(row[1]):
-                print(f'Line {idx}: {row} - stop must be higher than start')
+                error = f'Line {idx+1}: {row} - stop must be higher than start'
+                errors.append(error) 
+                print(error)
                 continue
             if last_stop > int(row[0]):
-                print(f'Line {idx}: {row} - start must be higher or equal to previous stop')
+                error = f'Line {idx+1}: {row} - start must be higher or equal to previous stop'
+                errors.append(error) 
+                print(error)
                 continue
             last_stop = int(row[1])
+    return errors
 
-def validate_all(labels_path):
+def validate_all(labels_path) -> List[str]:
+    errors = []
     files = listdir(labels_path)
     for file in files:
-        file_path = join(labels_path, file)
-        print(f'Validating: {file}')
-        validate_label(file_path)
+        if file.endswith('.csv'):
+            file_path = join(labels_path, file)
+            print(f'Validating: {file}')
+            file_errors = validate_label(file_path)
+            errors = [*errors, *file_errors]
     print("Done validating")
+    return errors
 
 def correct_fps(label_path, output_path):
     '''
