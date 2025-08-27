@@ -5,7 +5,9 @@ from sklearn.metrics import ConfusionMatrixDisplay
 from os.path import dirname
 from os import makedirs
 
-__TICKS = ["NONE", "FOOT_SWAP", "OUTSIDE_FLAG", "BACK_FLAG", "INSIDE_FLAG", "DROP_KNEE", "CROSS_MIDLINE"]
+from src.labels import iterate_valid_labels
+
+__TICKS = [label for label in iterate_valid_labels()]
 
 def plot_confusion_matrix(labels: ndarray, predictions: ndarray,
         save_path: Optional[str] = None,
@@ -30,10 +32,3 @@ def plot_confusion_matrix(labels: ndarray, predictions: ndarray,
         plt.savefig(save_path, bbox_inches="tight")
     else:
         plt.show()
-
-def map_to_ticks_idx(path: str):
-    for idx, label in enumerate(__TICKS):
-        if path.__contains__(f"/{label}/"):
-            return idx
-        
-    raise Exception(f"did not find label in path: {path}")

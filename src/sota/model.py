@@ -9,8 +9,9 @@ from wandb.integration.ultralytics import add_wandb_callback
 from json import dump, load
 from glob import glob
 
+from src.labels import get_label_value_from_path
 from src.common.model import ModelConstructorArgs, ModelInitializeArgs, TestArgs, TrainArgs, MultiRunTrainArgs, ClassificationModel
-from src.common.plot import map_to_ticks_idx, plot_confusion_matrix
+from src.common.plot import plot_confusion_matrix
 from src.common.helpers import get_next_train_run, get_current_test_run
 from src.sota.balancing import WeightedTrainer
 
@@ -194,7 +195,7 @@ class SOTA(ClassificationModel):
 
         # Override confusion matrices
         image_paths = glob(join(dataset_path, "test") + "/**/*.*", recursive=True)
-        labels = [map_to_ticks_idx(image_path) for image_path in image_paths]
+        labels = [get_label_value_from_path(image_path) for image_path in image_paths]
         y_pred = self.model.predict(image_paths)
         predictions = [self.__map_prediction_to_tick_idx(prediction) for prediction in y_pred]
 

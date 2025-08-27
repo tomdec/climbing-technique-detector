@@ -95,15 +95,15 @@ Expected structure:
 ```yaml
 name: "label name"
 values:
-  INVALID: 0
-  LABEL_1: 1
+  - INVALID
+  - LABEL_1
   ...
 ```
 The `name` value of the labels is also used as the dataset name when these are generated.
 
-`values` is a dictionary with string keys mapped to integer values. The keys are the names of the labels, these names are used as the folder names in the `/samples` and `/img` datasets. The integer values are used in the `.csv` label files under `/data/labels` and the `/df` datasets.
+`values` is a list of the names of the labels. These names are used as the folder names in the `/samples` and `/img` datasets. The indexes of these labels are used in the `.csv` label files under `/data/labels` and the `/df` datasets.
 
-The only fixed value of these labels is `0`, this will always be recognized as the `INVALID` label, used to mark video segments that should not be used for training or testing, for example, parts of the video that are heavily editted or cuts happen. 
+The only fixed value of these labels is the first label `INVALID`, at index `0`. This index will always be recognized as the `INVALID` label, used to mark video segments that should not be used for training or testing, for example, parts of the video that are heavily editted or cuts happen. 
 
 ### /samples
 Contains the video snippets grouped by their label. These samples are [generated](#3-extract-labelled-samples-from-videos) from `/videos` and `/labels`.

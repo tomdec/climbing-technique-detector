@@ -21,21 +21,27 @@ def get_dataset_name() -> str:
     return __labels['name']
 
 def name_to_value(name: str) -> int:
-    return __labels['values'][name]
+    return __labels['values'].index(name)
 
 def value_to_name(value: int) -> str:
-    for key, val in __labels['values'].items():
-        if (val == value):
-            return key
-    raise ValueError(f"Value '{value}' not found in labels.")
+    if value < 0:
+        raise IndexError("Expected values to be non-negative.")
+    return __labels['values'][value]
 
 def iterate_valid_labels() -> Iterator[str]:
-    return iter([key for (key, value) in __labels['values'].items() if value > 0])
+    return iter([name for (value, name) in enumerate(__labels['values']) if value > 0])
 
 def make_label_dirs(root: str):
     for name in iterate_valid_labels():
             label_dir = join(root, name)
             makedirs(label_dir, exist_ok=True)
+
+def get_label_value_from_path(path: str) -> int:
+    for (value, name) in enumerate(__labels['values']):
+        if path.__contains__(f"/{name}/"):
+            return value
+        
+    raise Exception(f"did not find label in path: {path}")
 
 def get_label_name(label_path: str, frame_number: int) -> str:
     with open(label_path, 'r', newline='') as csvfile:
@@ -75,7 +81,7 @@ def validate_label(file_path) -> List[str]:
                 errors.append(error) 
                 print(error)
                 continue
-            if int(row[2]) not in __labels['values'].values():
+            if int(row[2]) < 0 or len(__labels['values']) <= int(row[2]):
                 error = f'Line {idx+1}: {row} - third value not a valid label, according to the yaml file.'
                 errors.append(error) 
                 print(error)

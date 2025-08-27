@@ -1,5 +1,4 @@
 from math import inf
-from numpy import empty
 import pytest
 from os import makedirs
 from os.path import exists, join
@@ -35,7 +34,7 @@ def test_name_to_value(input, expected):
     assert actual == expected
 
 def test_name_to_value_with_invalid_name():
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError):
         _ = name_to_value("incorrect value")
 
 @pytest.mark.parametrize("input,expected", [
@@ -53,11 +52,14 @@ def test_value_to_name(input, expected):
 
     assert actual == expected
 
-@pytest.mark.parametrize("input", [
-    -1, 10, inf, "NONE"
+@pytest.mark.parametrize("input,error", [
+    (-1, IndexError), 
+    (10, IndexError), 
+    (inf, TypeError), 
+    ("NONE", TypeError)
 ])
-def test_value_to_name_with_invalid_input(input):
-    with pytest.raises(ValueError):
+def test_value_to_name_with_invalid_input(input, error):
+    with pytest.raises(error):
         _ = value_to_name(input)
 
 def test_iterate_valid_labels():
