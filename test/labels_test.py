@@ -1,5 +1,4 @@
 from math import inf
-from numpy import empty
 import pytest
 from os import makedirs
 from os.path import exists, join
