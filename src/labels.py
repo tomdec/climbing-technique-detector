@@ -1,7 +1,7 @@
 from enum import Enum
 from csv import writer as csv_writer, reader as csv_reader
 from os import listdir, makedirs
-from os.path import join, split, exists
+from os.path import join, exists
 from typing import Iterator, List
 from pandas import DataFrame, read_csv
 
@@ -17,16 +17,8 @@ if __labels is None:
             __labels = safe_load(file)
             print("loaded labels")
 
-class Technique(Enum):
-    INVALID = 0
-    NONE = 1
-    FOOT_SWAP = 2
-    OUTSIDE_FLAG = 3
-    BACK_FLAG = 4
-    INSIDE_FLAG = 5
-    #BACK_STEP = 6
-    DROP_KNEE = 7
-    CROSS_MIDLINE = 8
+def get_dataset_name() -> str:
+    return __labels['name']
 
 def name_to_value(name: str) -> int:
     return __labels['values'][name]

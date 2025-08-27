@@ -5,7 +5,7 @@ from os import makedirs
 from os.path import exists, join
 from shutil import rmtree
 
-from src.labels import Technique, get_label_name, iterate_valid_labels, make_label_dirs, name_to_value, validate_all, validate_label, value_to_name
+from src.labels import get_label_name, iterate_valid_labels, make_label_dirs, name_to_value, validate_all, validate_label, value_to_name
 
 __location = "./data/labels/How to Flag - A Climbing Technique for Achieving Balance.csv"
 
