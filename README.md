@@ -168,8 +168,10 @@ python generate-sample-dataset.py
 Each labelled part of the videos will be copied and pasted to the `/data/samples` directory.
 
 This script expects videos directly in the `/data/videos` directory and files of the same name (but with the `.csv` extension) in the `/data/labels` directory.
+It also expects a label configuration file at `/data/labels/labels.yml` with the names of the labels 
 
-Within the `/data/samples` directory, a folder will be made for each label according to their name in the enum [Technique](/src/labels.py), except `INVALID`.
+Within the `/data/samples` directory, a folder will be made for each label according to their name in the [labels.yml file](/data/labels/labels.yml), except the label with value `0`.
+
 Each sample will be named according to the pattern:
 ```python
 filename = f"{video_file_name}__{start_frame}.mp4"
@@ -191,12 +193,13 @@ So a video segment labelled as `Y1` should be found at:
 This dataset will be needed when training models that use single images (or data from single images) as input.
 
 This script will walk through each video in `/data/samples` for each label and extract a set of images to build this image dataset.
-How these images are sampled is explained in the doc string of the [this function](src/sampling/images.py#46).
+How these images are sampled is explained in the doc string of the [this function](src/sampling/images.py#34).
 All the sampled images will be divided in in either the training (train), validation (val) or testing (test) dataset, this will be done according to a 70/15/15 split.
 
-At this stage, the dataset name `techniques` will be added in the file system structure, so the path for an image in the training set, labelled with `Y1`, will be found at:
+At this stage, a dataset name will be added in the file system structure, this name is taken from the `name` field in the [label config file](/data/labels/labels.yml). 
+So the path for an image in the training set, labelled with `Y1`, will be found at:
 ```python
-f"/data/img/techniques/train/Y1/{sample_name}__{frame_num}.png"
+f"/data/img/{dataset_name}/train/Y1/{sample_name}__{frame_num}.png"
 ```
 
 ## 5. Build DataFrame dataset
@@ -206,15 +209,15 @@ python generate-hpe-dnn-dataset.py
 ```
 HPE features will be calculated and stored in a `.pkl` file for working with a Dense Neural Network (DNN) model.
 
-This script expects an image dataset under `/data/img/techniques/`, first grouped by their split (`train`, `val` or `test`) and then grouped by their label name.
+This script expects an image dataset under `/data/img/{dataset_name}/`, first grouped by their split (`train`, `val` or `test`) and then grouped by their label name.
 
 Each image found there will be processed by an HPE model and a specific set of features will be extracted, these features can be found [here](src/hpe/landmarks.py#36) for the pose landmarks and [here](src/hpe/landmarks.py#58) for the hand landmarks.
 
 For each data split a DataFrame is then constructed, with each image converted to a row of features. This will give us the following 3 files: 
 ```
-/data/df/techniques/train.pkl
-/data/df/techniques/val.pkl
-/data/df/techniques/test.pkl
+/data/df/{dataset_name}/train.pkl
+/data/df/{dataset_name}/val.pkl
+/data/df/{dataset_name}/test.pkl
 ```
 
 ## 6. Train models
@@ -270,18 +273,16 @@ f"/data/img/{dataset_name}_kf/all/{label_name}/{image_name}.png
 ### 7.2. HPE DNN model
 For the data in `/data/df` this is a bit more complex as we need to combine data from multiple `.pkl` files.
 This can be done by running the code: 
-```python
-from src.hpe_dnn.helpers import combine_dataset
-
-combine_dataset(data_root="data", dataset_name="techniques")
+```bash
+python generate-hpe-dnn-dataset.py -c
 ```
-This will combine the three dataset splits
+This will expect these three dataset splits to already exist
 ```
-/data/df/techniques/train.pkl
-/data/df/techniques/val.pkl
-/data/df/techniques/test.pkl
+/data/df/{dataset_name}/train.pkl
+/data/df/{dataset_name}/val.pkl
+/data/df/{dataset_name}/test.pkl
 ```
-to
+and combine them to
 ```
 /data/df/techniques_kf/all.pkl
 ```
@@ -289,7 +290,7 @@ to
 ## 8. K-Fold validation of models
 Multiple models can be trained in a group according to the K-Fold Cross Validation Algorithm using this source code.
 Depending on the type of model, different assumptions will be made from the `/data` folder.
-All training data will be split in 10 different folds.
+All data will be split in 10 different folds.
 
 ### 8.1. SOTA image classification model
 The SOTA models can be trained with K-Fold Cross Validation to acquired multiple test metrics.
