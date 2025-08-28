@@ -1,29 +1,17 @@
-from os.path import exists, join
-from os import makedirs, listdir
+from os.path import join
+from os import listdir
 from random import randint, random
 from cv2 import VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FPS, CAP_PROP_POS_FRAMES, imwrite
 from matplotlib.pyplot import subplots, subplots_adjust, Axes
 from numpy import mean
 
-from src.labels import Technique
+from src.labels import make_label_dirs, get_dataset_name
 from src.common.helpers import get_filename, get_split_limits
 
 def build_image_dirs(dataset_dir):
-    
-    if not exists(dataset_dir):
-        makedirs(dataset_dir)
-    
     for segment in ["train", "test", "val"]:
         segment_dir = join(dataset_dir, segment)
-        if not exists(segment_dir):
-            makedirs(segment_dir)
-        
-        for value in Technique:
-            if value == Technique.INVALID:
-                continue
-            label_dir = join(segment_dir, value.name)
-            if not exists(label_dir):
-                makedirs(label_dir)
+        make_label_dirs(segment_dir)
 
 def random_init_skip(max):
     max_int = int(max)
@@ -98,65 +86,12 @@ def __generate_image_dataset(video_path,
 
     sample_video.release()
 
-def __generate_balanced_image_dataset(video_path,
-        dataset_root,
-        label_name,
-        data_split,
-        sample_chance):
-    '''
-    Generate a balanced amount of images from a segment video
-
-    Algorithm:
-        Each 10th frame from the video is considered, starting with a random offset between [0, 9],
-        but only sampled at 'sample_chance' * 100 % of the time.
-        But this is only applied to train and validation data, test data keeps 'real world' distribution.
-
-    Args:
-        video_path: path to the segment video to sample
-        dataset_root: path to the folder where to write the images
-        label_name: true label of the segment video
-        data_split: distribution of the data split, as a tuple (train, val, test)
-        sample_chance: rate at which frames are actually sampled
-    '''
-    
-    slice_factory = data_slice_factory(data_split)
-
-    sample_video = VideoCapture(video_path)
-    if not sample_video.isOpened():
-        print(f"Cannot open video file '{video_path}'")
-        exit()
-    
-    video_name = get_filename(video_path)
-    total_frames = int(sample_video.get(CAP_PROP_FRAME_COUNT))
-    frame_skip = 10
-    start_frame = random_init_skip(min(frame_skip, total_frames))
-    
-    for frame_num in range(start_frame, total_frames, frame_skip):
-        slice = slice_factory()
-        if (slice != 'test' and random() >= sample_chance):
-            print(f"Skipping frame {frame_num} of {video_name}")
-            continue
-        
-        sample_video.set(CAP_PROP_POS_FRAMES, frame_num)
-        success, image = sample_video.read()
-        if not success or image is None:
-            print(f'Could not read frame nr {frame_num} of {video_name}')
-            break
-
-        label_dir = join(dataset_root, slice, label_name)
-        
-        file_name = f'{video_name}__{frame_num}.png'
-        imwrite(join(label_dir, file_name), image)
-        
-    print(f'Reached end of video')
-    sample_video.release()
-
 def generate_image_dataset_from_samples(data_root,
         data_split = (0.7, 0.15, 0.15)):
     
     samples_root = join(data_root, "samples")
 
-    dataset_name = "techniques"
+    dataset_name = get_dataset_name()
     dataset_dir = join(data_root, "img", dataset_name)
     
     build_image_dirs(dataset_dir)

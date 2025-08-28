@@ -1,21 +1,52 @@
 from enum import Enum
 from csv import writer as csv_writer, reader as csv_reader
-from os import listdir
-from os.path import join, split
-from pandas import read_csv
+from os import listdir, makedirs
+from os.path import join, exists
+from typing import Iterator, List
+from pandas import DataFrame, read_csv
 
-class Technique(Enum):
-    INVALID = 0
-    NONE = 1
-    FOOT_SWAP = 2
-    OUTSIDE_FLAG = 3
-    BACK_FLAG = 4
-    INSIDE_FLAG = 5
-    #BACK_STEP = 6
-    DROP_KNEE = 7
-    CROSS_MIDLINE = 8
+__LABELS_PATH = "data/labels/labels.yml"
+__labels = None
 
-def get_label(label_path: str, frame_number: int):
+if __labels is None:
+    if not exists(__LABELS_PATH):
+        print(f"Could not load labels, '{__LABELS_PATH}' was not found")
+    else:
+        from yaml import safe_load
+        with open(__LABELS_PATH, 'r') as file:
+            __labels = safe_load(file)
+            print("loaded labels")
+
+def get_valid_label_count():
+    return len(__labels['values']) - 1
+
+def get_dataset_name() -> str:
+    return __labels['name']
+
+def name_to_value(name: str) -> int:
+    return __labels['values'].index(name)
+
+def value_to_name(value: int) -> str:
+    if value < 0:
+        raise IndexError("Expected values to be non-negative.")
+    return __labels['values'][value]
+
+def iterate_valid_labels() -> Iterator[str]:
+    return iter([name for (value, name) in enumerate(__labels['values']) if value > 0])
+
+def make_label_dirs(root: str):
+    for name in iterate_valid_labels():
+            label_dir = join(root, name)
+            makedirs(label_dir, exist_ok=True)
+
+def get_label_value_from_path(path: str) -> int:
+    for (value, name) in enumerate(__labels['values']):
+        if path.__contains__(f"/{name}/"):
+            return value
+        
+    raise Exception(f"did not find label in path: {path}")
+
+def get_label_name(label_path: str, frame_number: int) -> str:
     with open(label_path, 'r', newline='') as csvfile:
         reader = csv_reader(csvfile)
         for row in reader:
@@ -24,49 +55,68 @@ def get_label(label_path: str, frame_number: int):
             if current_stop <= frame_number:
                 continue
             elif current_start <= frame_number and frame_number < current_stop:
-                return Technique(int(row[2]))
+                return value_to_name(int(row[2]))
             else:
-                return Technique.INVALID
+                return value_to_name(0)
 
-def get_labels_as_dataframe(label_path):
+def get_labels_as_dataframe(label_path) -> DataFrame:
     return read_csv(label_path, header=None, names=["start", "stop", "label"])
 
-def validate_label(file_path):
+def validate_label(file_path) -> List[str]:
+    errors = []
     with open(file_path, 'r', newline='') as csvfile:
         reader = csv_reader(csvfile)
         last_stop = -1
         for idx, row in enumerate(reader):
             #print(f'{idx}: {row}')
             if len(row) != 3:
-                print(f'Line {idx}: {row} - Expected three values')
+                error = f'Line {idx+1}: {row} - Expected three values'
+                errors.append(error) 
+                print(error)
                 continue
             if not row[0].isdigit() or not row[1].isdigit() or not row[2].isdigit():
-                print(f'Line {idx}: {row} - not a number')
+                error = f'Line {idx+1}: {row} - not a number'
+                errors.append(error) 
+                print(error)
                 continue
             if int(row[2]) == 0:
-                print(f'Line {idx}: {row} - unnecessary INVALID label found')
+                error = f'Line {idx+1}: {row} - unnecessary INVALID label found'
+                errors.append(error) 
+                print(error)
                 continue
-            if int(row[2]) not in Technique:
-                print(f'Line {idx}: {row} - third value not a valid technique')
+            if int(row[2]) < 0 or len(__labels['values']) <= int(row[2]):
+                error = f'Line {idx+1}: {row} - third value not a valid label, according to the yaml file.'
+                errors.append(error) 
+                print(error)
                 continue
             if int(row[0]) >= int(row[1]):
-                print(f'Line {idx}: {row} - stop must be higher than start')
+                error = f'Line {idx+1}: {row} - stop must be higher than start'
+                errors.append(error) 
+                print(error)
                 continue
             if last_stop > int(row[0]):
-                print(f'Line {idx}: {row} - start must be higher or equal to previous stop')
+                error = f'Line {idx+1}: {row} - start must be higher or equal to previous stop'
+                errors.append(error) 
+                print(error)
                 continue
             last_stop = int(row[1])
+    return errors
 
-def validate_all(root_dir):
-    files = listdir(root_dir)
+def validate_all(labels_path) -> List[str]:
+    errors = []
+    files = listdir(labels_path)
     for file in files:
-        file_path = join(root_dir, file)
-        print(f'Validating: {file}')
-        validate_label(file_path)
+        if file.endswith('.csv'):
+            file_path = join(labels_path, file)
+            print(f'Validating: {file}')
+            file_errors = validate_label(file_path)
+            errors = [*errors, *file_errors]
     print("Done validating")
+    return errors
 
-def correct_fps(label_path, output_path):
+def __correct_fps(label_path, output_path):
     '''
+    One-time-use code. Can be ignored unless needed
     Example: 
         correct_fps("./data/labels/How to Flag - A Climbing Technique for Achieving Balance.csv", 
             "./data/labels/How to Flag - A Climbing Technique for Achieving Balance corrected.csv")
@@ -84,12 +134,20 @@ def correct_fps(label_path, output_path):
                 label = int(row[2])
                 writer.writerow([int(start / current * actual), int(stop / current * actual), label])
 
-def get_label_from_path(path) -> Technique:
-    head, tail = split(path)
-    if head == '':
-        raise Exception("Could not find Technique")
-    
-    if tail in [label.name for label in Technique]:
-        return Technique[tail]
-    
-    return get_label_from_path(head)
+def __correct_all_labelling(labels_path):
+    '''
+    One-time-use code. Can be ignored unless needed
+    '''
+    files = [file for file in listdir(labels_path) if file.endswith('.csv')]
+    for file_name in files:
+        file_path = join(labels_path, file_name)
+        __correct_labelling(file_path)
+
+def __correct_labelling(file_path):
+    '''
+    One-time-use code. Can be ignored unless needed
+    Still needs manual removal of trailing newline. Did not find how to tell pandas not to store that.
+    '''
+    label_df = get_labels_as_dataframe(file_path)
+    label_df['label'] = label_df['label'].replace({7: 6, 8: 7})
+    label_df.to_csv(file_path, header=False, index=False)

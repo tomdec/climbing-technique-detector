@@ -9,8 +9,9 @@ from wandb.integration.ultralytics import add_wandb_callback
 from json import dump, load
 from glob import glob
 
+from src.labels import get_label_value_from_path, name_to_value
 from src.common.model import ModelConstructorArgs, ModelInitializeArgs, TestArgs, TrainArgs, MultiRunTrainArgs, ClassificationModel
-from src.common.plot import map_to_ticks_idx, plot_confusion_matrix
+from src.common.plot import plot_confusion_matrix
 from src.common.helpers import get_next_train_run, get_current_test_run
 from src.sota.balancing import WeightedTrainer
 
@@ -163,7 +164,7 @@ class SOTA(ClassificationModel):
         
         if args.write_to_wandb:
             config = self.__get_test_wandb_config(args)
-            wandb_run = init(project="detect-climbing-technique", job_type="eval", group="sota", 
+            wandb_run = init(project="detect-climbing-technique", job_type="test", group="sota", 
                 name=self.name, config=config, dir=self.data_root_path)
             add_wandb_callback(self.model, enable_model_checkpointing=True)
 
@@ -194,9 +195,9 @@ class SOTA(ClassificationModel):
 
         # Override confusion matrices
         image_paths = glob(join(dataset_path, "test") + "/**/*.*", recursive=True)
-        labels = [map_to_ticks_idx(image_path) for image_path in image_paths]
+        labels = [get_label_value_from_path(image_path) for image_path in image_paths]
         y_pred = self.model.predict(image_paths)
-        predictions = [self.__map_prediction_to_tick_idx(prediction) for prediction in y_pred]
+        predictions = [self.__get_label_value_from_prediction(prediction) for prediction in y_pred]
 
         test_run_path = self.__get_current_test_run_path()        
         plot_confusion_matrix(labels, predictions, 
@@ -215,9 +216,9 @@ class SOTA(ClassificationModel):
         
         return metrics
                 
-    def __map_prediction_to_tick_idx(self, prediction: Results):
-        map_to_enum_order = [3, 6, 5, 1, 4, 0, 2]
-        return map_to_enum_order[prediction.probs.top1]
+    def __get_label_value_from_prediction(self, prediction: Results) -> int:
+        pred_name = prediction.names[prediction.probs.top1]
+        return name_to_value(pred_name)
 
     def __get_dataset_dir(self):
         return join(self.data_root_path, "img", self.dataset_name)
