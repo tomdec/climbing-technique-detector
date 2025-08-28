@@ -6,24 +6,6 @@ from shutil import rmtree
 
 import src.labels as mut
 
-"""
-Mock the __labels variable, so that the test are independent from the actual /labels.yml file. 
-"""
-test_labels = {
-        "name": "test-techniques",
-        "values": [
-            "INVALID", 
-            "NONE", 
-            "FOOT_SWAP",
-            "OUTSIDE_FLAG",
-            "BACK_FLAG",
-            "INSIDE_FLAG",
-            "DROP_KNEE",
-            "CROSS_MIDLINE"
-        ]
-    }
-mut.__labels = test_labels
-
 def test_get_dataset_name():
     actual = mut.get_dataset_name()
 
