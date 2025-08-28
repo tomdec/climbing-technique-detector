@@ -121,7 +121,10 @@ class SOTA(ClassificationModel):
         config = self.__get_train_wandb_config(args)
         init(project="detect-climbing-technique", job_type="train", group="sota", name=self.name, 
             config=config, dir=self.data_root_path)
-        add_wandb_callback(self.model, enable_model_checkpointing=True)
+        add_wandb_callback(self.model, enable_model_checkpointing=False,
+            enable_train_validation_logging=False,
+            enable_validation_logging=False,
+            enable_prediction_logging=False)
 
         results = self.model.train(trainer=trainer,
             data=dataset_path, 
@@ -166,7 +169,10 @@ class SOTA(ClassificationModel):
             config = self.__get_test_wandb_config(args)
             wandb_run = init(project="detect-climbing-technique", job_type="test", group="sota", 
                 name=self.name, config=config, dir=self.data_root_path)
-            add_wandb_callback(self.model, enable_model_checkpointing=True)
+            add_wandb_callback(self.model, enable_model_checkpointing=False,
+                enable_train_validation_logging=False,
+                enable_validation_logging=False,
+                enable_prediction_logging=False)
 
         # Calculate metrics
         rename(join(dataset_path, "val"), join(dataset_path, "val_temp"))
