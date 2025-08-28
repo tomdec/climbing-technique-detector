@@ -220,27 +220,12 @@ def __arch5_factory(train: tf.data.Dataset,
         Don't change, make new DnnArch and function.
     """
 
-    input_dict, all_features = __make_input_layer(train, normalize=normalize)
-    intermediate = layers.Dense(128, activation="relu")(all_features)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(128, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(128, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(64, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(32, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    output = layers.Dense(7, activation="softmax")(intermediate)
-
-    model = Model(input_dict, output)
-
-    model.compile(optimizer='adam', 
-        loss=losses.CategoricalCrossentropy(), 
-        metrics=[metrics.CategoricalAccuracy()], 
-        run_eagerly=debugging)
-    
-    return model
+    return __arch_factory(train=train, 
+        nodes=[128, 128, 128, 64, 32], 
+        normalize=normalize, 
+        debugging=debugging, 
+        dropout_rate=dropout_rate, 
+        activation="relu")
 
 _arch_mapping: Mapping[DnnArch, Callable[[tf.data.Dataset, bool, bool, float], Model]] = {
     DnnArch.ARCH1: __arch1_factory,
