@@ -2,9 +2,11 @@
 from cv2 import FILLED, FONT_HERSHEY_SIMPLEX, LINE_AA, getTextSize, rectangle, putText
 from cv2.typing import MatLike
 
-from src.labels import Technique 
+from src.labels import value_to_name
 
-def write_label(frame: MatLike, label: Technique) -> MatLike:
+def write_label(frame: MatLike, label: int | str) -> MatLike:
+    if type(label) is int:
+        label = value_to_name(label)
     return write_text(frame, label.name)
 
 def write_text(frame: MatLike, text: str) -> MatLike:

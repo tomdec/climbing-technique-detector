@@ -4,14 +4,11 @@ from os.path import join, isdir, exists
 from os import listdir, makedirs, mkdir
 from numpy import zeros
 
+from src.labels import name_to_value
 from src.common.helpers import read_dataframe
-from src.labels import Technique
 from src.hpe.model import build_holistic_model
 from src.hpe.evaluate import to_feature_vector
 from src.hpe.landmarks import get_feature_labels
-
-def __label_encoding(label: str) -> int:
-    return Technique[label].value
 
 def generate_hpe_feature_df(data_path,
         dataset_name = "techniques"):
@@ -36,7 +33,7 @@ def generate_hpe_feature_df(data_path,
                     
                     with build_holistic_model() as model:
                         features = to_feature_vector(model, image)
-                        matrix.append([*features, __label_encoding(label), image_file_path])
+                        matrix.append([*features, name_to_value(label), image_file_path])
         
         df = DataFrame(data=matrix, columns=column_names)
         df.to_pickle(join(df_path, f"{data_split}.pkl"))
@@ -59,7 +56,7 @@ def generate_unity_df(data_root_path, combine_for_kfold=False):
                 label_path = join(data_split_path, label)
                 for image_name in listdir(label_path):
                     image_file_path = join(label_path, image_name)
-                    encoded_label = __label_encoding(label)
+                    encoded_label = name_to_value(label)
                     features = zeros(len(column_names) - 2)
                     features[encoded_label] = 1
                     matrix.append([*features, encoded_label, image_file_path])

@@ -1,25 +1,17 @@
 from os.path import exists, join
-from os import makedirs, listdir
+from os import listdir
 from cv2 import VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_POS_FRAMES, VideoWriter_fourcc, VideoWriter
 
-from src.labels import get_labels_as_dataframe, Technique
-from src.helpers import get_filename
+from src.labels import get_labels_as_dataframe, make_label_dirs, value_to_name
+from src.common.helpers import get_filename
 
-def build_segment_dirs(rootpath):
+def build_sample_dirs(rootpath):
     samples_dir = join(rootpath, "samples")
-    if not exists(samples_dir):
-        makedirs(samples_dir)
-
-    for value in Technique:
-        if value == Technique.INVALID:
-            continue
-        samples_label_path = join(samples_dir, value.name)
-        if not exists(samples_label_path):
-            makedirs(samples_label_path)
+    make_label_dirs(samples_dir)
 
 def generate_from_labels(video_path, 
-                     path_to_samples,
-                     run_build_sample_dirs = True):
+        path_to_samples,
+        run_build_sample_dirs = True):
     original_video = VideoCapture(video_path)
     try: 
         if not original_video.isOpened():
@@ -36,11 +28,11 @@ def generate_from_labels(video_path,
         labels = get_labels_as_dataframe(label_path)
 
         if run_build_sample_dirs:
-            build_segment_dirs(path_to_samples)
+            build_sample_dirs(path_to_samples)
         
         for _, row in labels.iterrows():
             start = row["start"]
-            label_name = Technique(row["label"]).name
+            label_name = value_to_name(row["label"])
             stop = row["stop"]
         
             sample_path = f"{path_to_samples}/samples/{label_name}/{file_name}__{start}.mp4"
@@ -71,7 +63,7 @@ def generate_from_labels(video_path,
 def generate_all_segments(data_root):
     video_root = join(data_root, "videos")
 
-    build_segment_dirs(data_root)
+    build_sample_dirs(data_root)
 
     videos = listdir(video_root)
     for video in videos:
