@@ -17,6 +17,9 @@ if __labels is None:
             __labels = safe_load(file)
             print("loaded labels")
 
+def get_valid_label_count():
+    return len(__labels['values']) - 1
+
 def get_dataset_name() -> str:
     return __labels['name']
 

@@ -1,8 +1,9 @@
 from enum import Enum
-from typing import Mapping
-from typing import Callable
+from typing import Mapping, Callable, List
 from keras import Model, layers, losses, metrics, optimizers, Input
 import tensorflow as tf
+
+from src.labels import get_valid_label_count
 
 class DnnArch(Enum):
     ARCH1 = 0
@@ -89,6 +90,33 @@ def __make_input_layer(train: tf.data.Dataset, normalize=True):
 
     return all_inputs, layers.concatenate(encoded_feature)
 
+def __arch_factory(train: tf.data.Dataset,
+        nodes: List[int],
+        normalize: bool,
+        debugging: bool,
+        dropout_rate: float,
+        activation: str) -> Model:
+    
+    input_dict, all_features = __make_input_layer(train, normalize=normalize)
+    
+    intermediate = layers.Dense(nodes[0], activation=activation)(all_features)
+    intermediate = layers.Dropout(dropout_rate)(intermediate)
+    
+    for node in nodes[1:]:    
+        intermediate = layers.Dense(node, activation=activation)(intermediate)
+        intermediate = layers.Dropout(dropout_rate)(intermediate)
+    
+    output = layers.Dense(get_valid_label_count(), activation="softmax")(intermediate)
+
+    model = Model(input_dict, output)
+    
+    model.compile(optimizer=optimizers.Adam(),
+        loss=losses.CategoricalCrossentropy(), 
+        metrics=[metrics.CategoricalAccuracy()], 
+        run_eagerly=debugging)
+    
+    return model
+
 def __arch1_factory(train: tf.data.Dataset, 
         normalize=True, 
         debugging=False,
@@ -99,25 +127,12 @@ def __arch1_factory(train: tf.data.Dataset,
         Don't change, make new DnnArch and function.
     """
 
-    input_dict, all_features = __make_input_layer(train, normalize=normalize)
-    intermediate = layers.Dense(256, activation="relu")(all_features)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(128, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(64, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(32, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    output = layers.Dense(7, activation="softmax")(intermediate)
-
-    model = Model(input_dict, output)
-    
-    model.compile(optimizer=optimizers.Adam(),
-        loss=losses.CategoricalCrossentropy(), 
-        metrics=[metrics.CategoricalAccuracy()], 
-        run_eagerly=debugging)
-
-    return model
+    return __arch_factory(train=train, 
+        nodes=[256, 128, 64, 32], 
+        normalize=normalize, 
+        debugging=debugging, 
+        dropout_rate=dropout_rate, 
+        activation="relu")
 
 def __arch2_factory(train: tf.data.Dataset, 
         normalize=True, 
@@ -129,27 +144,12 @@ def __arch2_factory(train: tf.data.Dataset,
         Don't change, make new DnnArch and function.
     """
 
-    input_dict, all_features = __make_input_layer(train, normalize=normalize)
-    intermediate = layers.Dense(512, activation="relu")(all_features)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(256, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(128, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(64, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(32, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    output = layers.Dense(7, activation="softmax")(intermediate)
-
-    model = Model(input_dict, output)
-
-    model.compile(optimizer='adam', 
-        loss=losses.CategoricalCrossentropy(), 
-        metrics=[metrics.CategoricalAccuracy()], 
-        run_eagerly=debugging)
-    
-    return model
+    return __arch_factory(train=train, 
+        nodes=[512, 256, 128, 64, 32], 
+        normalize=normalize, 
+        debugging=debugging, 
+        dropout_rate=dropout_rate, 
+        activation="relu")
 
 def __arch3_factory(train: tf.data.Dataset, 
         normalize=True, 
@@ -161,31 +161,12 @@ def __arch3_factory(train: tf.data.Dataset,
         Don't change, make new DnnArch and function.
     """
 
-    input_dict, all_features = __make_input_layer(train, normalize=normalize)
-    intermediate = layers.Dense(32, activation="relu")(all_features)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(64, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(128, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(256, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(128, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(64, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(32, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    output = layers.Dense(7, activation="softmax")(intermediate)
-
-    model = Model(input_dict, output)
-
-    model.compile(optimizer='adam', 
-        loss=losses.CategoricalCrossentropy(), 
-        metrics=[metrics.CategoricalAccuracy()], 
-        run_eagerly=debugging)
-    
-    return model
+    return __arch_factory(train=train, 
+        nodes=[32, 64, 128, 256, 128, 64, 32], 
+        normalize=normalize, 
+        debugging=debugging, 
+        dropout_rate=dropout_rate, 
+        activation="relu")
 
 def __arch4_factory(train: tf.data.Dataset, 
         normalize=True, 
@@ -199,27 +180,12 @@ def __arch4_factory(train: tf.data.Dataset,
         Don't change, make new DnnArch and function.
     """
 
-    input_dict, all_features = __make_input_layer(train, normalize=normalize)
-    intermediate = layers.Dense(128, activation="relu")(all_features)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(256, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(128, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(64, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(32, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    output = layers.Dense(7, activation="softmax")(intermediate)
-
-    model = Model(input_dict, output)
-
-    model.compile(optimizer='adam', 
-        loss=losses.CategoricalCrossentropy(), 
-        metrics=[metrics.CategoricalAccuracy()], 
-        run_eagerly=debugging)
-    
-    return model
+    return __arch_factory(train=train, 
+        nodes=[128, 256, 128, 64, 32], 
+        normalize=normalize, 
+        debugging=debugging, 
+        dropout_rate=dropout_rate, 
+        activation="relu")
 
 def __arch5_factory(train: tf.data.Dataset, 
         normalize=True, 
@@ -234,27 +200,12 @@ def __arch5_factory(train: tf.data.Dataset,
         Don't change, make new DnnArch and function.
     """
 
-    input_dict, all_features = __make_input_layer(train, normalize=normalize)
-    intermediate = layers.Dense(128, activation="relu")(all_features)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(128, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(128, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(64, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    intermediate = layers.Dense(32, activation="relu")(intermediate)
-    intermediate = layers.Dropout(dropout_rate)(intermediate)
-    output = layers.Dense(7, activation="softmax")(intermediate)
-
-    model = Model(input_dict, output)
-
-    model.compile(optimizer='adam', 
-        loss=losses.CategoricalCrossentropy(), 
-        metrics=[metrics.CategoricalAccuracy()], 
-        run_eagerly=debugging)
-    
-    return model
+    return __arch_factory(train=train, 
+        nodes=[128, 128, 128, 64, 32], 
+        normalize=normalize, 
+        debugging=debugging, 
+        dropout_rate=dropout_rate, 
+        activation="relu")
 
 _arch_mapping: Mapping[DnnArch, Callable[[tf.data.Dataset, bool, bool, float], Model]] = {
     DnnArch.ARCH1: __arch1_factory,
