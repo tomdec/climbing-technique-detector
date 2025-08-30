@@ -3,7 +3,8 @@ from os import listdir
 from os.path import splitext, split, exists
 from numpy import array
 from pandas import DataFrame, read_pickle
-from sympy import root
+from cv2 import imread as cv2_imread, cvtColor, COLOR_BGR2RGB
+from cv2.typing import MatLike
 
 def get_filename(path: str):
     _, tail = split(path)
@@ -61,3 +62,7 @@ def read_dataframe(location, verbose=False) -> DataFrame:
 def make_file(filepath):
     with open(filepath, 'w'):
         pass
+
+def imread(file_path: str) -> MatLike:
+    image = cv2_imread(file_path)
+    return cvtColor(image, COLOR_BGR2RGB)

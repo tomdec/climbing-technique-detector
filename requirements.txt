@@ -109,6 +109,7 @@ six==1.17.0
 sounddevice==0.5.1
 stack-data==0.6.3
 stringzilla==3.12.5
+supervision==0.25.0
 sympy==1.13.1
 tensorboard==2.18.0
 tensorboard-data-server==0.7.2

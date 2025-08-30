@@ -207,26 +207,6 @@ def __arch5_factory(train: tf.data.Dataset,
         dropout_rate=dropout_rate, 
         activation="relu")
 
-def __arch5_factory(train: tf.data.Dataset, 
-        normalize=True, 
-        debugging=False,
-        dropout_rate=0.1) -> Model:
-    """
-        Arch5.
-        Architecture with two parts, the first part has layers of a consistent size.
-        In the second part, each layer has half the nodes of the previous layer, down to 32 nodes.
-        This specific instance, has 3 layers of 128 nodes for the first part.
-
-        Don't change, make new DnnArch and function.
-    """
-
-    return __arch_factory(train=train, 
-        nodes=[128, 128, 128, 64, 32], 
-        normalize=normalize, 
-        debugging=debugging, 
-        dropout_rate=dropout_rate, 
-        activation="relu")
-
 _arch_mapping: Mapping[DnnArch, Callable[[tf.data.Dataset, bool, bool, float], Model]] = {
     DnnArch.ARCH1: __arch1_factory,
     DnnArch.ARCH2: __arch2_factory,

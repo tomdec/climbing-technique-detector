@@ -1,19 +1,22 @@
-from cv2 import cvtColor, COLOR_BGR2RGB
+from cv2.typing import MatLike
 from mediapipe.python.solutions.holistic import Holistic
-from typing import NamedTuple
+from typing import NamedTuple, Tuple
 from numpy import array
 
-from src.hpe.landmarks import _used_pose_landmarks, _used_hand_landmarks
+from src.hpe.mp.landmarks import _used_pose_landmarks, _used_hand_landmarks
 
-def predict_landmarks(image, model: Holistic):
-	image_height, image_width, _ = image.shape
+def predict_landmarks(image: MatLike, model: Holistic) -> Tuple[NamedTuple, Tuple[int, int]]:
+    """
+    Returns:
+        (results, image_shape): 
+        - results: NamedTuple object containing the HPE results from the Holistic model.
+        - image_shape: Shape, (image_height, image_width), of the processed image. 
+    """
+    image_height, image_width, _ = image.shape
+    
+    results = model.process(image)                # Make prediction
 
-	image = cvtColor(image, COLOR_BGR2RGB) 		# COLOR CONVERSION BGR 2 RGB
-	image.flags.writeable = False				# Image is no longer writeable
-	
-	results = model.process(image)				# Make prediction
-	
-	return results, (image_height, image_width)
+    return results, (image_height, image_width)
 
 def __to_np_array(results: NamedTuple):
     result_array = []
@@ -52,6 +55,6 @@ def __to_np_array(results: NamedTuple):
 
     return array(result_array)
 
-def to_feature_vector(model, image):
+def to_feature_vector(model: Holistic, image: MatLike):
     results, _ = predict_landmarks(image, model)
     return __to_np_array(results)
