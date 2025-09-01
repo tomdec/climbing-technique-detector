@@ -45,7 +45,6 @@ def plot_distances(distances):
     plt.ylim(0, 10)
     plt.xlim(0, 60)
 
-
 def plot_yolo_average_distances(distances, 
         save_location: str = ""):
     plot_average_distances(distances, "yolo11x-pose", save_location)
