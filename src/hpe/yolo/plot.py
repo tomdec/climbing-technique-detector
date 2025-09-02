@@ -10,15 +10,13 @@ from src.hpe.yolo.draw import draw_my_landmarks
 
 def compare_landmarks(image: MatLike, 
         labels: YoloLabels,
-        results: Results,
+        results: Keypoints | Results,
         object_index: int = 0) -> MatLike:
-    return compare_landmarks(image, labels, results[object_index].keypoints)
+    if (type(results) is Results):
+        results = results[object_index].keypoints
 
-def compare_landmarks(image: MatLike, 
-        labels: YoloLabels,
-        results: Keypoints) -> MatLike:
     annotated = image.copy()
-    
+
     annotated = labels.draw(annotated)
     annotated = draw_my_landmarks(annotated, results)
 
