@@ -1,9 +1,9 @@
-from cv2 import imread
 from pandas import DataFrame, concat
 from os.path import join, isdir, exists
 from os import listdir, makedirs, mkdir
 from numpy import zeros
 
+from src.common.helpers import imread
 from src.labels import name_to_value
 from src.common.helpers import read_dataframe
 from src.hpe.mp.model import build_holistic_model

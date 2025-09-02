@@ -1,18 +1,17 @@
-from typing import Dict
-from networkx import dfs_labeled_edges
+from typing import Dict, Callable, Any, List
+from cv2.typing import MatLike
 from numpy import array, full, nan
-from typing import Any, List
 from mediapipe.python.solutions.holistic import PoseLandmark, HandLandmark
 from os.path import join
 from pandas import DataFrame, read_pickle
 
-from src.hpe.common.labels import MyLandmark
-from src.hpe.mp.landmarks import get_pose_landmark, get_left_hand_landmark, get_right_hand_landmark
-from src.hpe.common.labels import YoloLabels, build_yolo_labels, get_most_central
+from src.common.helpers import imread as imread_as_rgb
 from src.hpe.common.helpers import eucl_distance, list_image_label_pairs
-from src.hpe.mp.model import build_holistic_model
-from src.hpe.mp.evaluate import predict_landmarks
+from src.hpe.common.labels import MyLandmark, YoloLabels, build_yolo_labels, get_most_central
 from src.hpe.common.performance import log_overall_performance
+from src.hpe.mp.evaluate import predict_landmarks
+from src.hpe.mp.landmarks import get_pose_landmark, get_left_hand_landmark, get_right_hand_landmark
+from src.hpe.mp.model import build_holistic_model
 
 def PCKh50(ytrue: YoloLabels, yhat) -> Dict[MyLandmark, bool | None]:
     """
@@ -152,7 +151,9 @@ def estimate_performance(root_image_dir: str):
     
     log_overall_performance(performance_maps, "MediaPipe")
 
-def estimate_distances(data_root: str = "data", split: str = "test") -> DataFrame:
+def estimate_distances(data_root: str = "data", split: str = "test",
+        dataset_name: str = "distances",
+        image_mutators: List[Callable[[MatLike], MatLike]] = []) -> DataFrame:
     root_image_dir = join(data_root, "hpe", "img", split, "images")
     data_pairs = list_image_label_pairs(root_image_dir)
 
@@ -163,7 +164,12 @@ def estimate_distances(data_root: str = "data", split: str = "test") -> DataFram
     
     with build_holistic_model() as model:
         for image_path, label_path in data_pairs:
-            _, results, _ = predict_landmarks(image_path, model)
+            image = imread_as_rgb(image_path)
+
+            for mutator in image_mutators:
+                image = mutator(image)
+
+            results, _ = predict_landmarks(image, model)
             labels_list = build_yolo_labels(label_path)
 
             if len(labels_list) == 0:
@@ -176,15 +182,15 @@ def estimate_distances(data_root: str = "data", split: str = "test") -> DataFram
                 
             index += 1
 
-    result_path = join(data_root, "hpe", "mediapipe", "distances.pkl") 
+    result_path = join(data_root, "hpe", "mediapipe", f"{dataset_name}.pkl") 
     df = DataFrame(distances, columns=[landmark.name for landmark in MyLandmark])
     df.to_pickle(result_path)
     print(f"Distances saved to '{result_path}'")
 
     return df
 
-def read_distances(data_root: str = "data") -> DataFrame:
-    result_path = join(data_root, "hpe", "mediapipe", "distances.pkl")
+def read_distances(data_root: str = "data", dataset_name: str = "distances") -> DataFrame:
+    result_path = join(data_root, "hpe", "mediapipe", f"{dataset_name}.pkl")
     df = read_pickle(result_path)
     return df
 
