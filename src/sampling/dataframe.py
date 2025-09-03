@@ -1,14 +1,14 @@
-from cv2 import imread
 from pandas import DataFrame, concat
 from os.path import join, isdir, exists
 from os import listdir, makedirs, mkdir
 from numpy import zeros
 
+from src.common.helpers import imread
 from src.labels import name_to_value
 from src.common.helpers import read_dataframe
-from src.hpe.model import build_holistic_model
-from src.hpe.evaluate import to_feature_vector
-from src.hpe.landmarks import get_feature_labels
+from src.hpe.mp.model import build_holistic_model
+from src.hpe.mp.evaluate import to_feature_vector
+from src.hpe.mp.landmarks import get_feature_labels
 
 def generate_hpe_feature_df(data_path,
         dataset_name = "techniques"):

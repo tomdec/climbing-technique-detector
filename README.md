@@ -14,6 +14,7 @@ python3 -m venv ./.venv
 
 Activate the virtual environment by running:
 
+
 On Windows:
 ```
 .venv\Scripts\Activate.ps1
@@ -83,14 +84,103 @@ Contains all data files required in this project.
 Label files will be included in source control to have back-ups of them, video files and images won't since they are too large and not mine
 to make publicly available.
 
-### /video
-Folder that contains the full, original, videos that are used as dataset for this project. 
+### /df
+Contains the DataFrame datasets used for the HPE DNN models. The DataFrames are saved as `.pkl` files.
+
+The file system structure of this folder is determined by the source code of this project.
+
+Expected structure: 
+```bash
+data/df
+├── {dataset_name}
+│   ├── test.pkl
+│   ├── train.pkl
+│   └── val.pkl
+└── {dataset_name}_kf
+    └── all.pkl
+```
+
+### /hpe
+Contains data for the HPE benchmark. These are open source images of climbers with the HPE landmarks labelled. Also contains the result data of the compared HPE tools, MediaPipe and Yolo.
+
+The file structure under `/data/hpe/img` is determined by the HPE labelling tool, [roboflow](https://app.roboflow.com).
+
+The file structure under `/data/hpe/mediapipe` and `/data/hpe/yolo` is determined by the source code of this project.
+
+Expected structure:
+```bash
+data/hpe
+├── img
+│   ├── README.dataset.txt
+│   ├── README.roboflow.txt
+│   ├── data.yaml
+│   ├── test
+│   │   ├── images
+│   │   │   ├── image_name_1.jpg
+│   │   │   └── ...
+│   │   └── labels
+│   │       ├── image_name_1.txt
+│   │       └── ...
+│   ├── train
+│   │   ├── images
+│   │   │   └── ...
+│   │   └── labels
+│   │       └── ...
+│   └── valid
+│       ├── images
+│       │   └── ...
+│       └── labels
+│           └── ...
+├── mediapipe
+│   ├── avg-distances.png
+│   ├── distances.pkl
+│   └── distances_bgr.pkl
+└── yolo
+    ├── avg-distances.png
+    ├── distances.pkl
+    └── distances_bgr.pkl
+```
+
+### /img
+Contains the image datasets. This structure is determined by the source code of this project.
+
+Expected structure: 
+```bash
+data/img
+├── {dataset_name}
+│   ├── test
+│   │   ├── label1
+│   │   │   ├── image_name_1.png
+│   │   │   └── ...
+│   │   ├── ...
+│   │   └── label{n}
+│   │       ├── image_name_x.png
+│   │       └── ...
+│   ├── train
+│   │   ├── label1
+│   │   │   └── ...
+│   │   └── ...
+│   └── val
+│       ├── label1
+│       │   └── ...
+│       └── ...
+└── {dataset_name}_kf
+    └── all
+        ├── label1
+        │   ├── image_name_1.png
+        │   └── ...
+        ├── ...
+        └── label{n}
+            ├── image_name_x.png
+            └── ...
+```
 
 ### /labels
 Labels for the video files in `/data/videos`. They should have the exact same names as the video files, but have the `.csv` extension.
 
 #### /labels.yml
 Configuration file to specify the labels we will try to recognize.
+
 Expected structure: 
 ```yaml
 name: "label name"
@@ -105,14 +195,57 @@ The `name` value of the labels is also used as the dataset name when these are g
 
 The only fixed value of these labels is the first label `INVALID`, at index `0`. This index will always be recognized as the `INVALID` label, used to mark video segments that should not be used for training or testing, for example, parts of the video that are heavily editted or cuts happen. 
 
+### /runs
+Contains the results from training, validation and test runs for the different models.
+
+This structure is determined by the source code of this project, the actual saved files for each run depend on the used tools for that model.
+
+The `split` folder are only present for models trained under the k-fold algorithm.
+
+Expected structure:
+```bash
+data/runs
+├── {model_name}
+│   ├── train
+│   │   └── ...
+│   ├── ...
+│   ├── train{n_train}
+│   │   └── ...
+│   ├── test
+│   │   └── ...
+│   ├── ...
+│   └── test{n_test}
+│       └── ...
+└── {model_name}-kf-fold{n_fold}
+    ├── split
+    │   ├── test.npy
+    │   ├── train.npy
+    │   └── val.npy
+    ├── train
+    │   └── ...
+    ├── ...
+    ├── test
+    │   └── ...
+    └── ...
+```
+
 ### /samples
 Contains the video snippets grouped by their label. These samples are [generated](#3-extract-labelled-samples-from-videos) from `/videos` and `/labels`.
 
-### /img
+Expected structure:
+```bash
+data/samples
+├── label1
+│   ├── sample_name_1.mp4
+│   └── ...
+├── ...
+└── label{n}
+    ├── sample_name_x.mp4
+    └── ...
+```
 
-### /df
-
-### /runs
+### /video
+Folder that contains the full, original, videos that are used as dataset for this project. 
 
 ## /src
 Contains the source code required in the project.
@@ -124,6 +257,31 @@ pytest
 ```
 
 # Usage
+
+## 1. HPE tool benchmark
+To compare the MediaPipe and Yolo tools for the HPE predictions the code in the [hpe poc notebook](/hpe_poc.ipynb) can be used, or the source code under `src/hpe`.
+
+First, labelled images will be needed, we did the labelling with [roboflow](https://app.roboflow.com). 
+Once labelled, the data can be imported and placed in `/data/hpe/img`.
+
+Plot the distances between the labelled landmarks and the predicted landmarks, run:
+```python
+from src.hpe.yolo.performance import estimate_distances
+from src.hpe.yolo.plot import plot_yolo_average_distances
+
+distances = estimate_distances()
+plot_yolo_average_distances(distances=distances)
+```
+
+To estimate the performance and log it to the output, run:
+```python
+from src.hpe.yolo.performance import estimate_performance
+
+estimate_performance(name="Yolov11x-pose")
+```
+
+Similar code is used for MediaPipe, just import from `src.hpe.mp` instead.
+Alterations can also be made to test the performance when evaluation the images from BGR color encoding, see the [hpe poc notebook](/hpe_poc.ipynb) for this code.
 
 ## 1. download videos
 By running

@@ -1,9 +1,5 @@
-data/videos/**
-data/samples/**
-data/img/**
-data/runs/**
-data/df/**
-data/wandb/**
+data/**
+!data/labels/**
 **.pt
 test/sota/data/**
 
