@@ -3,7 +3,7 @@ import tensorflow as tf
 from keras import Model
 from os.path import join
 from os import listdir, mkdir
-from keras._tf_keras.keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger
+from keras._tf_keras.keras.callbacks import ModelCheckpoint, TensorBoard, CSVLogger, EarlyStopping
 from os import makedirs
 from keras._tf_keras.keras.models import load_model
 from typing import Optional, override
@@ -145,9 +145,16 @@ class HpeDnn(ClassificationModel):
 
         csv_callback = CSVLogger(filename=results_file)
 
+        early_stopping_callback = EarlyStopping(monitor="val_categorical_accuracy", patience=3)
+
         self.model.fit(train_ds, epochs=args.epochs, validation_data=val_ds, 
-            callbacks=[cp_callback, tb_callback, csv_callback, WandbMetricsLogger(), 
-                WandbModelCheckpoint(join(log_dir, "wandb.keras"))])
+            callbacks=[cp_callback,
+                tb_callback, 
+                csv_callback, 
+                WandbMetricsLogger(), 
+                WandbModelCheckpoint(join(log_dir, "wandb.keras")),
+                early_stopping_callback
+            ])
         
         finish()
 

@@ -132,7 +132,8 @@ class SOTA(ClassificationModel):
             imgsz=640,
             project=project_path,
             optimizer=args.optimizer,
-            lr0=args.lr0)
+            lr0=args.lr0,
+            patience=3)
         
         finish()
         
