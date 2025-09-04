@@ -65,7 +65,8 @@ class HpeDnnModelInitializeArgs(ModelInitializeArgs):
     
 class HpeDnnMultiRunTrainArgs(MultiRunTrainArgs):
 
-    def __init__(self, model_initialize_args: HpeDnnModelInitializeArgs = HpeDnnModelInitializeArgs(), 
+    def __init__(self, 
+            model_initialize_args: HpeDnnModelInitializeArgs = HpeDnnModelInitializeArgs(), 
             runs: int = 5, 
             train_args: HpeDnnTrainArgs = HpeDnnTrainArgs()):
         MultiRunTrainArgs.__init__(self, model_initialize_args, runs, train_args)
