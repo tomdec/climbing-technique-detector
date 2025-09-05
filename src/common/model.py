@@ -1,9 +1,8 @@
 from typing import Any
-from os.path import exists
+from os.path import exists, join
 
-from cv2 import add
-
-from src.common.helpers import get_runs, raise_not_implemented_error
+from src.common.helpers import get_runs, raise_not_implemented_error, get_next_train_run, get_current_train_run,\
+    get_current_test_run
 
 class ModelConstructorArgs:
 
@@ -151,6 +150,28 @@ class ClassificationModel:
 
     def _fresh_model(self, args: ModelInitializeArgs):
         raise_not_implemented_error(self.__class__.__name__, self._fresh_model.__name__)
+
+    def _get_next_train_run(self):
+        model_dir = self._get_model_dir()
+        return get_next_train_run(model_dir)
+
+    def _get_next_train_dir(self):
+        model_dir = self._get_model_dir()
+        return join(model_dir, get_next_train_run(model_dir))
+
+    def _get_current_train_run(self):
+        model_dir = self._get_model_dir()
+        return get_current_train_run(model_dir)
+
+    def _get_current_test_run_path(self):
+        model_dir = self._get_model_dir()
+        return join(model_dir, get_current_test_run(model_dir))
+
+    def _get_common_wandb_config(self) -> dict:
+        return {
+            'model_arch': self.model_arch,
+            'dataset_name': self.dataset_name
+        }
 
     def __has_trained(self) -> bool:
         model_dir = self._get_model_dir()

@@ -99,25 +99,20 @@ class HpeDnn(ClassificationModel):
     def initialize_model(self, args: HpeDnnModelInitializeArgs):
         ClassificationModel.initialize_model(self, args)
     
-    def __get_common_wandb_config(self) -> dict:
-        return {
-            'model_arch': self.model_arch,
-            'dataset_name': self.dataset_name
-        }
-    
     def __get_train_wandb_config(self, args: HpeDnnTrainArgs) -> dict:
-        return self.__get_common_wandb_config() | {
+        return self._get_common_wandb_config() | {
             'balanced': args.balanced,
             'augmented': args.augment,
-            'run': self.__get_next_train_run(),
+            'run': self._get_next_train_run(),
             #'optimizer': optimizer,
             #'lr0': lr0,
         } | args.additional_config
 
     def __get_test_wandb_config(self, args: TestArgs) -> dict:
-        return self.__get_common_wandb_config() | {
+        return self._get_common_wandb_config() | {
             'balanced': False,
             'augmented': False,
+            'run': self._get_current_train_run()
         } | args.additional_config
 
     @override
@@ -249,24 +244,16 @@ class HpeDnn(ClassificationModel):
         with open(results_file, 'r') as file:
             return load(file)
 
-    def __get_next_train_run(self):
-        model_dir = self._get_model_dir()
-        return get_next_train_run(model_dir)
-
-    def __get_next_train_dir(self):
-        model_dir = self._get_model_dir()
-        return join(model_dir, get_next_train_run(model_dir))
-
     def __get_checkpoint_dir(self):
-        train_dir = self.__get_next_train_dir()
+        train_dir = self._get_next_train_dir()
         return join(train_dir, "models")
 
     def __get_tensorboard_log_dir(self):
-        train_dir = self.__get_next_train_dir()
+        train_dir = self._get_next_train_dir()
         return join(train_dir, "logs")
 
     def __get_results_file_path(self):
-        train_dir = self.__get_next_train_dir()
+        train_dir = self._get_next_train_dir()
         return join(train_dir, "results.csv")
 
     def __get_dataset_dir(self):
