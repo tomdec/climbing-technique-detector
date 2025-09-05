@@ -1,6 +1,6 @@
 from os import makedirs
 from sklearn.model_selection import KFold
-from typing import Tuple, Type
+from typing import Tuple, Type, Dict
 from numpy import ndarray, array, save, load
 from random import sample
 from os.path import join, exists
@@ -16,6 +16,10 @@ class AbstractFoldCrossValidation:
     _model_args: ModelConstructorArgs
     _train_run_args: MultiRunTrainArgs
     _model_type: Type[ClassificationModel]
+
+    @property
+    def train_run_args(self) -> MultiRunTrainArgs:
+        return self._train_run_args
 
     def __init__(self, model_args: ModelConstructorArgs,
             train_run_args: MultiRunTrainArgs,
@@ -83,6 +87,9 @@ class AbstractFoldCrossValidation:
         save(join(model_dir, "split", "val.npy"), val)
         save(join(model_dir, "split", "test.npy"), test)
 
+    def get_additional_config(self, context_config: Dict={}) -> Dict:
+        return context_config
+
     def train_folds(self):
         full_data = self.get_full_data_list()
 
@@ -100,16 +107,15 @@ class AbstractFoldCrossValidation:
             
             self.build_fold(fold_num, train, val, test, full_data)
             
-            train_run_args = deepcopy(self._train_run_args)
-            train_run_args.train_args.additional_config = {
+            additional_config = self.get_additional_config(context_config={
                 "fold": fold_num
-            }
+            })
+            train_run_args = deepcopy(self._train_run_args)
+            train_run_args.train_args.additional_config = additional_config
             model.execute_train_runs(train_run_args)
 
             model.test_model(args=TestArgs(write_to_wandb=True, 
-                additional_config={
-                    "fold": fold_num
-                }))
+                additional_config=additional_config))
 
             self.clear_fold()
 
@@ -131,10 +137,11 @@ class AbstractFoldCrossValidation:
             
             self.build_fold(fold_num, train, val, test, full_data)
             
+            additional_config = self.get_additional_config(context_config={
+                "fold": fold_num
+            })
             model.test_model(args=TestArgs(write_to_wandb=True, 
-                additional_config={
-                    "fold": fold_num
-                }))
+                additional_config=additional_config))
 
             self.clear_fold()
 
