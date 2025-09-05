@@ -229,20 +229,13 @@ class HpeDnn(ClassificationModel):
             })
             wandb_run.finish()
 
-        results_file = join(test_run_path, "metics.json")
-        with open(join(results_file), "w") as file:
-            dump(results, file)
+        self._save_test_metrics(results)
         
         return results
 
-    def get_test_metrics(self):
-        model_path = self._get_model_dir()
-        test_run = get_current_test_run(model_path)
-        test_run_path = join(model_path, test_run)
-        
-        results_file = join(test_run_path, "metics.json")
-        with open(results_file, 'r') as file:
-            return load(file)
+    @override
+    def get_test_accuracy_metric(self) -> float:
+        return self.get_test_metrics()["categorical_accuracy"]
 
     def __get_checkpoint_dir(self):
         train_dir = self._get_next_train_dir()

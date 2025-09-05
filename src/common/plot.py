@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 from numpy import ndarray
-from typing import Optional
+from typing import Optional, List
 from sklearn.metrics import ConfusionMatrixDisplay
 from os.path import dirname
 from os import makedirs
 
+from src.common.kfold import AbstractFoldCrossValidation
 from src.labels import iterate_valid_labels
 
 __TICKS = [label for label in iterate_valid_labels()]
@@ -32,3 +33,19 @@ def plot_confusion_matrix(labels: ndarray, predictions: ndarray,
         plt.savefig(save_path, bbox_inches="tight")
     else:
         plt.show()
+
+def box_plot_accuracies(*kfold_models: List[AbstractFoldCrossValidation]):
+    
+    def get_name(fold_model: AbstractFoldCrossValidation) -> str:
+        return fold_model._model_args.name
+    
+    def get_metrics(model: AbstractFoldCrossValidation) -> List[float]:
+        return model.get_test_accuracy_metrics()
+
+    metrics = list(map(get_metrics, kfold_models))
+    names = list(map(get_name, kfold_models))
+    
+    plt.figure()
+    plt.title("Comparison of test accuracies")
+    plt.boxplot(metrics, tick_labels=names)
+    plt.show()

@@ -181,8 +181,7 @@ class SOTA(ClassificationModel):
             saved_metrics = metrics.results_dict.copy()
             saved_metrics['speed'] = metrics.speed.copy()
             
-            with open(join(project_path, "test", "metrics.json"), "w") as file:
-                dump(saved_metrics, file)
+            self._save_test_metrics(saved_metrics)
     
             if args.write_to_wandb:
                 wandb_run.log(saved_metrics)
@@ -216,7 +215,11 @@ class SOTA(ClassificationModel):
             wandb_run.finish()
         
         return metrics
-                
+    
+    @override
+    def get_test_accuracy_metric(self) -> float:
+        return self.get_test_metrics()["metrics/accuracy_top1"]
+
     def __get_label_value_from_prediction(self, prediction: Results) -> int:
         pred_name = prediction.names[prediction.probs.top1]
         return name_to_value(pred_name)
@@ -226,10 +229,6 @@ class SOTA(ClassificationModel):
 
     def __get_project_dir(self):
         return join(self.data_root_path, "runs", "sota", self.name)
-
-    def get_test_metrics(self):
-        with open(join(self.__get_project_dir(), "test", "metrics.json"), "r") as file:
-            return load(file)
 
 # results = model.predict(img, verbose = False)
 # result = results[0]

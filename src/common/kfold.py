@@ -1,28 +1,29 @@
+from ctypes import ArgumentError
 from os import makedirs
 from sklearn.model_selection import KFold
-from typing import Tuple, Type, Dict
+from typing import Tuple, Type, Dict, List
 from numpy import ndarray, array, save, load
 from random import sample
 from os.path import join, exists
 from copy import deepcopy
 
 from src.common.helpers import raise_not_implemented_error
-from src.common.model import ClassificationModel, ModelConstructorArgs, MultiRunTrainArgs, TestArgs
+from src.common.model import ClassificationModel, ModelConstructorArgs, MultiRunTrainArgs, TestArgs, TrainArgs
 
 class AbstractFoldCrossValidation:
 
     __N_SPLITS = 10
 
     _model_args: ModelConstructorArgs
-    _train_run_args: MultiRunTrainArgs
+    _train_run_args: MultiRunTrainArgs | None
     _model_type: Type[ClassificationModel]
 
     @property
-    def train_run_args(self) -> MultiRunTrainArgs:
+    def train_run_args(self) -> MultiRunTrainArgs | None:
         return self._train_run_args
 
     def __init__(self, model_args: ModelConstructorArgs,
-            train_run_args: MultiRunTrainArgs,
+            train_run_args: MultiRunTrainArgs | None,
             model_type: Type[ClassificationModel]):
         
         self._kf = KFold(n_splits=self.__N_SPLITS, shuffle=True)
@@ -45,7 +46,7 @@ class AbstractFoldCrossValidation:
     def build_fold(self, fold_num, train, val, test, full_data):
         raise_not_implemented_error(self.__class__.__name__, self.build_fold.__name__)
 
-    def _init_fold_model(self, fold_num) -> ClassificationModel:
+    def _init_fold_model(self, fold_num: int) -> ClassificationModel:
         adapted_args = ModelConstructorArgs(
             name=f"{self._model_args.name}-fold{fold_num}",
             model_arch=self._model_args.model_arch,
@@ -56,6 +57,13 @@ class AbstractFoldCrossValidation:
 
     def clear_fold(self):
         raise_not_implemented_error(self.__class__.__name__, self.clear_fold.__name__)
+    
+    def get_test_accuracy_metrics(self) -> List[float]:
+        def get_metric(model: ClassificationModel) -> float:
+            return model.get_test_accuracy_metric()
+
+        models = list(map(self._init_fold_model, range(1, 11)))
+        return list(map(get_metric, models))
         
     def print_box_plot(self):
         raise_not_implemented_error(self.__class__.__name__, self.print_box_plot.__name__)
@@ -87,10 +95,18 @@ class AbstractFoldCrossValidation:
         save(join(model_dir, "split", "val.npy"), val)
         save(join(model_dir, "split", "test.npy"), test)
 
-    def get_additional_config(self, context_config: Dict={}) -> Dict:
+    def _get_additional_config(self, context_config: Dict={}) -> Dict:
         return context_config
 
-    def train_folds(self):
+    def train_folds(self,
+            train_run_args: MultiRunTrainArgs | None = None):
+
+        if train_run_args is not None:
+            self._train_run_args = train_run_args
+
+        if self.train_run_args is None:
+            raise(ArgumentError("Provide 'train_run_args' argument in either the constructor or 'train_folds' method to execute training."))
+
         full_data = self.get_full_data_list()
 
         for i, (train, test) in enumerate(self._kf.split(full_data)):
@@ -107,7 +123,7 @@ class AbstractFoldCrossValidation:
             
             self.build_fold(fold_num, train, val, test, full_data)
             
-            additional_config = self.get_additional_config(context_config={
+            additional_config = self._get_additional_config(context_config={
                 "fold": fold_num
             })
             train_run_args = deepcopy(self._train_run_args)
@@ -137,7 +153,7 @@ class AbstractFoldCrossValidation:
             
             self.build_fold(fold_num, train, val, test, full_data)
             
-            additional_config = self.get_additional_config(context_config={
+            additional_config = self._get_additional_config(context_config={
                 "fold": fold_num
             })
             model.test_model(args=TestArgs(write_to_wandb=True, 

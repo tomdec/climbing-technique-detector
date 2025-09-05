@@ -1,3 +1,4 @@
+from json import dump, load
 from typing import Any
 from os.path import exists, join
 
@@ -135,9 +136,24 @@ class ClassificationModel:
         self._model_arch = args.model_arch
         self.data_root_path = args.data_root_path
         self.dataset_name = args.dataset_name
+
+    def initialize_model(self, args: ModelInitializeArgs):
+        if (self.__has_trained()):
+            self._load_best_model()
+        else:
+            self._fresh_model(args)
+
+    def execute_train_runs(self, args: MultiRunTrainArgs):
+        for run in range(args.runs):
+            print(f"starting run #{run}")
+            self.initialize_model(args.model_initialize_args)
+            self.train_model(args.train_args)
     
     def train_model(self, args: TrainArgs):
         raise_not_implemented_error(self.__class__.__name__, self.train_model.__name__)
+
+    def test_model(self, args: TestArgs):
+        raise_not_implemented_error(self.__class__.__name__, self.test_model.__name__)
 
     def _get_model_dir(self):
         raise_not_implemented_error(self.__class__.__name__, self._get_model_dir.__name__)
@@ -147,6 +163,10 @@ class ClassificationModel:
 
     def _load_model(self, model_path: str):
         raise_not_implemented_error(self.__class__.__name__, self._load_model.__name__)
+
+    def _load_best_model(self):
+        model_path = self._get_best_model_path()
+        self._load_model(model_path)
 
     def _fresh_model(self, args: ModelInitializeArgs):
         raise_not_implemented_error(self.__class__.__name__, self._fresh_model.__name__)
@@ -172,6 +192,19 @@ class ClassificationModel:
             'model_arch': self.model_arch,
             'dataset_name': self.dataset_name
         }
+    
+    def _save_test_metrics(self, metrics: dict):
+        file_path = join(self._get_current_test_run_path(), "metrics.json")
+        with open(file_path, 'w') as file:
+            dump(metrics, file)
+
+    def get_test_metrics(self) -> dict:
+        file_path = join(self._get_current_test_run_path(), "metrics.json")
+        with open(file_path, 'r') as file:
+            return load(file)
+        
+    def get_test_accuracy_metric(self) -> float:
+        raise_not_implemented_error(self.__class__.__name__, self.get_test_accuracy_metric.__name__)
 
     def __has_trained(self) -> bool:
         model_dir = self._get_model_dir()
@@ -180,23 +213,3 @@ class ClassificationModel:
         
         train_runs = get_runs(model_dir, "train")
         return len(train_runs) > 0
-
-    def _load_best_model(self):
-        model_path = self._get_best_model_path()
-        self._load_model(model_path)
-
-    def initialize_model(self, args: ModelInitializeArgs):
-        if (self.__has_trained()):
-            self._load_best_model()
-        else:
-            self._fresh_model(args)
-
-    def execute_train_runs(self, args: MultiRunTrainArgs):
-        for run in range(args.runs):
-            print(f"starting run #{run}")
-            self.initialize_model(args.model_initialize_args)
-            self.train_model(args.train_args)
-
-    def test_model(self, args: TestArgs):
-        raise_not_implemented_error(self.__class__.__name__, self.test_model.__name__)
-
