@@ -1,6 +1,6 @@
 from os import mkdir, listdir
 from os.path import join, exists
-from typing import override
+from typing import override, Dict
 from shutil import rmtree
 from pandas import DataFrame
 from numpy import average
@@ -13,6 +13,11 @@ from src.hpe_dnn.model import HpeDnn, HpeDnnConstructorArgs, HpeDnnMultiRunTrain
 
 class HpeDnnFoldCrossValidation(AbstractFoldCrossValidation):
     
+    @override
+    @property
+    def train_run_args(self) -> HpeDnnMultiRunTrainArgs:
+        return self._train_run_args
+
     def __init__(self, model_args: ModelConstructorArgs,
             train_run_args: HpeDnnMultiRunTrainArgs):
         AbstractFoldCrossValidation.__init__(self, model_args, train_run_args, HpeDnn)
@@ -43,6 +48,12 @@ class HpeDnnFoldCrossValidation(AbstractFoldCrossValidation):
         val_df = full_data.iloc[val]
         val_df.to_pickle(join(path_to_current, "val.pkl"))
     
+    @override
+    def get_additional_config(self, context_config: Dict = {}) -> Dict:
+        return super().get_additional_config(context_config) | {
+            "dropout_rate": self.train_run_args.model_initialize_args.dropout_rate
+        }
+
     @override
     def clear_fold(self):
         rmtree(join(self.__get_fold_dataset_path(), "current_fold"))

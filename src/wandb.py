@@ -11,8 +11,8 @@ def add_dropout(run: Run) -> Dict:
 
 hpe_dnn_filter: Dict = {"$and": [{"group": { "$eq": "hpe_dnn" }}]}
 
-def update_run(filters: Dict = {},
-        value_calculator: Callable[[Run], Dict] = no_update):
+def update_run_config(filters: Dict = {},
+        config_patcher: Callable[[Run], Dict] = no_update):
     api = Api()
     entity = api.default_entity
     project = "detect-climbing-technique"
@@ -20,9 +20,9 @@ def update_run(filters: Dict = {},
     runs = api.runs(f"{entity}/{project}", filters)
     
     for run in runs:
-        config_patch = value_calculator(run)
+        config_patch = config_patcher(run)
         run.config.update(config_patch)
         run.update()
 
 def update_dropout_rate():
-    update_run(filters = hpe_dnn_filter, value_calculator=add_dropout)
+    update_run_config(filters = hpe_dnn_filter, config_patcher=add_dropout)

@@ -65,6 +65,12 @@ class HpeDnnModelInitializeArgs(ModelInitializeArgs):
     
 class HpeDnnMultiRunTrainArgs(MultiRunTrainArgs):
 
+    @override
+    @property
+    def model_initialize_args(self) -> HpeDnnModelInitializeArgs:
+        """Arguments for initializing the HPE DNN model."""
+        return self._model_initialize_args
+
     def __init__(self, 
             model_initialize_args: HpeDnnModelInitializeArgs = HpeDnnModelInitializeArgs(), 
             runs: int = 5, 
