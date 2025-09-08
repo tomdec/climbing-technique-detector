@@ -2,7 +2,7 @@ from ultralytics import YOLO
 from ultralytics.engine.results import Results
 from ultralytics.utils.metrics import DetMetrics
 from os.path import join
-from os import listdir, rename, remove
+from os import listdir, rename
 from typing import Optional, override
 from wandb import finish, init, Image
 from wandb.integration.ultralytics import add_wandb_callback
@@ -12,7 +12,6 @@ from glob import glob
 from src.labels import get_label_value_from_path, name_to_value
 from src.common.model import ModelConstructorArgs, ModelInitializeArgs, TestArgs, TrainArgs, MultiRunTrainArgs, ClassificationModel
 from src.common.plot import plot_confusion_matrix
-from src.common.helpers import get_next_train_run, get_current_test_run
 from src.sota.balancing import WeightedTrainer
 
 class SOTAConstructorArgs(ModelConstructorArgs):
@@ -86,26 +85,21 @@ class SOTA(ClassificationModel):
     @override
     def execute_train_runs(self, args: SOTAMultiRunTrainArgs):
         ClassificationModel.execute_train_runs(self, args)
-
-    def __get_common_wandb_config(self) -> dict:
-        return {
-            'model_arch': self.model_arch,
-            'dataset_name': self.dataset_name
-        }
     
     def __get_train_wandb_config(self, args: SOTATrainArgs) -> dict:
-        return self.__get_common_wandb_config() | {
+        return self._get_common_wandb_config() | {
             'augmented': True,
             'balanced': args.balanced,
             'optimizer': args.optimizer,
             'lr0': args.lr0,
-            'run': self.__get_next_train_run()
+            'run': self._get_next_train_run()
         } | args.additional_config
 
     def __get_test_wandb_config(self, args: TrainArgs) -> dict:
-        return self.__get_common_wandb_config() | {
+        return self._get_common_wandb_config() | {
             'balanced': False,
             'augmented': False,
+            'run': self._get_current_train_run()
         } | args.additional_config
 
     @override
@@ -187,8 +181,7 @@ class SOTA(ClassificationModel):
             saved_metrics = metrics.results_dict.copy()
             saved_metrics['speed'] = metrics.speed.copy()
             
-            with open(join(project_path, "test", "metrics.json"), "w") as file:
-                dump(saved_metrics, file)
+            self._save_test_metrics(saved_metrics)
     
             if args.write_to_wandb:
                 wandb_run.log(saved_metrics)
@@ -206,7 +199,7 @@ class SOTA(ClassificationModel):
         y_pred = self.model.predict(image_paths)
         predictions = [self.__get_label_value_from_prediction(prediction) for prediction in y_pred]
 
-        test_run_path = self.__get_current_test_run_path()        
+        test_run_path = self._get_current_test_run_path()        
         plot_confusion_matrix(labels, predictions, 
             save_path=join(test_run_path, "confusion_matrix.png"),
             normalized=False)
@@ -222,7 +215,11 @@ class SOTA(ClassificationModel):
             wandb_run.finish()
         
         return metrics
-                
+    
+    @override
+    def get_test_accuracy_metric(self) -> float:
+        return self.get_test_metrics()["metrics/accuracy_top1"]
+
     def __get_label_value_from_prediction(self, prediction: Results) -> int:
         pred_name = prediction.names[prediction.probs.top1]
         return name_to_value(pred_name)
@@ -230,20 +227,8 @@ class SOTA(ClassificationModel):
     def __get_dataset_dir(self):
         return join(self.data_root_path, "img", self.dataset_name)
 
-    def __get_next_train_run(self):
-        model_dir = self._get_model_dir()
-        return get_next_train_run(model_dir)
-
-    def __get_current_test_run_path(self):
-        model_dir = self._get_model_dir()
-        return join(model_dir, get_current_test_run(model_dir))
-
     def __get_project_dir(self):
         return join(self.data_root_path, "runs", "sota", self.name)
-
-    def get_test_metrics(self):
-        with open(join(self.__get_project_dir(), "test", "metrics.json"), "r") as file:
-            return load(file)
 
 # results = model.predict(img, verbose = False)
 # result = results[0]

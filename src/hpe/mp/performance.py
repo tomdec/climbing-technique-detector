@@ -133,13 +133,21 @@ def ensure_empty(yhat) -> Dict[MyLandmark, bool | None]:
 
     return correct_pred
 
-def estimate_performance(root_image_dir: str):
+def estimate_performance(data_root: str = "data", split: str = "test",
+        dataset_name: str = "MediaPipe",
+        image_mutators: List[Callable[[MatLike], MatLike]] = []):
+    root_image_dir = join(data_root, "hpe", "img", split, "images")
     data_pairs = list_image_label_pairs(root_image_dir)
     performance_maps = list()
 
     with build_holistic_model() as model:
         for image_path, label_path in data_pairs:
-            _, results, _ = predict_landmarks(image_path, model)
+            image = imread_as_rgb(image_path)
+
+            for mutator in image_mutators:
+                image = mutator(image)
+            
+            results, _ = predict_landmarks(image, model)
             labels_list = build_yolo_labels(label_path)
 
             if len(labels_list) == 0:
@@ -149,7 +157,7 @@ def estimate_performance(root_image_dir: str):
             else:
                 performance_maps.append(PCKh50(get_most_central(labels_list), results))
     
-    log_overall_performance(performance_maps, "MediaPipe")
+    log_overall_performance(performance_maps, dataset_name)
 
 def estimate_distances(data_root: str = "data", split: str = "test",
         dataset_name: str = "distances",

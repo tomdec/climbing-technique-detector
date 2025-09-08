@@ -51,7 +51,7 @@ def get_current_test_run(root_path: str):
     return __get_current_run(root_path, "test")
 
 def raise_not_implemented_error(class_name, function_name):
-    raise NotImplementedError(f"Invalid use of the class '{class_name}', it needs to implement the function 'f{function_name}'.")
+    raise NotImplementedError(f"Invalid use of the class '{class_name}', it needs to implement the function '{function_name}'.")
 
 def read_dataframe(location, verbose=False) -> DataFrame:
     data_frame = read_pickle(location)
