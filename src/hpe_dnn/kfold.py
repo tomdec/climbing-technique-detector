@@ -10,11 +10,19 @@ from src.common.helpers import read_dataframe
 from src.common.kfold import AbstractFoldCrossValidation
 from src.hpe_dnn.model import HpeDnn, HpeDnnConstructorArgs, HpeDnnMultiRunTrainArgs
 
-def init_hpednn(name: str) -> AbstractFoldCrossValidation:
-    return HpeDnnFoldCrossValidation(model_args=HpeDnnConstructorArgs(name=name))
-
 class HpeDnnFoldCrossValidation(AbstractFoldCrossValidation):
     
+    def evaluation_instance(name: str):
+        """Create instance of the HPE DNN fold cross validation model only used for evaluation.
+
+        Args:
+            name (str): Name of the model.
+
+        Returns:
+            HpeDnnFoldCrossValidation: K-fold model instance
+        """
+        return HpeDnnFoldCrossValidation(model_args=HpeDnnConstructorArgs(name=name))
+
     @override
     @property
     def train_run_args(self) -> HpeDnnMultiRunTrainArgs | None:

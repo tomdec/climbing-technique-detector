@@ -9,11 +9,20 @@ import matplotlib.pyplot as plt
 from src.sampling.images import build_image_dirs
 from src.common.kfold import AbstractFoldCrossValidation
 from src.sota.model import SOTA, SOTAConstructorArgs, SOTAMultiRunTrainArgs
- 
-def init_sota(name: str, model: str) -> AbstractFoldCrossValidation:
-    return SOTAFoldCrossValidation(model_args=SOTAConstructorArgs(name=name, model_arch=model))
 
 class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
+
+    def evaluation_instance(name: str, model: str):
+        """Create instance of the SOTA fold cross validation model only used for evaluation.
+
+        Args:
+            name (str): Name of the model
+            model (str): Model name to load from Ultralytics.
+
+        Returns:
+            SOTAFoldCrossValidation: K-fold model instance
+        """
+        return SOTAFoldCrossValidation(model_args=SOTAConstructorArgs(name=name, model_arch=model))
 
     @override
     @property
