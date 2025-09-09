@@ -42,6 +42,7 @@ def __get_category_encoding_layer(name, dataset, max_tokens=None):
     return lambda feature: encoder(index(feature))
 
 def __make_input_layer(train: tf.data.Dataset, normalize=True):
+    # these are all the input features
     numeric_features = ['NOSE_x', 'NOSE_y', 'NOSE_z', 'NOSE_visibility', 'LEFT_SHOULDER_x',
        'LEFT_SHOULDER_y', 'LEFT_SHOULDER_z', 'LEFT_SHOULDER_visibility',
        'LEFT_ELBOW_x', 'LEFT_ELBOW_y', 'LEFT_ELBOW_z', 'LEFT_ELBOW_visibility',

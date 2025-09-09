@@ -1,6 +1,5 @@
 from typing import Dict, List, Callable
 from numpy import array, full, nan, ndarray
-from ultralytics import YOLO
 from ultralytics.engine.results import Results, Keypoints
 from pandas import DataFrame, read_pickle
 from os.path import join
@@ -10,8 +9,8 @@ from src.hpe.common.helpers import eucl_distance, list_image_label_pairs
 from src.hpe.common.performance import log_overall_performance
 from src.hpe.yolo.landmarks import get_pose_landmark
 from src.hpe.yolo.evaluate import predict_landmarks
+from src.hpe.yolo.model import build_pose_model
 
-__model_name = "yolo11x-pose.pt"
 __num_landmarks = 28
 
 def PCKh50(ytrue: YoloLabels, 
@@ -94,14 +93,14 @@ def performance_map_for_false_negative() -> Dict[MyLandmark, bool | None]:
     return performance
 
 def estimate_performance(data_root: str = "data", split: str = "test",
-        name: str = __model_name,
+        name: str = "Yolo",
         image_path_mutators: List[Callable[[str], str]] = [],
         clean_up: List[Callable] = []):
     try:
         path = join(data_root, "hpe", "img", split, "images")
         data_pairs = list_image_label_pairs(path)
         performance_maps = list()
-        model = YOLO(__model_name)
+        model = build_pose_model()
         
         for image_path, label_path in data_pairs:
 
@@ -128,8 +127,6 @@ def estimate_performance(data_root: str = "data", split: str = "test",
         for clean_func in clean_up:
             clean_func()
 
-
-
 def estimate_distances(data_root: str = "data", split: str = "test",
         dataset_name: str = "distances",
         image_path_mutators: List[Callable[[str], str]] = [],
@@ -152,7 +149,7 @@ def estimate_distances(data_root: str = "data", split: str = "test",
     try:
         path = join(data_root, "hpe", "img", split, "images")
         data_pairs = list_image_label_pairs(path)
-        model = YOLO(__model_name)
+        model = build_pose_model()
         
         _num_images = len(data_pairs)
         _num_landmarks = 28

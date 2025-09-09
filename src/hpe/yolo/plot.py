@@ -1,5 +1,5 @@
 from cv2.typing import MatLike
-from ultralytics.engine.results import Results, Keypoints
+from ultralytics.engine.results import Results
 import matplotlib.pyplot as plt
 from numpy import ones
 
@@ -10,11 +10,7 @@ from src.hpe.yolo.draw import draw_my_landmarks
 
 def compare_landmarks(image: MatLike, 
         labels: YoloLabels,
-        results: Keypoints | Results,
-        object_index: int = 0) -> MatLike:
-    if (type(results) is Results):
-        results = results[object_index].keypoints
-
+        results: Results) -> MatLike:
     annotated = image.copy()
 
     annotated = labels.draw(annotated)
@@ -45,4 +41,4 @@ def plot_distances(distances):
 
 def plot_yolo_average_distances(distances, 
         save_location: str = ""):
-    plot_average_distances(distances, "yolo11x-pose", save_location)
+    plot_average_distances(distances, "Yolo", save_location)
