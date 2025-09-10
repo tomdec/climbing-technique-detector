@@ -35,6 +35,10 @@ class MyLandmark(Enum):
     RIGHT_THUMB_IP = 25
     LEFT_ANKLE = 26
     RIGHT_ANKLE = 27
+    LEFT_EYE = 28
+    RIGHT_EYE = 29
+    LEFT_EAR = 30
+    RIGHT_EAR = 31
     
 class Visibility(Enum):
     MISSING = 0
@@ -66,7 +70,7 @@ class BoundingBox:
     
     def distance_to(self, point) -> float:
         return eucl_distance(array([self._x, self._y]), point)
-    
+
 class KeyPoint:
 
     _x: float

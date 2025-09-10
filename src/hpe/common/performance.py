@@ -1,9 +1,9 @@
 from typing import Callable, Any, List, Dict
 from numpy import array
 
-from src.hpe.common.labels import MyLandmark
-from src.hpe.common.labels import get_mylandmark_count
-from src.hpe.common.labels import YoloLabels
+from src.hpe.common.landmarks import MyLandmark
+from src.hpe.common.landmarks import get_mylandmark_count
+from src.hpe.common.landmarks import YoloLabels
 from src.hpe.common.helpers import eucl_distance
 
 def PCKh50_general(ytrue: YoloLabels, get_prediction: Callable[[MyLandmark], Any | None]) -> List[bool]:

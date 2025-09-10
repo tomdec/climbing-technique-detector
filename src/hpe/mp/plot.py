@@ -1,7 +1,7 @@
 from cv2.typing import MatLike
 import matplotlib.pyplot as plt
 
-from src.hpe.common.labels import YoloLabels
+from src.hpe.common.landmarks import YoloLabels
 from src.hpe.common.plot import plot_average_distances
 from src.hpe.mp.draw import draw_my_landmarks
 

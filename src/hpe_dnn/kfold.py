@@ -12,6 +12,7 @@ from src.hpe_dnn.model import HpeDnn, HpeDnnConstructorArgs, HpeDnnMultiRunTrain
 
 class HpeDnnFoldCrossValidation(AbstractFoldCrossValidation):
     
+    @staticmethod
     def evaluation_instance(name: str):
         """Create instance of the HPE DNN fold cross validation model only used for evaluation.
 

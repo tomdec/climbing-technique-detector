@@ -35,7 +35,7 @@ def __to_df_row(input: Series, xyz, vis, height, width):
     appended = [[*coordinates, visibility] for coordinates, visibility in zipped]
     result_array = [element for element in array(appended).reshape(-1) if element != None]
     
-    result_array.append(input["technique"])
+    result_array.append(input["label"])
     result_array.append(input["image_path"])
 
     return Series(data=result_array, index=input.index)

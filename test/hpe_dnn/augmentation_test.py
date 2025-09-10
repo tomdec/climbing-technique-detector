@@ -1,7 +1,8 @@
 from os.path import exists
-from pandas import Series
+from pandas import DataFrame, Series
 from math import isnan
 from cv2 import imread
+from typing import List
 
 from src.hpe_dnn.model import read_dataframe
 from src.hpe_dnn.augmentation import __to_augmenting_array, __to_df_row, __transform_pipeline
@@ -12,6 +13,15 @@ def __get_train_df():
         raise FileNotFoundError('Make sure to generate the hpe dataset before running this test.')
 
     return read_dataframe(df_path)
+
+def __get_test_df(features: List[str]) -> DataFrame:
+    matrix = []
+    columns={*features, "label", "image_path"}
+
+    
+
+    return DataFrame(data=matrix, columns=columns)
+
 
 def test_identity_transformations():
     test_data = __get_train_df().sample(10)

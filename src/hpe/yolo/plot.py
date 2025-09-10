@@ -3,7 +3,7 @@ from ultralytics.engine.results import Results
 import matplotlib.pyplot as plt
 from numpy import ones
 
-from src.hpe.common.labels import YoloLabels, MyLandmark
+from src.hpe.common.landmarks import YoloLabels, MyLandmark
 from src.hpe.common.plot import plot_average_distances
 from src.hpe.yolo.landmarks import get_pose_landmark
 from src.hpe.yolo.draw import draw_my_landmarks

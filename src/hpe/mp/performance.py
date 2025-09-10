@@ -7,7 +7,7 @@ from pandas import DataFrame, read_pickle
 
 from src.common.helpers import imread as imread_as_rgb
 from src.hpe.common.helpers import eucl_distance, list_image_label_pairs
-from src.hpe.common.labels import MyLandmark, YoloLabels, build_yolo_labels, get_most_central
+from src.hpe.common.landmarks import MyLandmark, YoloLabels, build_yolo_labels, get_most_central
 from src.hpe.common.performance import log_overall_performance
 from src.hpe.mp.evaluate import predict_landmarks
 from src.hpe.mp.landmarks import get_pose_landmark, get_left_hand_landmark, get_right_hand_landmark

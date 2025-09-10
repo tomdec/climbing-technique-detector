@@ -8,11 +8,10 @@ from src.labels import get_label_value_from_path
 from src.hpe.mp.model import build_holistic_model
 from src.hpe.mp.landmarks import _used_pose_landmarks, _used_hand_landmarks
 
-def evaluate_images(image_paths: List[str]) -> List[List[Any]]:
+def extract_features(image_paths: List[str]) -> List[List[Any]]:
     """
     Keep at one model per image!! Evaluating images with different sized wit the same model gives incorrect values.
     """
-    
     def image_2_features(image_path: str) -> List[Any]:
         with build_holistic_model() as model:
             image = imread(image_path)

@@ -14,8 +14,9 @@ def plot_model(model: Model):
 def demo_batch(dataset: tf.data.Dataset):
     [(features, label_batch)] = dataset.take(1)
 
-    print('Every feature:', list(features.keys()))
-    print('A batch of Nose x-coordinates:', features['NOSE_x'])
+    feature_names = list(dataset.element_spec[0].keys())
+    print('Every feature:', feature_names)
+    print(f'A batch of {feature_names[0]}:', features[feature_names[0]])
     print('A batch of techniques:', label_batch)
 
 def __binarize_labels(labels: Series) -> ndarray:
@@ -37,7 +38,7 @@ def df_to_dataset(dataframe: DataFrame,
     if augment:
         df = df.apply(augment_keypoints, axis=1)
 
-    labels = df.pop("technique")
+    labels = df.pop("label")
     _ = df.pop("image_path")
     
     imp = SimpleImputer(missing_values=nan, strategy='mean')
