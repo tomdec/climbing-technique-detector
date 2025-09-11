@@ -5,9 +5,8 @@ from numpy import zeros
 from glob import glob
 from typing import Any, List, Callable
 
-from src.labels import name_to_value
+from src.labels import get_label_value_from_path, name_to_value
 from src.common.helpers import read_dataframe
-from src.hpe.mp.landmarks import get_feature_labels
 
 def generate_hpe_feature_df(data_path,
         feature_names: List[str],
@@ -26,17 +25,42 @@ def generate_hpe_feature_df(data_path,
         data_split_path = join(img_path, data_split)
         if (isdir(data_split_path)):
             image_paths = glob(data_split_path + "/**/*.*", recursive=True)
-            matrix = evaluate_func(image_paths)        
+            matrix = evaluate_func(image_paths)
             df = DataFrame(data=matrix, columns=column_names)
             df.to_pickle(join(df_path, f"{data_split}.pkl"))
 
+#TODO: reuse for unity dataset, if needed
+def generate_correlated_data(feature_names: List[str],
+        labels: List[int]) -> List[List[int]]:
+    """
+    Generate data directly correlated to the labels.
+    For testing purposes.
+
+    Args:
+        feature_names (List[str]): The columns for which data is generated.
+        labels (List[int]): The labels the data will be correlated with.
+
+    Returns:
+        List[List[Any]]: List of features, correlated to the labels.
+    """
+    def generate_features(label: int) -> List[int]:
+        features = zeros(len(feature_names))
+        features[label] = 1
+        return features
+    
+    return list(map(generate_features, labels))
+
+def append_to_row(row: List[Any], addition: Any) -> List[Any]:
+    return [*row, addition]
+
 def generate_unity_df(data_root_path: str,
+        dataset_name: str,
         feature_names: List[str],
         combine_for_kfold: bool = False):
     column_names = [*feature_names, "label", "image_path"]
 
     img_path = join(data_root_path, "img", "techniques")
-    df_path = join(data_root_path, "df", "unity")
+    df_path = join(data_root_path, "df", dataset_name)
     if (not exists(df_path)):
         makedirs(df_path)
 
@@ -44,15 +68,13 @@ def generate_unity_df(data_root_path: str,
         matrix = []
         data_split_path = join(img_path, data_split)
         if (isdir(data_split_path)):
-            for label in listdir(data_split_path):
-                label_path = join(data_split_path, label)
-                for image_name in listdir(label_path):
-                    image_file_path = join(label_path, image_name)
-                    encoded_label = name_to_value(label)
-                    features = zeros(len(column_names) - 2)
-                    features[encoded_label] = 1
-                    matrix.append([*features, encoded_label, image_file_path])
-
+            image_paths = glob(data_split_path + "/**/*.*", recursive=True)
+            labels = list(map(get_label_value_from_path, image_paths))
+            
+            matrix = generate_correlated_data(feature_names, labels)
+            matrix = list(map(append_to_row, matrix, labels))
+            matrix = list(map(append_to_row, matrix, image_paths))
+            
             df = DataFrame(data=matrix, columns=column_names)
             df.to_pickle(join(df_path, f"{data_split}.pkl"))
 

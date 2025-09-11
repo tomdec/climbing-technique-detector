@@ -43,8 +43,7 @@ def __get_category_encoding_layer(name, dataset, max_tokens=None):
 
 def __make_input_layer(train: tf.data.Dataset, normalize=True):
     # these are all the input features, they're all numeric
-    numeric_features = list(train.element_spec[0].keys())
-    print("used numeric features: ", numeric_features)
+    numeric_features = list(map(lambda x: f"{x}", train.element_spec[0].keys()))
     
     all_inputs = {}
     encoded_feature = []

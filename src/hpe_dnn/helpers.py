@@ -6,7 +6,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import LabelBinarizer
 
 from src.hpe_dnn.balancing import balance_func_factory
-from src.hpe_dnn.augmentation import augment_keypoints
+from src.hpe_dnn.augmentation import AugmentationPipeline
 
 def plot_model(model: Model):
     utils.plot_model(model, show_shapes=True, show_layer_names=True, rankdir="TB")
@@ -36,7 +36,8 @@ def df_to_dataset(dataframe: DataFrame,
         df = df.apply(balance_func, axis=1)
 
     if augment:
-        df = df.apply(augment_keypoints, axis=1)
+        aug_pipeline = AugmentationPipeline.for_dataframe(df)
+        df = df.apply(aug_pipeline, axis=1)
 
     labels = df.pop("label")
     _ = df.pop("image_path")

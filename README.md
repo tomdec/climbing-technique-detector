@@ -415,7 +415,7 @@ Do not change these architectures when you have already used them, but add new o
 
 To train these DNN models execute: 
 ```python
-from src.common.model import ModelConstructurArgs
+from src.common.model import ModelConstructorArgs
 from src.hpe_dnn.architecture import DnnArch
 from src.hpe_dnn.model import HpeDnn, HpeDnnModelInitializeArgs, HpeDnnTrainArgs  
 

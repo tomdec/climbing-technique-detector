@@ -1,4 +1,3 @@
-from json import dump, load
 import tensorflow as tf
 from keras import Model
 from os.path import join
@@ -28,7 +27,7 @@ class HpeDnnConstructorArgs(ModelConstructorArgs):
     def __init__(self, name: str, 
             model_arch: DnnArch = DnnArch.ARCH1,
             data_root_path: str = "data",
-            dataset_name: str = "techniques_yolo"):
+            dataset_name: str = "techniques_mp"):
         ModelConstructorArgs.__init__(self, name, model_arch, data_root_path, dataset_name)
 
 
