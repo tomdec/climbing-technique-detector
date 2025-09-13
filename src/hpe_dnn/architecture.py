@@ -42,37 +42,8 @@ def __get_category_encoding_layer(name, dataset, max_tokens=None):
     return lambda feature: encoder(index(feature))
 
 def __make_input_layer(train: tf.data.Dataset, normalize=True):
-    numeric_features = ['NOSE_x', 'NOSE_y', 'NOSE_z', 'NOSE_visibility', 'LEFT_SHOULDER_x',
-       'LEFT_SHOULDER_y', 'LEFT_SHOULDER_z', 'LEFT_SHOULDER_visibility',
-       'LEFT_ELBOW_x', 'LEFT_ELBOW_y', 'LEFT_ELBOW_z', 'LEFT_ELBOW_visibility',
-       'LEFT_WRIST_x', 'LEFT_WRIST_y', 'LEFT_WRIST_z', 'LEFT_WRIST_visibility',
-       'RIGHT_SHOULDER_x', 'RIGHT_SHOULDER_y', 'RIGHT_SHOULDER_z',
-       'RIGHT_SHOULDER_visibility', 'RIGHT_ELBOW_x', 'RIGHT_ELBOW_y',
-       'RIGHT_ELBOW_z', 'RIGHT_ELBOW_visibility', 'RIGHT_WRIST_x',
-       'RIGHT_WRIST_y', 'RIGHT_WRIST_z', 'RIGHT_WRIST_visibility',
-       'LEFT_HIP_x', 'LEFT_HIP_y', 'LEFT_HIP_z', 'LEFT_HIP_visibility',
-       'LEFT_KNEE_x', 'LEFT_KNEE_y', 'LEFT_KNEE_z', 'LEFT_KNEE_visibility',
-       'LEFT_ANKLE_x', 'LEFT_ANKLE_y', 'LEFT_ANKLE_z', 'LEFT_ANKLE_visibility',
-       'LEFT_HEEL_x', 'LEFT_HEEL_y', 'LEFT_HEEL_z', 'LEFT_HEEL_visibility',
-       'LEFT_FOOT_INDEX_x', 'LEFT_FOOT_INDEX_y', 'LEFT_FOOT_INDEX_z',
-       'LEFT_FOOT_INDEX_visibility', 'RIGHT_HIP_x', 'RIGHT_HIP_y',
-       'RIGHT_HIP_z', 'RIGHT_HIP_visibility', 'RIGHT_KNEE_x', 'RIGHT_KNEE_y',
-       'RIGHT_KNEE_z', 'RIGHT_KNEE_visibility', 'RIGHT_ANKLE_x',
-       'RIGHT_ANKLE_y', 'RIGHT_ANKLE_z', 'RIGHT_ANKLE_visibility',
-       'RIGHT_HEEL_x', 'RIGHT_HEEL_y', 'RIGHT_HEEL_z', 'RIGHT_HEEL_visibility',
-       'RIGHT_FOOT_INDEX_x', 'RIGHT_FOOT_INDEX_y', 'RIGHT_FOOT_INDEX_z',
-       'RIGHT_FOOT_INDEX_visibility', 'RIGHT_THUMB_MCP_x', 'RIGHT_THUMB_MCP_y',
-       'RIGHT_THUMB_MCP_z', 'RIGHT_THUMB_IP_x', 'RIGHT_THUMB_IP_y',
-       'RIGHT_THUMB_IP_z', 'RIGHT_THUMB_TIP_x', 'RIGHT_THUMB_TIP_y',
-       'RIGHT_THUMB_TIP_z', 'RIGHT_INDEX_FINGER_MCP_x',
-       'RIGHT_INDEX_FINGER_MCP_y', 'RIGHT_INDEX_FINGER_MCP_z',
-       'RIGHT_PINKY_MCP_x', 'RIGHT_PINKY_MCP_y', 'RIGHT_PINKY_MCP_z',
-       'LEFT_THUMB_MCP_x', 'LEFT_THUMB_MCP_y', 'LEFT_THUMB_MCP_z',
-       'LEFT_THUMB_IP_x', 'LEFT_THUMB_IP_y', 'LEFT_THUMB_IP_z',
-       'LEFT_THUMB_TIP_x', 'LEFT_THUMB_TIP_y', 'LEFT_THUMB_TIP_z',
-       'LEFT_INDEX_FINGER_MCP_x', 'LEFT_INDEX_FINGER_MCP_y',
-       'LEFT_INDEX_FINGER_MCP_z', 'LEFT_PINKY_MCP_x', 'LEFT_PINKY_MCP_y',
-       'LEFT_PINKY_MCP_z']
+    # these are all the input features, they're all numeric
+    numeric_features = list(map(lambda x: f"{x}", train.element_spec[0].keys()))
     
     all_inputs = {}
     encoded_feature = []

@@ -67,6 +67,14 @@ to:
 f"{model.overrides["model"]}".split('.')[0]
 ```
 
+#### Mismatch with GPU drivers and cuda libraries
+Pytorch has very strict requirements about the used cudu libraries, so it will complain when trying to upgrade the cuda libraries, which is necessary after upgrading your GPU drivers.
+I have found that (at least for some cases) reinstalling tensorflow with: 
+```
+pip install tensorflow[and-cuda]
+```
+This upgrades the cuda libraries without the restrictions of pytorch, without breaking pytorch functionality, at least as for as is needed in this project.
+
 # Structure
 
 ## root folder
@@ -407,7 +415,7 @@ Do not change these architectures when you have already used them, but add new o
 
 To train these DNN models execute: 
 ```python
-from src.common.model import ModelConstructurArgs
+from src.common.model import ModelConstructorArgs
 from src.hpe_dnn.architecture import DnnArch
 from src.hpe_dnn.model import HpeDnn, HpeDnnModelInitializeArgs, HpeDnnTrainArgs  
 

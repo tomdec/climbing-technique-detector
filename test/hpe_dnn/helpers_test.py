@@ -4,7 +4,7 @@ from random import shuffle
 
 from src.hpe_dnn.helpers import __binarize_labels
 
-label_column = Series([1, 2, 3, 4, 5, 6, 7], name="technique")
+label_column = Series([1, 2, 3, 4, 5, 6, 7], name="label")
 expected_list = array([
     [1, 0, 0, 0, 0, 0, 0],
     [0, 1, 0, 0, 0, 0, 0],

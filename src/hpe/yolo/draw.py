@@ -1,13 +1,13 @@
 from cv2.typing import MatLike
-from ultralytics.engine.results import Keypoints
+from ultralytics.engine.results import Results
 from supervision import VertexAnnotator, Color, KeyPoints as sv_Keypoints
 
-def draw_my_landmarks(image: MatLike, results: Keypoints) -> MatLike:
+def draw_my_landmarks(image: MatLike, results: Results) -> MatLike:
     annotated = image.copy()
     sv_keypoints = sv_Keypoints.from_ultralytics(results)
 
     vertex_annotator = VertexAnnotator(
-        radius=15, 
+        radius=5, 
         color=Color.WHITE)
 
     annotated = vertex_annotator.annotate(

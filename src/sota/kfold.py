@@ -1,4 +1,3 @@
-from os import listdir
 from os.path import join
 from glob import glob
 from typing import override

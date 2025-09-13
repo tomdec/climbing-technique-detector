@@ -1,8 +1,8 @@
 from mediapipe.python.solutions.holistic import PoseLandmark, HandLandmark
-from typing import Mapping
+from typing import Dict
 from numpy import concatenate
 
-from src.hpe.common.labels import MyLandmark
+from src.hpe.common.landmarks import MyLandmark
 
 _used_pose_landmarks = list([
     PoseLandmark.NOSE,
@@ -36,7 +36,7 @@ _used_hand_landmarks = list([
 
 _unused_hand_landmarks = set(HandLandmark).difference(_used_hand_landmarks)
 
-_pose_landmark_mapping: Mapping[MyLandmark, PoseLandmark] = {
+_pose_landmark_mapping: Dict[MyLandmark, PoseLandmark] = {
     MyLandmark.HEAD: PoseLandmark.NOSE,
     MyLandmark.RIGHT_SHOULDER: PoseLandmark.RIGHT_SHOULDER,
     MyLandmark.LEFT_SHOULDER: PoseLandmark.LEFT_SHOULDER,
@@ -62,7 +62,7 @@ def get_pose_landmark(key: MyLandmark) -> PoseLandmark | None:
     except KeyError:
         return None
     
-_left_hand_landmark_mapping: Mapping[MyLandmark, HandLandmark] = {
+_left_hand_landmark_mapping: Dict[MyLandmark, HandLandmark] = {
     MyLandmark.LEFT_INDEX: HandLandmark.INDEX_FINGER_MCP,
     MyLandmark.LEFT_THUMB_MCP: HandLandmark.THUMB_MCP,
     MyLandmark.LEFT_PINKY: HandLandmark.PINKY_MCP,
@@ -76,7 +76,7 @@ def get_left_hand_landmark(key: MyLandmark) -> HandLandmark | None:
     except KeyError:
         return None
 
-_right_hand_landmark_mapping: Mapping[MyLandmark, HandLandmark] = {
+_right_hand_landmark_mapping: Dict[MyLandmark, HandLandmark] = {
     MyLandmark.RIGHT_INDEX: HandLandmark.INDEX_FINGER_MCP,
     MyLandmark.RIGHT_THUMB_MCP: HandLandmark.THUMB_MCP,
     MyLandmark.RIGHT_PINKY: HandLandmark.PINKY_MCP,
