@@ -415,12 +415,13 @@ Do not change these architectures when you have already used them, but add new o
 
 To train these DNN models execute: 
 ```python
-from src.common.model import ModelConstructorArgs
 from src.hpe_dnn.architecture import DnnArch
-from src.hpe_dnn.model import HpeDnn, HpeDnnModelInitializeArgs, HpeDnnTrainArgs  
+from src.hpe_dnn.model import HpeDnn, HpeDnnConstructorArgs, HpeDnnModelInitializeArgs, HpeDnnTrainArgs  
 
-hpednn = HpeDnn(args=ModelConstructorArgs(name="name"))
-hpednn.initialize_model(args=HpeDnnModelInitializeArgs(model=DnnArch.ARCH1))
+hpednn = HpeDnn(args=HpeDnnConstructorArgs(
+    name="name", 
+    model_arch=DnnArch.ARCH1))
+hpednn.initialize_model(args=HpeDnnModelInitializeArgs())
 hpednn.train_model(args=HpeDnnTrainArgs(epochs=10))
 ```
 
