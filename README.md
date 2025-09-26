@@ -397,11 +397,11 @@ f"/data/img/{dataset_name}/{split}/{label_name}/{file_name}.png"
 As SOTA models, [yolov11](https://docs.ultralytics.com/tasks/classify/) models are used, and they can be used with the [SOTA class](src/sota/model.py#51).
 For example to train this model execute: 
 ```python
-from src.common.model import ModelConstructorArgs
-from src.sota.model import SOTA, SOTAModelInitializeArgs, SOTATrainArgs
+from src.common.model import ModelInitializeArgs
+from src.sota.model import SOTA, SOTAConstructorArgs, SOTATrainArgs
 
-sota = SOTA(args=ModelConstructorArgs(name="name"))
-sota.initialize_model(args=SOTAModelInitializeArgs(model="yolo11m-cls"))
+sota = SOTA(args=SOTAConstructorArgs(name="name"))
+sota.initialize_model(args=ModelInitializeArgs())
 sota.train_model(args=SOTATrainArgs(epochs=10))
 ``` 
 
