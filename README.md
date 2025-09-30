@@ -397,11 +397,11 @@ f"/data/img/{dataset_name}/{split}/{label_name}/{file_name}.png"
 As SOTA models, [yolov11](https://docs.ultralytics.com/tasks/classify/) models are used, and they can be used with the [SOTA class](src/sota/model.py#51).
 For example to train this model execute: 
 ```python
-from src.common.model import ModelConstructorArgs
-from src.sota.model import SOTA, SOTAModelInitializeArgs, SOTATrainArgs
+from src.common.model import ModelInitializeArgs
+from src.sota.model import SOTA, SOTAConstructorArgs, SOTATrainArgs
 
-sota = SOTA(args=ModelConstructorArgs(name="name"))
-sota.initialize_model(args=SOTAModelInitializeArgs(model="yolo11m-cls"))
+sota = SOTA(args=SOTAConstructorArgs(name="name"))
+sota.initialize_model(args=ModelInitializeArgs())
 sota.train_model(args=SOTATrainArgs(epochs=10))
 ``` 
 
@@ -415,12 +415,13 @@ Do not change these architectures when you have already used them, but add new o
 
 To train these DNN models execute: 
 ```python
-from src.common.model import ModelConstructorArgs
 from src.hpe_dnn.architecture import DnnArch
-from src.hpe_dnn.model import HpeDnn, HpeDnnModelInitializeArgs, HpeDnnTrainArgs  
+from src.hpe_dnn.model import HpeDnn, HpeDnnConstructorArgs, HpeDnnModelInitializeArgs, HpeDnnTrainArgs  
 
-hpednn = HpeDnn(args=ModelConstructorArgs(name="name"))
-hpednn.initialize_model(args=HpeDnnModelInitializeArgs(model=DnnArch.ARCH1))
+hpednn = HpeDnn(args=HpeDnnConstructorArgs(
+    name="name", 
+    model_arch=DnnArch.ARCH1))
+hpednn.initialize_model(args=HpeDnnModelInitializeArgs())
 hpednn.train_model(args=HpeDnnTrainArgs(epochs=10))
 ```
 
