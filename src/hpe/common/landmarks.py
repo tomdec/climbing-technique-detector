@@ -2,7 +2,7 @@ from enum import Enum
 from numpy import array
 from cv2.typing import MatLike
 from cv2 import circle, putText, FONT_HERSHEY_PLAIN
-from typing import List
+from typing import List, Any
 
 from src.hpe.common.helpers import eucl_distance
 
@@ -161,7 +161,46 @@ class YoloLabels:
     
     def distance_to(self, point) -> float:
         return self._bounding_box.distance_to(point)
+
+class PredictedKeyPoint:
+
+    @staticmethod
+    def from_mediapipe(values: Any) -> 'PredictedKeyPoint':
+        return PredictedKeyPoint(values.x, values.y, values.z, values.visibility)
+
+    @property
+    def x(self) -> float:
+        """Relative x-coordinate of the landmark."""
+        return self._x
     
+    @property
+    def y(self) -> float:
+        """Relative y-coordinate of the landmark."""
+        return self._y
+    
+    @property
+    def z(self) -> float | None:
+        """Estimated z-coordinate (or depth) of the landmark. Uses scaling of x-axis."""
+        return self._z
+    
+    @property
+    def visibility(self) -> float:
+        """Likelihood of the landmark being visible, in range [0.0, 1.0]."""
+        return self._visibility
+    
+    def __init__(self, 
+            x: float, 
+            y: float, 
+            z: float | None, 
+            visibility: float):
+        self._x = x
+        self._y = y
+        self._z = z
+        self._visibility = visibility
+
+    def as_array(self):
+        return array([self._x, self._y])
+
 def build_yolo_labels(file_path: str) -> List[YoloLabels]:
     result = list()
     
@@ -191,4 +230,4 @@ def get_most_central(label_list: List[YoloLabels]) -> YoloLabels:
     return result
 
 def get_mylandmark_count():
-    return len([x for x in MyLandmark])
+    return len(MyLandmark)

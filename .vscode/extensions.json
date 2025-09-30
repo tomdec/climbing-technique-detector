@@ -3,6 +3,8 @@
         "ms-toolsai.datawrangler",
         "donjayamanne.git-extension-pack",
         "ms-toolsai.jupyter",
-        "ms-python.python"
+        "ms-python.python",
+        "tushortz.python-extended-snippets",
+        "njqdev.vscode-python-typehint"
     ]
 }

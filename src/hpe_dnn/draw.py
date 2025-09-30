@@ -1,9 +1,10 @@
-from cv2 import circle, imread, cvtColor, COLOR_BGR2RGB
+from cv2 import circle, cvtColor, COLOR_BGR2RGB
 from cv2.typing import MatLike
 from math import isnan
 from matplotlib import pyplot as plt
 from pandas import Series
 
+from src.common.helpers import imread
 from src.hpe.mp.model import build_holistic_model
 from src.hpe.mp.evaluate import predict_landmarks
 from src.hpe.mp.draw import draw_my_landmarks
@@ -29,15 +30,11 @@ def draw_augmented_keypoints(image, keypoints):
     plt.imshow(image)
 
 def predict_and_draw_landmarks(row: Series):
-    image = imread(row['image_path'])           # Read as BGR
-    image.flags.writeable = False                # Image is no longer writeable
+    image = imread(row['image_path'])           # Read as RGB
+    image.flags.writeable = False               # Image is no longer writeable
 
     with build_holistic_model() as model:
-        results, shape = predict_landmarks(image, model)
-        
-        image.flags.writeable = True                # Image is now writeable 
-        image = cvtColor(image, COLOR_BGR2RGB)        # COLOR COVERSION RGB 2 BGR
-
+        results = predict_landmarks(image, model)
         image = draw_my_landmarks(image, results)
     print(row.values)
     plt.imshow(image)

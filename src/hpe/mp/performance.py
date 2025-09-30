@@ -1,6 +1,6 @@
 from typing import Dict, Callable, Any, List
 from cv2.typing import MatLike
-from numpy import array, full, nan
+from numpy import array, ndarray, full, nan
 from mediapipe.python.solutions.holistic import PoseLandmark, HandLandmark
 from os.path import join
 from pandas import DataFrame, read_pickle
@@ -10,12 +10,13 @@ from src.hpe.common.helpers import eucl_distance, list_image_label_pairs
 from src.hpe.common.landmarks import MyLandmark, YoloLabels, build_yolo_labels, get_most_central
 from src.hpe.common.performance import log_overall_performance
 from src.hpe.mp.evaluate import predict_landmarks
-from src.hpe.mp.landmarks import get_pose_landmark, get_left_hand_landmark, get_right_hand_landmark
+from src.hpe.mp.landmarks import PredictedLandmarks, can_predict
 from src.hpe.mp.model import build_holistic_model
 
-def PCKh50(ytrue: YoloLabels, yhat) -> Dict[MyLandmark, bool | None]:
+def PCKh50(ytrue: YoloLabels, yhat: PredictedLandmarks) -> Dict[MyLandmark, bool | None]:
     """
-    Return mapping of MyLandmark to booleans to indicate correct, or incorrect predictions.
+    Return mapping of MyLandmark to booleans to indicate correct, or incorrect predictions, 
+    as defined by the PCKh50 metric.
     None, if mediapipe is not able to predict this landmark.
     """
     limit = ytrue.get_head_bone_link() / 2
@@ -23,115 +24,42 @@ def PCKh50(ytrue: YoloLabels, yhat) -> Dict[MyLandmark, bool | None]:
     correct_pred = {}
 
     for landmark in MyLandmark:
+        
+        if not can_predict(landmark):
+            correct_pred[landmark] = None
+            continue
+
         ytrue_value = ytrue.get_keypoint(landmark)
-        
-        pose_landmark = get_pose_landmark(landmark)
-        right_hand_landmark = get_right_hand_landmark(landmark)
-        left_hand_landmark = get_left_hand_landmark(landmark)
-        
-        result = None
-        
-        if pose_landmark is not None:
-            yhat_value = _get_pose_prediction(yhat, pose_landmark)
-            
-            if yhat_value is None:
-                result = ytrue_value.is_missing()
-            else:
-                result = eucl_distance(ytrue_value.as_array(), array([yhat_value.x, yhat_value.y])) <= limit
+        yhat_value = yhat[landmark]
 
-        elif left_hand_landmark is not None:
-            yhat_value = _get_left_hand_prediction(yhat, left_hand_landmark)
+        if yhat_value is None:
+            result = ytrue_value.is_missing()
+        else:
+            result = eucl_distance(ytrue_value.as_array(), yhat_value.as_array()) <= limit
 
-            if yhat_value is None:
-                result = ytrue_value.is_missing()
-            else:
-                result = eucl_distance(ytrue_value.as_array(), array([yhat_value.x, yhat_value.y])) <= limit
-
-        elif right_hand_landmark is not None:
-            yhat_value = _get_right_hand_prediction(yhat, right_hand_landmark)
-
-            if yhat_value is None:
-                result = ytrue_value.is_missing()
-            else:
-                result = eucl_distance(ytrue_value.as_array(), 
-                    array([yhat_value.x, yhat_value.y])) <= limit
-        
         correct_pred[landmark] = result
 
     return correct_pred
 
-def distance(ytrue: YoloLabels, yhat):
-    _num_landmarks = 28
+def distance(ytrue: YoloLabels, yhat: PredictedLandmarks) -> ndarray:
+    _num_landmarks = len(MyLandmark)
     _limit = ytrue.get_head_bone_link() / 2
     distances = full(_num_landmarks, nan, dtype=float)
 
     for landmark in MyLandmark:
+        if not can_predict(landmark):
+            continue
+
         index = landmark.value
         ytrue_value = ytrue.get_keypoint(landmark)
-        
-        pose_landmark = get_pose_landmark(landmark)
-        right_hand_landmark = get_right_hand_landmark(landmark)
-        left_hand_landmark = get_left_hand_landmark(landmark)
+        yhat_value = yhat[landmark]
 
-        if pose_landmark is not None:
-            yhat_value = _get_pose_prediction(yhat, pose_landmark)
-            
-            if ytrue_value.is_missing() and yhat_value is None:
-                distances[index] = 0 
-            elif yhat_value is not None:
-                distances[index] = eucl_distance(ytrue_value.as_array(), array([yhat_value.x, yhat_value.y])) / _limit
-
-        elif left_hand_landmark is not None:
-            yhat_value = _get_left_hand_prediction(yhat, left_hand_landmark)
-            
-            if ytrue_value.is_missing() and yhat_value is None:
-                distances[index] = 0
-            elif yhat_value is not None:
-                distances[index] = eucl_distance(ytrue_value.as_array(), array([yhat_value.x, yhat_value.y])) / _limit
-
-        elif right_hand_landmark is not None:
-            yhat_value = _get_right_hand_prediction(yhat, right_hand_landmark)
-            
-            if ytrue_value.is_missing() and yhat_value is None:
-                distances[index] = 0 
-            elif yhat_value is not None:
-                distances[index] = eucl_distance(ytrue_value.as_array(), array([yhat_value.x, yhat_value.y])) / _limit
-                
-        else:
-            continue
+        if ytrue_value.is_missing() and yhat_value is None:
+            distances[index] = 0 
+        elif yhat_value is not None:
+            distances[index] = eucl_distance(ytrue_value.as_array(), yhat_value.as_array()) / _limit
                 
     return distances
-
-def ensure_empty(yhat) -> Dict[MyLandmark, bool | None]:
-    """
-    Return mapping of MyLandmark to booleans to indicate correct, or incorrect predictions.
-    None, if mediapipe is not able to predict this landmark.
-    """
-    correct_pred = {}
-
-    for landmark in MyLandmark:
-        
-        pose_landmark = get_pose_landmark(landmark)
-        right_hand_landmark = get_right_hand_landmark(landmark)
-        left_hand_landmark = get_left_hand_landmark(landmark)
-        
-        result = None
-        
-        if pose_landmark is not None:
-            yhat_value = _get_pose_prediction(yhat, pose_landmark)
-            result = yhat_value is None
-
-        elif left_hand_landmark is not None:
-            yhat_value = _get_left_hand_prediction(yhat, left_hand_landmark)
-            result = yhat_value is None
-
-        elif right_hand_landmark is not None:
-            yhat_value = _get_right_hand_prediction(yhat, right_hand_landmark)
-            result = yhat_value is None
-        
-        correct_pred[landmark] = result
-
-    return correct_pred
 
 def estimate_performance(data_root: str = "data", split: str = "test",
         dataset_name: str = "MediaPipe",
@@ -147,11 +75,11 @@ def estimate_performance(data_root: str = "data", split: str = "test",
             for mutator in image_mutators:
                 image = mutator(image)
             
-            results, _ = predict_landmarks(image, model)
+            results = predict_landmarks(image, model)
             labels_list = build_yolo_labels(label_path)
 
             if len(labels_list) == 0:
-                performance_maps.append(ensure_empty(results))
+                performance_maps.append(results.ensure_empty())
             elif len(labels_list) == 1:
                 performance_maps.append(PCKh50(labels_list[0], results))
             else:
@@ -166,7 +94,7 @@ def estimate_distances(data_root: str = "data", split: str = "test",
     data_pairs = list_image_label_pairs(root_image_dir)
 
     num_images = len(data_pairs)
-    num_landmarks = 28
+    num_landmarks = len(MyLandmark)
     distances = full((num_images, num_landmarks), nan, dtype=float)
     index = 0
     
@@ -177,7 +105,7 @@ def estimate_distances(data_root: str = "data", split: str = "test",
             for mutator in image_mutators:
                 image = mutator(image)
 
-            results, _ = predict_landmarks(image, model)
+            results = predict_landmarks(image, model)
             labels_list = build_yolo_labels(label_path)
 
             if len(labels_list) == 0:
@@ -201,27 +129,3 @@ def read_distances(data_root: str = "data", dataset_name: str = "distances") -> 
     result_path = join(data_root, "hpe", "mediapipe", f"{dataset_name}.pkl")
     df = read_pickle(result_path)
     return df
-
-def _get_pose_prediction(results: Any, key: PoseLandmark) -> Any | None:
-    """return predicted landmark of provided key. None, if the landmark is not detected"""
-    
-    if results.pose_landmarks is None:
-        return None
-
-    return results.pose_landmarks.landmark[key]
-
-def _get_left_hand_prediction(results: Any, key: HandLandmark) -> Any | None:
-    """return predicted landmark of provided key. None, if the landmark is not detected"""
-    
-    if results.left_hand_landmarks is None:
-        return None
-    
-    return results.left_hand_landmarks.landmark[key]
-
-def _get_right_hand_prediction(results: Any, key: HandLandmark) -> Any | None:
-    """return predicted landmark of provided key. None, if the landmark is not detected"""
-    
-    if results.right_hand_landmarks is None:
-        return None
-    
-    return results.right_hand_landmarks.landmark[key]
