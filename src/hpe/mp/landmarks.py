@@ -1,7 +1,7 @@
 from argparse import ArgumentError
 from mediapipe.python.solutions.holistic import PoseLandmark, HandLandmark
 from numpy import concatenate, ndarray, array
-from typing import Dict, NamedTuple, Any
+from typing import Dict, NamedTuple
 
 from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint
 
