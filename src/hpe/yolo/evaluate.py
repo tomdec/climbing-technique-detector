@@ -3,16 +3,18 @@ from cv2.typing import MatLike
 from typing import List, Any
 from numpy import ndarray
 
+from src.common.helpers import imread
 from src.labels import get_label_value_from_path
 from src.hpe.yolo.model import build_pose_model
 from src.hpe.yolo.landmarks import PredictedLandmarks
 
-def predict_landmarks(image_path: str | MatLike, model: YOLO) -> PredictedLandmarks:
-    results = model(image_path)
+def predict_landmarks(image: MatLike, model: YOLO) -> PredictedLandmarks:
+    results = model(image)
     return PredictedLandmarks(results[0])
 
 def to_feature_vector(image_path: str, model: YOLO) -> ndarray:
-    results = predict_landmarks(image_path, model)
+    image = imread(image_path)
+    results = predict_landmarks(image, model)
     return results.to_array()
 
 def extract_features(image_paths: List[str]) -> List[List[Any]]:

@@ -1,7 +1,6 @@
-from typing import Dict, Callable, Any, List
+from typing import Dict, Callable, List
 from cv2.typing import MatLike
-from numpy import array, ndarray, full, nan
-from mediapipe.python.solutions.holistic import PoseLandmark, HandLandmark
+from numpy import ndarray, full, nan
 from os.path import join
 from pandas import DataFrame, read_pickle
 

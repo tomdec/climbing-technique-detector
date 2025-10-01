@@ -1,8 +1,10 @@
 from typing import Dict, List, Callable
+from cv2.typing import MatLike
 from numpy import full, nan
 from pandas import DataFrame, read_pickle
 from os.path import join
 
+from src.common.helpers import imread as imread_as_rgb
 from src.hpe.common.landmarks import YoloLabels, MyLandmark, build_yolo_labels, get_most_central
 from src.hpe.common.helpers import eucl_distance, list_image_label_pairs
 from src.hpe.common.performance import log_overall_performance
@@ -73,41 +75,36 @@ def performance_map_for_false_negative() -> Dict[MyLandmark, bool | None]:
 
 def estimate_performance(data_root: str = "data", split: str = "test",
         name: str = "Yolo",
-        image_path_mutators: List[Callable[[str], str]] = [],
-        clean_up: List[Callable] = []):
-    try:
-        path = join(data_root, "hpe", "img", split, "images")
-        data_pairs = list_image_label_pairs(path)
-        performance_maps = list()
-        model = build_pose_model()
+        image_mutators: List[Callable[[MatLike], MatLike]] = []):
+    path = join(data_root, "hpe", "img", split, "images")
+    data_pairs = list_image_label_pairs(path)
+    performance_maps = list()
+    model = build_pose_model()
+    
+    for image_path, label_path in data_pairs:
+        image = imread_as_rgb(image_path)
         
-        for image_path, label_path in data_pairs:
+        for mutator in image_mutators:
+            image = mutator(image)
 
-            for mutator in image_path_mutators:
-                image_path = mutator(image_path)
+        results = predict_landmarks(image, model)
+        labels_list = build_yolo_labels(label_path)
 
-            results = predict_landmarks(image_path, model)
-            labels_list = build_yolo_labels(label_path)
-
-            if len(labels_list) == 0:
-                performance_maps.append(results.ensure_empty())
-            elif len(labels_list) == 1:
-                if len(results) == 0:
-                    performance_maps.append(performance_map_for_false_negative())
-                else:
-                    performance_maps.append(PCKh50(labels_list[0], results))
+        if len(labels_list) == 0:
+            performance_maps.append(results.ensure_empty())
+        elif len(labels_list) == 1:
+            if len(results) == 0:
+                performance_maps.append(performance_map_for_false_negative())
             else:
-                performance_maps.append(PCKh50(get_most_central(labels_list), results))
-        
-        log_overall_performance(performance_maps, name)
-    finally:
-        for clean_func in clean_up:
-            clean_func()
+                performance_maps.append(PCKh50(labels_list[0], results))
+        else:
+            performance_maps.append(PCKh50(get_most_central(labels_list), results))
+    
+    log_overall_performance(performance_maps, name)
 
 def estimate_distances(data_root: str = "data", split: str = "test",
         dataset_name: str = "distances",
-        image_path_mutators: List[Callable[[str], str]] = [],
-        clean_up: List[Callable] = []) -> DataFrame:
+        image_mutators: List[Callable[[MatLike], MatLike]] = []) -> DataFrame:
     """
     Estimate the distances between HPE landmark labels and predicted HPE landmarks.
     Distances are saved to the file system as a .pkl file.
@@ -123,54 +120,50 @@ def estimate_distances(data_root: str = "data", split: str = "test",
         DataFrame: Matrix with distances (normalized according to PCKh50) between label landmarks and predicted landmarks.
         Each row represents an image and the columns the landmarks.
     """
-    try:
-        path = join(data_root, "hpe", "img", split, "images")
-        data_pairs = list_image_label_pairs(path)
-        model = build_pose_model()
+    path = join(data_root, "hpe", "img", split, "images")
+    data_pairs = list_image_label_pairs(path)
+    model = build_pose_model()
+    
+    _num_images = len(data_pairs)
+    distances = full((_num_images, __num_landmarks), nan, dtype=float)
+    index = 0
+
+    for image_path, label_path in data_pairs:
+        image = imread_as_rgb(image_path)
         
-        _num_images = len(data_pairs)
-        distances = full((_num_images, __num_landmarks), nan, dtype=float)
-        index = 0
+        for mutator in image_mutators:
+            image = mutator(image)
+        
+        results = predict_landmarks(image, model)
+        labels_list = build_yolo_labels(label_path)
 
-        for image_path, label_path in data_pairs:
-
-            for mutator in image_path_mutators:
-                image_path = mutator(image_path)
-            
-            results = predict_landmarks(image_path, model)
-            labels_list = build_yolo_labels(label_path)
-
-            if len(labels_list) == 0:
-                if results.is_missing():
-                    # True Negative
-                    distances[index] = full(__num_landmarks, 0, dtype=float)
-                else:
-                    # False Postive
-                    continue
-            elif len(labels_list) == 1:
-                if results.is_missing():
-                    # False Negative
-                    continue
-                else:    
-                    # 1 set of labels and predictions
-                    distances[index] = distance(labels_list[0], results)
+        if len(labels_list) == 0:
+            if results.is_missing():
+                # True Negative
+                distances[index] = full(__num_landmarks, 0, dtype=float)
             else:
-                # Multiple labels (people in image), only evaluate most central.
-                distances[index] = distance(get_most_central(labels_list), results)
-            
-            index += 1
+                # False Postive
+                continue
+        elif len(labels_list) == 1:
+            if results.is_missing():
+                # False Negative
+                continue
+            else:    
+                # 1 set of labels and predictions
+                distances[index] = distance(labels_list[0], results)
+        else:
+            # Multiple labels (people in image), only evaluate most central.
+            distances[index] = distance(get_most_central(labels_list), results)
+        
+        index += 1
 
-        result_path = join(data_root, "hpe", "yolo", f"{dataset_name}.pkl")
-        df = DataFrame(distances)
-        df.columns = [landmark.name for landmark in MyLandmark]
-        df.to_pickle(result_path)
-        print(f"Distances saved to '{result_path}'")
+    result_path = join(data_root, "hpe", "yolo", f"{dataset_name}.pkl")
+    df = DataFrame(distances)
+    df.columns = [landmark.name for landmark in MyLandmark]
+    df.to_pickle(result_path)
+    print(f"Distances saved to '{result_path}'")
 
-        return df
-
-    finally:
-        for clean_func in clean_up:
-            clean_func()
+    return df
 
 def read_distances(data_root: str = "data",
         dataset_name: str = "distances") -> DataFrame:

@@ -8,19 +8,6 @@ from src.labels import get_label_value_from_path
 from src.hpe.mp.model import build_holistic_model
 from src.hpe.mp.landmarks import PredictedLandmarks
 
-def extract_features(image_paths: List[str]) -> List[List[Any]]:
-    """
-    Keep at one model per image!! Evaluating images with different sized wit the same model gives incorrect values.
-    """
-    def image_2_features(image_path: str) -> List[Any]:
-        with build_holistic_model() as model:
-            image = imread(image_path)
-            label = get_label_value_from_path(image_path)
-            features = to_feature_vector(model, image)
-            return [*features, label, image_path]
-
-    return list(map(image_2_features, image_paths))
-
 def predict_landmarks(image: MatLike, model: Holistic) -> PredictedLandmarks:
     """Predict landmarks with MediaPipe tool, and wrap results in custom class PredictedLandmarks.
 
@@ -35,6 +22,19 @@ def predict_landmarks(image: MatLike, model: Holistic) -> PredictedLandmarks:
     results = model.process(image)
     return PredictedLandmarks(results)
 
-def to_feature_vector(model: Holistic, image: MatLike) -> ndarray:
+def to_feature_vector(image: MatLike, model: Holistic) -> ndarray:
     results = predict_landmarks(image, model)
     return results.to_array()
+
+def extract_features(image_paths: List[str]) -> List[List[Any]]:
+    """
+    Keep at one model per image!! Evaluating images with different sized wit the same model gives incorrect values.
+    """
+    def image_2_features(image_path: str) -> List[Any]:
+        with build_holistic_model() as model:
+            image = imread(image_path)
+            label = get_label_value_from_path(image_path)
+            features = to_feature_vector(image, model)
+            return [*features, label, image_path]
+
+    return list(map(image_2_features, image_paths))
