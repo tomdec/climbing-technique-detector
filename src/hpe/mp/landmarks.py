@@ -1,4 +1,3 @@
-from argparse import ArgumentError
 from mediapipe.python.solutions.holistic import PoseLandmark, HandLandmark
 from numpy import concatenate, ndarray, array
 from typing import Dict, NamedTuple
@@ -35,7 +34,7 @@ class PredictedLandmarks:
             index (MyLandmark): Landmark to get prediction for.
 
         Raises:
-            ArgumentError: When MediaPipe cannot predict given landmark.
+            Exception: When MediaPipe cannot predict given landmark.
 
         Returns:
             Any | None: Landmark prediction.
@@ -53,12 +52,15 @@ class PredictedLandmarks:
         if left_hand_landmark is not None:
             return self.__find_landmark(left_hand_landmark, self._values.left_hand_landmarks)
 
-        raise ArgumentError(f"Cannot get prediction for {index}, likely unable to predict this landmark")
+        raise Exception(f"Cannot get prediction for {index}, likely unable to predict this landmark")
 
     def ensure_empty(self) -> Dict[MyLandmark, bool | None]:
         """
-        Return mapping of MyLandmark to booleans to indicate correct, or incorrect predictions.
-        None, if mediapipe is not able to predict this landmark.
+        In the absence of a true object to detect landmarks,
+        return a mapping of MyLandmark to booleans:\n
+            - true, meaning no prediction (TN), 
+            - false, meaning an incorrect prediction (FP),
+            - None, if mediapipe is not able to predict this landmark.
         """
 
         def no_prediction_for_landmark(landmark: MyLandmark) -> bool | None:
@@ -71,7 +73,7 @@ class PredictedLandmarks:
         results = {}
 
         for landmark in MyLandmark:
-            results[landmark] = no_prediction_for_landmark(self[landmark])
+            results[landmark] = no_prediction_for_landmark(landmark)
 
         return results
 

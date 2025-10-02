@@ -1,7 +1,7 @@
 from cv2.typing import MatLike
 from mediapipe.python.solutions.holistic import Holistic
-from typing import NamedTuple, Tuple, List, Any
-from numpy import array, ndarray
+from typing import List, Any
+from numpy import ndarray
 
 from src.common.helpers import imread
 from src.labels import get_label_value_from_path

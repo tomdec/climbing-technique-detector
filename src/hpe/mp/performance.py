@@ -1,4 +1,4 @@
-from typing import Dict, Callable, List
+from typing import Dict, Callable, List, override
 from cv2.typing import MatLike
 from numpy import ndarray, full, nan
 from os.path import join
@@ -7,7 +7,7 @@ from pandas import DataFrame, read_pickle
 from src.common.helpers import imread as imread_as_rgb
 from src.hpe.common.helpers import eucl_distance, list_image_label_pairs
 from src.hpe.common.landmarks import MyLandmark, YoloLabels, build_yolo_labels, get_most_central
-from src.hpe.common.performance import log_overall_performance
+from src.hpe.common.performance import AbstractPerformanceCollector, log_overall_performance
 from src.hpe.mp.evaluate import predict_landmarks
 from src.hpe.mp.landmarks import PredictedLandmarks, can_predict
 from src.hpe.mp.model import build_holistic_model
@@ -31,9 +31,17 @@ def PCKh50(ytrue: YoloLabels, yhat: PredictedLandmarks) -> Dict[MyLandmark, bool
         ytrue_value = ytrue.get_keypoint(landmark)
         yhat_value = yhat[landmark]
 
-        if yhat_value is None:
-            result = ytrue_value.is_missing()
+        if ytrue_value.is_missing() and yhat_value is None:
+            # True Negative
+            result = True
+        elif ytrue_value.is_missing() and yhat_value is not None:
+            # False Positive
+            result = False
+        elif not ytrue_value.is_missing() and yhat_value is None:
+            # False Negative
+            result = False
         else:
+            # True Positive or False Positive (incorrect prediction)
             result = eucl_distance(ytrue_value.as_array(), yhat_value.as_array()) <= limit
 
         correct_pred[landmark] = result
@@ -60,31 +68,23 @@ def distance(ytrue: YoloLabels, yhat: PredictedLandmarks) -> ndarray:
                 
     return distances
 
-def estimate_performance(data_root: str = "data", split: str = "test",
-        dataset_name: str = "MediaPipe",
-        image_mutators: List[Callable[[MatLike], MatLike]] = []):
-    root_image_dir = join(data_root, "hpe", "img", split, "images")
-    data_pairs = list_image_label_pairs(root_image_dir)
-    performance_maps = list()
+class PerformanceLogger(AbstractPerformanceCollector):
 
-    with build_holistic_model() as model:
-        for image_path, label_path in data_pairs:
-            image = imread_as_rgb(image_path)
-
-            for mutator in image_mutators:
-                image = mutator(image)
-            
+    @override
+    def _process(self, image: MatLike, labels: List[YoloLabels]) -> Dict[MyLandmark, bool | None]:
+        with build_holistic_model() as model:
             results = predict_landmarks(image, model)
-            labels_list = build_yolo_labels(label_path)
-
-            if len(labels_list) == 0:
-                performance_maps.append(results.ensure_empty())
-            elif len(labels_list) == 1:
-                performance_maps.append(PCKh50(labels_list[0], results))
+            if len(labels) == 0:
+                # True Negative and False Positives
+                return results.ensure_empty()
+            elif len(labels) == 1:
+                return PCKh50(labels[0], results)
             else:
-                performance_maps.append(PCKh50(get_most_central(labels_list), results))
-    
-    log_overall_performance(performance_maps, dataset_name)
+                return PCKh50(get_most_central(labels), results)
+
+    @override
+    def _post_process(self, name: str, results: List[Dict[MyLandmark, bool | None]]):
+        log_overall_performance(results, name)
 
 def estimate_distances(data_root: str = "data", split: str = "test",
         dataset_name: str = "distances",
@@ -97,8 +97,8 @@ def estimate_distances(data_root: str = "data", split: str = "test",
     distances = full((num_images, num_landmarks), nan, dtype=float)
     index = 0
     
-    with build_holistic_model() as model:
-        for image_path, label_path in data_pairs:
+    for image_path, label_path in data_pairs:
+        with build_holistic_model() as model:
             image = imread_as_rgb(image_path)
 
             for mutator in image_mutators:

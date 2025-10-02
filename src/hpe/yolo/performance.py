@@ -79,8 +79,8 @@ def estimate_performance(data_root: str = "data", split: str = "test",
     path = join(data_root, "hpe", "img", split, "images")
     data_pairs = list_image_label_pairs(path)
     performance_maps = list()
-    model = build_pose_model()
     
+    model = build_pose_model()
     for image_path, label_path in data_pairs:
         image = imread_as_rgb(image_path)
         
