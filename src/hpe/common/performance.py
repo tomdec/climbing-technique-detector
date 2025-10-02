@@ -25,6 +25,10 @@ class HpeEstimation:
     @property
     def can_predict(self) -> bool:
         return self._can_predict
+    
+    @property
+    def image_path(self) -> str:
+        return self._image_path
 
     def __init__(self):
         pass

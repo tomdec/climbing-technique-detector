@@ -9,10 +9,10 @@ from src.hpe.common.helpers import eucl_distance, list_image_label_pairs
 from src.hpe.common.landmarks import MyLandmark, YoloLabels, build_yolo_labels, get_most_central
 from src.hpe.common.performance import AbstractPerformanceCollector, log_overall_performance
 from src.hpe.mp.evaluate import predict_landmarks
-from src.hpe.mp.landmarks import PredictedLandmarks, can_predict
+from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints, can_predict
 from src.hpe.mp.model import build_holistic_model
 
-def PCKh50(ytrue: YoloLabels, yhat: PredictedLandmarks) -> Dict[MyLandmark, bool | None]:
+def PCKh50(ytrue: YoloLabels, yhat: MediaPipePredictedKeyPoints) -> Dict[MyLandmark, bool | None]:
     """
     Return mapping of MyLandmark to booleans to indicate correct, or incorrect predictions, 
     as defined by the PCKh50 metric.
@@ -48,7 +48,7 @@ def PCKh50(ytrue: YoloLabels, yhat: PredictedLandmarks) -> Dict[MyLandmark, bool
 
     return correct_pred
 
-def distance(ytrue: YoloLabels, yhat: PredictedLandmarks) -> ndarray:
+def distance(ytrue: YoloLabels, yhat: MediaPipePredictedKeyPoints) -> ndarray:
     _num_landmarks = len(MyLandmark)
     _limit = ytrue.get_head_bone_link() / 2
     distances = full(_num_landmarks, nan, dtype=float)

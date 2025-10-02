@@ -6,11 +6,11 @@ from numpy import ndarray
 from src.common.helpers import imread
 from src.labels import get_label_value_from_path
 from src.hpe.yolo.model import build_pose_model
-from src.hpe.yolo.landmarks import PredictedLandmarks
+from src.hpe.yolo.landmarks import YoloPredictedKeyPoints
 
-def predict_landmarks(image: MatLike, model: YOLO) -> PredictedLandmarks:
+def predict_landmarks(image: MatLike, model: YOLO) -> YoloPredictedKeyPoints:
     results = model(image)
-    return PredictedLandmarks(results[0])
+    return YoloPredictedKeyPoints(results[0])
 
 def to_feature_vector(image_path: str, model: YOLO) -> ndarray:
     image = imread(image_path)

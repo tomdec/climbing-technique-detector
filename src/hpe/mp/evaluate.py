@@ -6,9 +6,9 @@ from numpy import ndarray
 from src.common.helpers import imread
 from src.labels import get_label_value_from_path
 from src.hpe.mp.model import build_holistic_model
-from src.hpe.mp.landmarks import PredictedLandmarks
+from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints
 
-def predict_landmarks(image: MatLike, model: Holistic) -> PredictedLandmarks:
+def predict_landmarks(image: MatLike, model: Holistic) -> MediaPipePredictedKeyPoints:
     """Predict landmarks with MediaPipe tool, and wrap results in custom class PredictedLandmarks.
 
     Args:
@@ -20,7 +20,7 @@ def predict_landmarks(image: MatLike, model: Holistic) -> PredictedLandmarks:
     """
     #image_height, image_width, _ = image.shape
     results = model.process(image)
-    return PredictedLandmarks(results)
+    return MediaPipePredictedKeyPoints(results)
 
 def to_feature_vector(image: MatLike, model: Holistic) -> ndarray:
     results = predict_landmarks(image, model)

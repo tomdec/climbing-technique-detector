@@ -1,9 +1,11 @@
 from enum import Enum
-from numpy import array
+from numpy import array, ndarray
 from cv2.typing import MatLike
 from cv2 import circle, putText, FONT_HERSHEY_PLAIN
-from typing import List, Any
+from typing import List, Any, Dict
+from torch import Tensor
 
+from src.common.helpers import raise_not_implemented_error
 from src.hpe.common.helpers import eucl_distance
 
 class MyLandmark(Enum):
@@ -165,17 +167,28 @@ class YoloLabels:
 class PredictedKeyPoint:
 
     @staticmethod
+    def empty() -> 'PredictedKeyPoint':
+        """To be used when a landmark is missing because the person (or body part) is not detected"""
+        return PredictedKeyPoint(0.0, 0.0, None, 1)
+
+    @staticmethod
     def from_mediapipe(values: Any) -> 'PredictedKeyPoint':
         return PredictedKeyPoint(values.x, values.y, values.z, values.visibility)
 
+    @staticmethod
+    def from_yolo(coordinates: Tensor, visibility: Tensor) -> 'PredictedKeyPoint':
+        print(coordinates)
+        print(visibility)
+        return PredictedKeyPoint(float(coordinates[0]), float(coordinates[1]), None, float(visibility))
+
     @property
     def x(self) -> float:
-        """Relative x-coordinate of the landmark."""
+        """Normalized x-coordinate of the landmark."""
         return self._x
     
     @property
     def y(self) -> float:
-        """Relative y-coordinate of the landmark."""
+        """Normalized y-coordinate of the landmark."""
         return self._y
     
     @property
@@ -198,8 +211,75 @@ class PredictedKeyPoint:
         self._z = z
         self._visibility = visibility
 
-    def as_array(self):
+    def is_missing(self) -> bool:
+        is_origin = (self._x == 0.0) and (self._y == 0.0)
+        is_out_of_bounds = (self._x < 0.0) or (1.0 < self._x) \
+            or (self._y < 0.0) or (1.0 < self._y)
+        
+        return is_origin or is_out_of_bounds
+
+    def as_array(self) -> ndarray:
         return array([self._x, self._y])
+    
+    def __str__(self) -> str:
+        d = {
+            'x': self.x,
+            'y': self.y,
+            'z': self.z,
+            'vis': self.visibility
+        }
+        return f"{d}"
+
+class PredictedKeyPoints:
+
+    def __init__(self):
+        pass
+    
+    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint | None:
+        """Get landmark prediction for given index. None if landmark was not found.
+
+        Args:
+            index (MyLandmark): Landmark to get prediction for.
+
+        Raises:
+            Exception: When tool cannot predict given landmark.
+
+        Returns:
+            PredictedKeyPoint | None: Landmark prediction.
+        """
+        raise_not_implemented_error(self.__class__.__name__, self.__getitem__.__name__)
+
+    def no_person_detected(self):
+        raise_not_implemented_error(self.__class__.__name__, self.no_person_detected.__name__)
+
+    def can_predict(self, landmark: MyLandmark):
+        raise_not_implemented_error(self.__class__.__name__, self.can_predict.__name__)
+
+    def ensure_empty(self) -> Dict[MyLandmark, bool | None]:
+        """
+        In the absence of a true object to detect landmarks,
+        return a mapping of MyLandmark to booleans:\n
+            - true, meaning no prediction (TN), 
+            - false, meaning an incorrect prediction (FP),
+            - None, if mediapipe is not able to predict this landmark.
+        """
+        def no_prediction_for_landmark(landmark: MyLandmark) -> bool | None:
+            if not self.can_predict(landmark):
+                return None
+            elif self.no_person_detected():
+                return True
+            else:
+                yhat = self[landmark]
+                return yhat is None
+
+        results = {}
+        for landmark in MyLandmark:
+            results[landmark] = no_prediction_for_landmark(landmark)
+        return results
+
+    def to_array(self) -> ndarray:
+        raise_not_implemented_error(self.__class__.__name__, self.to_array.__name__)
+
 
 def build_yolo_labels(file_path: str) -> List[YoloLabels]:
     result = list()

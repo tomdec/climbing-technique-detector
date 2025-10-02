@@ -1,22 +1,52 @@
-from typing import Dict, List
+from typing import Dict, List, override
 from ultralytics.engine.results import Results
 from numpy import ndarray, array
 
 from numpy import concatenate
-from src.hpe.common.landmarks import MyLandmark
+from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoints, PredictedKeyPoint
 
-class PredictedLandmarks:
+class YoloPredictedKeyPoints(PredictedKeyPoints):
 
     @property
     def values(self) -> Results:
         return self._values
 
+    @override
     def __init__(self, values: Results):
         self._values = values
 
-    def is_missing(self) -> bool:
-        return len(self._values) == 0
+    @override
+    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint | None:
+        # TODO: YOLO predicts landmarks at coordinates (0, 0) when a person is detected 
+        # but it can't find the landmark
+        
+        pose_landmark = get_pose_landmark(index)
+        if pose_landmark is None:
+            raise Exception(f"Cannot get prediction for {index}, likely unable to predict this landmark")
+        
+        if self.no_person_detected():
+            return None
+        
+        keypoints = self._values.keypoints
+        coordinates = keypoints.xyn[0][pose_landmark]
+        if coordinates.device.type == 'cuda':
+            coordinates = coordinates.cpu()
 
+        visibility = keypoints.conf[0][pose_landmark]
+        if visibility.device.type == 'cuda':
+            visibility = visibility.cpu()
+
+        return PredictedKeyPoint.from_yolo(coordinates, visibility)
+    
+    @override
+    def no_person_detected(self) -> bool:
+        return len(self._values) == 0
+    
+    @override
+    def can_predict(self, landmark: MyLandmark):
+        return can_predict(landmark)
+
+    @override    
     def to_array(self) -> ndarray:
         result_array = []
         for value in list(_pose_landmark_mapping.values()):
@@ -31,47 +61,6 @@ class PredictedLandmarks:
 
         return array(result_array)
     
-    def ensure_empty(self) -> Dict[MyLandmark, bool | None]:
-        correct_pred = {}
-    
-        if self._values.keypoints.xyn.shape[0] == 0: # no person detected
-            for landmark in MyLandmark:
-                pose_landmark_index = get_pose_landmark(landmark)
-                correct_pred[landmark] = True if pose_landmark_index is not None else None
-        else:
-            for landmark in MyLandmark:
-                pose_landmark_index = get_pose_landmark(landmark)
-                result = None
-                
-                if pose_landmark_index is not None:
-                    yhat_value = self.get_prediction(0, pose_landmark_index)
-                    result = yhat_value is None
-                
-                correct_pred[landmark] = result
-
-        return correct_pred
-    
-    def get_prediction(self, object_index: int, key: int) -> ndarray | None:
-        """
-        Get normalized coordinates of a predicted landmark for a detected object. 
-        None, if the landmark is not detected.
-
-        Args:
-            object_index (int): Index of a detected object in the results.
-            key (int): Index of a landmark.
-
-        Returns:
-            (ndarray | None): Normalized coordinates (x, y) of the predicted landmark.
-        """
-        keypoints = self._values.keypoints
-        if keypoints.xyn.shape.count(0) > 0:
-            return None
-        
-        raw_tensor = keypoints.xyn[object_index][key]
-        if raw_tensor.device.type == 'cuda':
-            return array(raw_tensor.cpu())
-        return array(raw_tensor)
-
 _pose_landmark_mapping: Dict[MyLandmark, int] = {
     MyLandmark.HEAD: 0,
     MyLandmark.RIGHT_SHOULDER: 6,
@@ -91,6 +80,9 @@ _pose_landmark_mapping: Dict[MyLandmark, int] = {
     MyLandmark.LEFT_EAR: 4,
     MyLandmark.RIGHT_EAR: 5 
 }
+
+def can_predict(landmark: MyLandmark) -> bool:
+    return landmark in _pose_landmark_mapping.keys()
 
 def get_pose_landmark(key: MyLandmark) -> int | None:
     try:

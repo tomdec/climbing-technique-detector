@@ -4,12 +4,12 @@ from numpy import ones
 
 from src.hpe.common.landmarks import YoloLabels, MyLandmark
 from src.hpe.common.plot import plot_average_distances
-from src.hpe.yolo.landmarks import PredictedLandmarks, get_pose_landmark
+from src.hpe.yolo.landmarks import YoloPredictedKeyPoints, get_pose_landmark
 from src.hpe.yolo.draw import draw_my_landmarks
 
 def compare_landmarks(image: MatLike, 
         labels: YoloLabels,
-        results: PredictedLandmarks) -> MatLike:
+        results: YoloPredictedKeyPoints) -> MatLike:
     annotated = image.copy()
 
     annotated = labels.draw(annotated)

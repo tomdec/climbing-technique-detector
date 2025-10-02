@@ -1,10 +1,10 @@
 from mediapipe.python.solutions.holistic import PoseLandmark, HandLandmark
 from numpy import concatenate, ndarray, array
-from typing import Dict, NamedTuple
+from typing import Dict, NamedTuple, override
 
-from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint
+from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint, PredictedKeyPoints
 
-class PredictedLandmarks:
+class MediaPipePredictedKeyPoints(PredictedKeyPoints):
 
     @staticmethod
     def __find_landmark(index, landmarks) -> PredictedKeyPoint | None:
@@ -24,22 +24,16 @@ class PredictedLandmarks:
     def left_hand_landmarks(self):
         return self._values.left_hand_landmarks
 
+    @override
     def __init__(self, values: NamedTuple):
         self._values = values
 
+    @override
     def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint | None:
-        """Get landmark prediction for given index. None if landmark was not found.
+        # TODO: no person detected when all landmark lists are None
+        # When a specific list is empty, that landmark is not found 
+        # or landmark is predicted out of frame
 
-        Args:
-            index (MyLandmark): Landmark to get prediction for.
-
-        Raises:
-            Exception: When MediaPipe cannot predict given landmark.
-
-        Returns:
-            Any | None: Landmark prediction.
-        """
-        
         pose_landmark = get_pose_landmark(index)
         if pose_landmark is not None:
             return self.__find_landmark(pose_landmark, self._values.pose_landmarks)
@@ -54,29 +48,17 @@ class PredictedLandmarks:
 
         raise Exception(f"Cannot get prediction for {index}, likely unable to predict this landmark")
 
-    def ensure_empty(self) -> Dict[MyLandmark, bool | None]:
-        """
-        In the absence of a true object to detect landmarks,
-        return a mapping of MyLandmark to booleans:\n
-            - true, meaning no prediction (TN), 
-            - false, meaning an incorrect prediction (FP),
-            - None, if mediapipe is not able to predict this landmark.
-        """
+    @override
+    def no_person_detected(self):
+        return self.pose_landmarks is None and \
+            self.right_hand_landmarks is None and \
+            self.left_hand_landmarks is None
 
-        def no_prediction_for_landmark(landmark: MyLandmark) -> bool | None:
-            if not can_predict(landmark):
-                return None
-            
-            yhat = self[landmark]
-            return yhat is None
+    @override
+    def can_predict(self, landmark: MyLandmark):
+        return can_predict(landmark)
 
-        results = {}
-
-        for landmark in MyLandmark:
-            results[landmark] = no_prediction_for_landmark(landmark)
-
-        return results
-
+    @override
     def to_array(self) -> ndarray:
         result_array = []
     

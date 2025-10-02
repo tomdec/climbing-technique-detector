@@ -1,6 +1,6 @@
 from typing import Dict, List, Callable
 from cv2.typing import MatLike
-from numpy import full, nan
+from numpy import full, nan, array, ndarray
 from pandas import DataFrame, read_pickle
 from os.path import join
 
@@ -8,15 +8,14 @@ from src.common.helpers import imread as imread_as_rgb
 from src.hpe.common.landmarks import YoloLabels, MyLandmark, build_yolo_labels, get_most_central
 from src.hpe.common.helpers import eucl_distance, list_image_label_pairs
 from src.hpe.common.performance import log_overall_performance
-from src.hpe.yolo.landmarks import PredictedLandmarks, get_pose_landmark
+from src.hpe.yolo.landmarks import YoloPredictedKeyPoints, can_predict
 from src.hpe.yolo.evaluate import predict_landmarks
 from src.hpe.yolo.model import build_pose_model
 
 __num_landmarks = len(MyLandmark)
 
 def PCKh50(ytrue: YoloLabels, 
-        yhat: PredictedLandmarks,
-        object_index: int = 0,
+        yhat: YoloPredictedKeyPoints,
         verbose: bool = False,
         limit_mod = 1) -> Dict[MyLandmark, bool | None]:
     
@@ -27,45 +26,59 @@ def PCKh50(ytrue: YoloLabels,
     correct_pred = {}
 
     for landmark in MyLandmark:
+        if not can_predict(landmark):
+            correct_pred[landmark] = None
+            continue
+        
         ytrue_value = ytrue.get_keypoint(landmark)
-        pose_landmark_index = get_pose_landmark(landmark)
         
         result = None
-        if pose_landmark_index is not None:
-            yhat_value = yhat.get_prediction(object_index, pose_landmark_index)
+        yhat_value = yhat[landmark]
 
-            if yhat_value is None:
-                result = ytrue_value.is_missing()
-            else:
-                if verbose:
-                    print(f'y true: {ytrue_value.as_array()}')
-                    print(f'y hat: {yhat_value}')
-                result = eucl_distance(ytrue_value.as_array(), yhat_value) <= limit
+        if ytrue_value.is_missing() and yhat_value is None:
+            # True Negative
+            result = True
+        elif ytrue_value.is_missing() and yhat_value is not None:
+            # False Positive
+            result = False
+        elif not ytrue_value.is_missing() and yhat_value is None:
+            # False Negative
+            result = False
+        else:
+            if verbose:
+                print(f'y_true: {ytrue_value.as_array()}')
+                print(f'y_hat: {yhat_value.as_array()}')
+            result = eucl_distance(ytrue_value.as_array(), yhat_value.as_array()) <= limit
         
         correct_pred[landmark] = result
 
     return correct_pred
     
 def distance(ytrue: YoloLabels, 
-        yhat: PredictedLandmarks,
-        object_index: int = 0): 
+        yhat: YoloPredictedKeyPoints) -> ndarray: 
     _limit = ytrue.get_head_bone_link() / 2
-    distances = full(__num_landmarks, nan, dtype=float)
-
-    for landmark in MyLandmark:
-        index = landmark.value
-        ytrue_value = ytrue.get_keypoint(landmark)
-        pose_landmark_index = get_pose_landmark(landmark)
+    
+    def calc_distance(landmark: MyLandmark) -> float:
+        if not can_predict(landmark):
+            return nan
         
-        if pose_landmark_index is not None:
-            yhat_value = yhat.get_prediction(object_index, pose_landmark_index)
+        ytrue_value = ytrue.get_keypoint(landmark)
+        yhat_value = yhat[landmark]
 
-            if ytrue_value.is_missing() and yhat_value is None:
-                distances[index] = 0
-            else:
-                distances[index] = eucl_distance(ytrue_value.as_array(), yhat_value) / _limit
+        if ytrue_value.is_missing() and yhat_value is None:
+            # True Negative
+            return 0
+        elif ytrue_value.is_missing() and yhat_value is not None:
+            # False Positive
+            return nan # should be handle differently than 'cannot predict' case
+        elif not ytrue_value.is_missing() and yhat_value is None:
+            # False Negative
+            return nan # should be handle differently than 'cannot predict' case
+        else:
+            return eucl_distance(ytrue_value.as_array(), yhat_value.as_array()) / _limit
 
-    return distances
+    distances = list(map(calc_distance, MyLandmark))
+    return array(distances)
 
 def performance_map_for_false_negative() -> Dict[MyLandmark, bool | None]:
     performance = {}
@@ -138,14 +151,14 @@ def estimate_distances(data_root: str = "data", split: str = "test",
         labels_list = build_yolo_labels(label_path)
 
         if len(labels_list) == 0:
-            if results.is_missing():
+            if results.no_person_detected():
                 # True Negative
                 distances[index] = full(__num_landmarks, 0, dtype=float)
             else:
                 # False Postive
                 continue
         elif len(labels_list) == 1:
-            if results.is_missing():
+            if results.no_person_detected():
                 # False Negative
                 continue
             else:    
