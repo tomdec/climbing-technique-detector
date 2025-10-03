@@ -1,128 +1,30 @@
-from typing import Dict, Callable, List, override
+from typing import override
 from cv2.typing import MatLike
-from numpy import ndarray, full, nan
 from os.path import join
 from pandas import DataFrame, read_pickle
 
-from src.common.helpers import imread as imread_as_rgb
-from src.hpe.common.helpers import eucl_distance, list_image_label_pairs
-from src.hpe.common.landmarks import MyLandmark, YoloLabels, build_yolo_labels, get_most_central
-from src.hpe.common.performance import AbstractPerformanceCollector, log_overall_performance
+from src.hpe.common.performance import AbstractDistanceCollector, AbstractPerformanceLogger
 from src.hpe.mp.evaluate import predict_landmarks
-from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints, can_predict
+from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints
 from src.hpe.mp.model import build_holistic_model
 
-def PCKh50(ytrue: YoloLabels, yhat: MediaPipePredictedKeyPoints) -> Dict[MyLandmark, bool | None]:
-    """
-    Return mapping of MyLandmark to booleans to indicate correct, or incorrect predictions, 
-    as defined by the PCKh50 metric.
-    None, if mediapipe is not able to predict this landmark.
-    """
-    limit = ytrue.get_head_bone_link() / 2
-    
-    correct_pred = {}
-
-    for landmark in MyLandmark:
-        
-        if not can_predict(landmark):
-            correct_pred[landmark] = None
-            continue
-
-        ytrue_value = ytrue.get_keypoint(landmark)
-        yhat_value = yhat[landmark]
-
-        if ytrue_value.is_missing() and yhat_value is None:
-            # True Negative
-            result = True
-        elif ytrue_value.is_missing() and yhat_value is not None:
-            # False Positive
-            result = False
-        elif not ytrue_value.is_missing() and yhat_value is None:
-            # False Negative
-            result = False
-        else:
-            # True Positive or False Positive (incorrect prediction)
-            result = eucl_distance(ytrue_value.as_array(), yhat_value.as_array()) <= limit
-
-        correct_pred[landmark] = result
-
-    return correct_pred
-
-def distance(ytrue: YoloLabels, yhat: MediaPipePredictedKeyPoints) -> ndarray:
-    _num_landmarks = len(MyLandmark)
-    _limit = ytrue.get_head_bone_link() / 2
-    distances = full(_num_landmarks, nan, dtype=float)
-
-    for landmark in MyLandmark:
-        if not can_predict(landmark):
-            continue
-
-        index = landmark.value
-        ytrue_value = ytrue.get_keypoint(landmark)
-        yhat_value = yhat[landmark]
-
-        if ytrue_value.is_missing() and yhat_value is None:
-            distances[index] = 0 
-        elif yhat_value is not None:
-            distances[index] = eucl_distance(ytrue_value.as_array(), yhat_value.as_array()) / _limit
-                
-    return distances
-
-class PerformanceLogger(AbstractPerformanceCollector):
+class PerformanceLogger(AbstractPerformanceLogger):
 
     @override
-    def _process(self, image: MatLike, labels: List[YoloLabels]) -> Dict[MyLandmark, bool | None]:
+    def _get_predictions(self, image: MatLike) -> MediaPipePredictedKeyPoints:
         with build_holistic_model() as model:
-            results = predict_landmarks(image, model)
-            if len(labels) == 0:
-                # True Negative and False Positives
-                return results.ensure_empty()
-            elif len(labels) == 1:
-                return PCKh50(labels[0], results)
-            else:
-                return PCKh50(get_most_central(labels), results)
+            return predict_landmarks(image, model)
+
+class DistanceCollector(AbstractDistanceCollector):
 
     @override
-    def _post_process(self, name: str, results: List[Dict[MyLandmark, bool | None]]):
-        log_overall_performance(results, name)
+    def __init__(self, data_root="data"):
+        super().__init__("mediapipe", data_root)
 
-def estimate_distances(data_root: str = "data", split: str = "test",
-        dataset_name: str = "distances",
-        image_mutators: List[Callable[[MatLike], MatLike]] = []) -> DataFrame:
-    root_image_dir = join(data_root, "hpe", "img", split, "images")
-    data_pairs = list_image_label_pairs(root_image_dir)
-
-    num_images = len(data_pairs)
-    num_landmarks = len(MyLandmark)
-    distances = full((num_images, num_landmarks), nan, dtype=float)
-    index = 0
-    
-    for image_path, label_path in data_pairs:
+    @override
+    def _get_predictions(self, image: MatLike) -> MediaPipePredictedKeyPoints:
         with build_holistic_model() as model:
-            image = imread_as_rgb(image_path)
-
-            for mutator in image_mutators:
-                image = mutator(image)
-
-            results = predict_landmarks(image, model)
-            labels_list = build_yolo_labels(label_path)
-
-            if len(labels_list) == 0:
-                #TODO: add check if predictions are also empty, then set to array of zeros
-                continue
-            elif len(labels_list) == 1:
-                distances[index] = distance(labels_list[0], results)
-            else:
-                distances[index] = distance(get_most_central(labels_list), results)
-                
-            index += 1
-
-    result_path = join(data_root, "hpe", "mediapipe", f"{dataset_name}.pkl") 
-    df = DataFrame(distances, columns=[landmark.name for landmark in MyLandmark])
-    df.to_pickle(result_path)
-    print(f"Distances saved to '{result_path}'")
-
-    return df
+            return predict_landmarks(image, model)
 
 def read_distances(data_root: str = "data", dataset_name: str = "distances") -> DataFrame:
     result_path = join(data_root, "hpe", "mediapipe", f"{dataset_name}.pkl")

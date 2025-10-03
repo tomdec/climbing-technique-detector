@@ -16,16 +16,28 @@ class YoloPredictedKeyPoints(PredictedKeyPoints):
         self._values = values
 
     @override
-    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint | None:
-        # TODO: YOLO predicts landmarks at coordinates (0, 0) when a person is detected 
-        # but it can't find the landmark
+    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint:
+        """Get landmark prediction for given index.
+        Returns an empty landmark when the landmark was not detected.
         
+        For YOLO, when a landmark is not detected but a person is, the landmark will be
+        at coordinates (0, 0).
+
+        Args:
+            index (MyLandmark): Landmark to get prediction for.
+
+        Raises:
+            Exception: When tool cannot predict given landmark.
+
+        Returns:
+            PredictedKeyPoint: Landmark prediction.
+        """
         pose_landmark = get_pose_landmark(index)
         if pose_landmark is None:
             raise Exception(f"Cannot get prediction for {index}, likely unable to predict this landmark")
         
         if self.no_person_detected():
-            return None
+            return PredictedKeyPoint.empty()
         
         keypoints = self._values.keypoints
         coordinates = keypoints.xyn[0][pose_landmark]
@@ -36,7 +48,7 @@ class YoloPredictedKeyPoints(PredictedKeyPoints):
         if visibility.device.type == 'cuda':
             visibility = visibility.cpu()
 
-        return PredictedKeyPoint.from_yolo(coordinates, visibility)
+        return PredictedKeyPoint(float(coordinates[0]), float(coordinates[1]), None, float(visibility))
     
     @override
     def no_person_detected(self) -> bool:

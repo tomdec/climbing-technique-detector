@@ -171,16 +171,6 @@ class PredictedKeyPoint:
         """To be used when a landmark is missing because the person (or body part) is not detected"""
         return PredictedKeyPoint(0.0, 0.0, None, 1)
 
-    @staticmethod
-    def from_mediapipe(values: Any) -> 'PredictedKeyPoint':
-        return PredictedKeyPoint(values.x, values.y, values.z, values.visibility)
-
-    @staticmethod
-    def from_yolo(coordinates: Tensor, visibility: Tensor) -> 'PredictedKeyPoint':
-        print(coordinates)
-        print(visibility)
-        return PredictedKeyPoint(float(coordinates[0]), float(coordinates[1]), None, float(visibility))
-
     @property
     def x(self) -> float:
         """Normalized x-coordinate of the landmark."""
@@ -235,8 +225,9 @@ class PredictedKeyPoints:
     def __init__(self):
         pass
     
-    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint | None:
-        """Get landmark prediction for given index. None if landmark was not found.
+    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint:
+        """Get landmark prediction for given index.
+        Returns an empty landmark when the landmark was not detected.
 
         Args:
             index (MyLandmark): Landmark to get prediction for.
@@ -245,14 +236,19 @@ class PredictedKeyPoints:
             Exception: When tool cannot predict given landmark.
 
         Returns:
-            PredictedKeyPoint | None: Landmark prediction.
+            PredictedKeyPoint: Landmark prediction.
         """
         raise_not_implemented_error(self.__class__.__name__, self.__getitem__.__name__)
 
     def no_person_detected(self):
         raise_not_implemented_error(self.__class__.__name__, self.no_person_detected.__name__)
 
-    def can_predict(self, landmark: MyLandmark):
+    def can_predict(self, landmark: MyLandmark) -> bool:
+        """Check if the tool can predict this landmark.
+
+        Args:
+            landmark (MyLandmark): Landmark to check.
+        """
         raise_not_implemented_error(self.__class__.__name__, self.can_predict.__name__)
 
     def ensure_empty(self) -> Dict[MyLandmark, bool | None]:
@@ -279,7 +275,6 @@ class PredictedKeyPoints:
 
     def to_array(self) -> ndarray:
         raise_not_implemented_error(self.__class__.__name__, self.to_array.__name__)
-
 
 def build_yolo_labels(file_path: str) -> List[YoloLabels]:
     result = list()

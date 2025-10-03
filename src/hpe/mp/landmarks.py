@@ -7,10 +7,11 @@ from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint, PredictedKey
 class MediaPipePredictedKeyPoints(PredictedKeyPoints):
 
     @staticmethod
-    def __find_landmark(index, landmarks) -> PredictedKeyPoint | None:
+    def __find_landmark(index, landmarks) -> PredictedKeyPoint:
         if landmarks is None:
-            return None
-        return PredictedKeyPoint.from_mediapipe(landmarks.landmark[index])
+            return PredictedKeyPoint.empty()
+        values = landmarks.landmark[index]
+        return PredictedKeyPoint(values.x, values.y, values.z, values.visibility)
 
     @property
     def pose_landmarks(self):
@@ -29,11 +30,22 @@ class MediaPipePredictedKeyPoints(PredictedKeyPoints):
         self._values = values
 
     @override
-    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint | None:
-        # TODO: no person detected when all landmark lists are None
-        # When a specific list is empty, that landmark is not found 
-        # or landmark is predicted out of frame
+    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint:
+        """Get landmark prediction for given index.
+        Returns an empty landmark when the landmark was not detected.
+        
+        For MediaPipe, when a landmark is not detected but a person, or body part, is, 
+        the landmark will be out of bounds.
 
+        Args:
+            index (MyLandmark): Landmark to get prediction for.
+
+        Raises:
+            Exception: When tool cannot predict given landmark.
+
+        Returns:
+            PredictedKeyPoint: Landmark prediction.
+        """
         pose_landmark = get_pose_landmark(index)
         if pose_landmark is not None:
             return self.__find_landmark(pose_landmark, self._values.pose_landmarks)
