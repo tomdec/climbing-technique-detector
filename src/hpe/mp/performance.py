@@ -8,7 +8,7 @@ from src.hpe.common.helpers import list_image_label_pairs
 from src.hpe.common.landmarks import PredictedKeyPoint, PredictedKeyPoints, YoloLabels, build_yolo_labels, get_most_central, MyLandmark
 from src.hpe.common.performance import AbstractDistanceCollector, AbstractPerformanceCollector, AbstractPerformanceLogger, HpeEstimation
 from src.hpe.mp.evaluate import predict_landmarks
-from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints, can_predict
+from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints
 from src.hpe.mp.model import build_holistic_model
 
 class PerformanceLogger(AbstractPerformanceLogger):
