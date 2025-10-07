@@ -3,6 +3,7 @@ from cv2.typing import MatLike
 from os.path import join
 from numpy import ndarray, full, nan
 from pandas import DataFrame
+from sympy import true
 
 from src.hpe.common.metrics import PerformanceMap, PCKh50, distance
 from src.common.helpers import imread, raise_not_implemented_error
@@ -12,34 +13,58 @@ from src.hpe.common.landmarks import KeyPoint, MyLandmark, PredictedKeyPoint, Pr
 
 class HpeEstimation:
 
+    @staticmethod
+    def from_dict(values: dict) -> 'HpeEstimation':
+        return HpeEstimation(
+            true_landmark=None if values['true_landmark'] is None else KeyPoint.from_dict(values['true_landmark']),
+            predicted_landmark=None if values['predicted_landmark'] is None else PredictedKeyPoint.from_dict(values['predicted_landmark']),
+            head_bone_link=values['head_bone_link'],
+            image_path=values['image_path'],
+            can_predict=values['can_predict']
+        )
+
     @property
     def true_landmark(self) -> KeyPoint | None:
         return self._true_landmark
 
     @property
-    def predicted_landmark(self) -> PredictedKeyPoint | None:
+    def predicted_landmark(self) -> PredictedKeyPoint:
         return self._predicted_landmark
     
     @property
-    def head_bone_link(self) -> float:
+    def head_bone_link(self) -> float | None:
         return self._head_bone_link
-    
-    @property
-    def can_predict(self) -> bool:
-        return self._can_predict
     
     @property
     def image_path(self) -> str:
         return self._image_path
+    
+    @property
+    def can_predict(self) -> bool:
+        return self._can_predict
 
-    def __init__(self):
-        pass
+    def __init__(self, true_landmark: KeyPoint | None,
+            predicted_landmark: PredictedKeyPoint,
+            head_bone_link: float | None,
+            image_path: str,
+            can_predict: bool):
+        self._true_landmark = true_landmark
+        self._predicted_landmark = predicted_landmark
+        self._head_bone_link = head_bone_link
+        self._image_path = image_path
+        self._can_predict = can_predict
 
     def __str__(self) -> str:
         return f"{self.as_dict()}"
 
     def as_dict(self) -> dict:
-        pass
+        return {
+            'true_landmark': None if self._true_landmark is None else self._true_landmark.as_dict(),
+            'predicted_landmark': self._predicted_landmark.as_dict(),
+            'head_bone_link': self._head_bone_link,
+            'image_path': self._image_path,
+            'can_predict': self._can_predict
+        }
 
 class AbstractPerformanceCollector:
     _data_root: str
@@ -48,7 +73,7 @@ class AbstractPerformanceCollector:
         self._data_root = data_root
 
     def collect(self, name: str, split: str = "test",
-            image_mutators: List[Callable[[MatLike], MatLike]] = []):
+            image_mutators: List[Callable[[MatLike], MatLike]] = []) -> Any:
         root_image_dir = join(self._data_root, "hpe", "img", split, "images")
         data_pairs = list_image_label_pairs(root_image_dir)
 
@@ -131,7 +156,7 @@ class AbstractDistanceCollector(AbstractPerformanceCollector):
         print(f"Distances saved to '{results_path}'")
         return df
 
-def count_values(map: Dict[MyLandmark, bool | None], value: bool | None):
+def count_values(map: PerformanceMap, value: bool | None):
     count = 0
     for landmark in MyLandmark:
         if map[landmark] == value:
@@ -139,13 +164,13 @@ def count_values(map: Dict[MyLandmark, bool | None], value: bool | None):
 
     return count
 
-def performance(map):
+def performance(map: PerformanceMap):
     correct_num = count_values(map, True)
     cant_detect = count_values(map, None)
 
     return correct_num, get_mylandmark_count() - cant_detect
 
-def log_overall_performance(maps,
+def log_overall_performance(maps: List[PerformanceMap],
         model_name: str = "The model"):
     total_correct = 0
     max_possible = 0

@@ -75,17 +75,24 @@ class BoundingBox:
 
 class KeyPoint:
 
+    @staticmethod
+    def from_dict(values: dict) -> 'KeyPoint':
+        return KeyPoint(
+            x=values['x'], 
+            y=values['y'],
+            visibility=values['visibility'])
+
     _x: float
     _y: float
     _visibility: Visibility
 
-    def __init__(self, x, y, visible):
+    def __init__(self, x, y, visibility):
         self._x = float(x)
         self._y = float(y)
-        self._visibility = Visibility(int(visible))
+        self._visibility = visibility if type(visibility) is Visibility else Visibility(int(visibility))
 
     def __str__(self):
-        return f"{{'x': {self._x}, 'y': {self._y}, 'visibility': {self._visibility.name}}}"
+        return f"{self.as_dict()}"
     
     def draw(self, image: MatLike, label: str) -> MatLike:
         result = image.copy()
@@ -96,11 +103,18 @@ class KeyPoint:
         result = putText(result, label, center, FONT_HERSHEY_PLAIN, 10, (150, 1, 1), 10)
         return result
     
-    def as_array(self):
-        return array([self._x, self._y])
-    
     def is_missing(self) -> bool:
         return self._visibility == Visibility.MISSING
+
+    def as_array(self) -> ndarray:
+        return array([self._x, self._y])
+    
+    def as_dict(self) -> dict:
+        return {
+            'x': self._x,
+            'y': self._y,
+            'visibility': self._visibility
+        }
 
 class KeyPoints:
     _values: List[KeyPoint]
@@ -167,6 +181,15 @@ class YoloLabels:
 class PredictedKeyPoint:
 
     @staticmethod
+    def from_dict(values: dict) -> 'PredictedKeyPoint':
+        return PredictedKeyPoint(
+            x=values['x'],
+            y=values['y'],
+            z=values['z'],
+            visibility=values['visibility']
+        )
+
+    @staticmethod
     def empty() -> 'PredictedKeyPoint':
         """To be used when a landmark is missing because the person (or body part) is not detected"""
         return PredictedKeyPoint(0.0, 0.0, None, 1)
@@ -201,6 +224,9 @@ class PredictedKeyPoint:
         self._z = z
         self._visibility = visibility
 
+    def __str__(self) -> str:
+        return f"{self.as_dict()}"
+    
     def is_missing(self) -> bool:
         is_origin = (self._x == 0.0) and (self._y == 0.0)
         is_out_of_bounds = (self._x < 0.0) or (1.0 < self._x) \
@@ -211,14 +237,13 @@ class PredictedKeyPoint:
     def as_array(self) -> ndarray:
         return array([self._x, self._y])
     
-    def __str__(self) -> str:
-        d = {
+    def as_dict(self) -> dict:
+        return {
             'x': self.x,
             'y': self.y,
             'z': self.z,
-            'vis': self.visibility
+            'visibility': self.visibility
         }
-        return f"{d}"
 
 class PredictedKeyPoints:
 
