@@ -192,7 +192,7 @@ class PredictedKeyPoint:
     @staticmethod
     def empty() -> 'PredictedKeyPoint':
         """To be used when a landmark is missing because the person (or body part) is not detected"""
-        return PredictedKeyPoint(0.0, 0.0, None, 1)
+        return PredictedKeyPoint(0.0, 0.0, None, 0.5)
 
     @property
     def x(self) -> float:
