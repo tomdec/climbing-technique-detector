@@ -5,9 +5,9 @@ from pandas import DataFrame, read_pickle
 from os.path import join
 from ultralytics import YOLO 
 
+from src.hpe.common.typing import HpeEstimation
 from src.hpe.common.metrics import PerformanceMap
-from src.hpe.common.performance import AbstractDistanceCollector, AbstractEstimationCollector, AbstractPerformanceLogger, \
-    HpeEstimation
+from src.hpe.common.performance import AbstractDistanceCollector, AbstractEstimationCollector, AbstractPerformanceLogger
 from src.hpe.yolo.landmarks import YoloPredictedKeyPoints
 from src.hpe.yolo.evaluate import predict_landmarks
 from src.hpe.yolo.model import build_pose_model

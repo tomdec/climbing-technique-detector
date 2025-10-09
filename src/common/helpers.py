@@ -24,6 +24,10 @@ def get_split_limits(data_split_ratios):
 def get_runs(root_path: str, run_type: str):
     return [dir for dir in listdir(root_path) if dir.startswith(run_type)]
 
+
+def safe_index(totals: DataFrame, index: str, fallback = 0) -> int:
+    return totals[index] if index in totals.keys() else fallback
+
 def __get_next_run(root_path: str, run_type: str):
     if run_type == "":
         raise ArgumentError(run_type, "Cannot be an empty string")

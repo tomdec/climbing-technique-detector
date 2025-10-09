@@ -1,8 +1,11 @@
-from typing import Dict
-from numpy import ndarray, array, nan
+from typing import Dict, Tuple, List
+from numpy import ndarray, array, nan, arange
+from pandas import DataFrame, Series
 
+from src.common.helpers import safe_index
 from src.hpe.common.helpers import eucl_distance
 from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoints, YoloLabels
+from src.hpe.common.typing import HpeEstimation
 
 PerformanceMap = Dict[MyLandmark, bool | None]
 
@@ -55,3 +58,73 @@ def distance(ytrue: YoloLabels, yhat: PredictedKeyPoints) -> ndarray:
 
     distances = list(map(map_distance, MyLandmark))
     return array(distances)
+
+def _precision(totals: DataFrame, verbose: bool = False) -> float:
+    tp = safe_index(totals, "TP")
+    fp = safe_index(totals, "FP")
+
+    if verbose:
+        print(f"TP: {tp}")
+        print(f"FP: {fp}")
+
+    if tp + fp == 0:
+        return 0.0
+    
+    result = tp  / (tp + fp)
+    if verbose:
+        print(f"{tp} / ({tp} + {fp}) = {result}")
+
+    return result
+
+def _recall(totals: DataFrame, verbose: bool = False) -> float:
+    tp = safe_index(totals, "TP")
+    fn = safe_index(totals, "FN")
+
+    if verbose:
+        print(f"TP: {tp}")
+        print(f"FN: {fn}")
+
+    if tp + fn == 0:
+        return 0
+    
+    result = tp  / (tp + fn)
+    if verbose:
+        print(f"{tp} / ({tp} + {fn}) = {result}")
+    return result
+
+PrecisionList = List[float]
+RecallList = List[float]
+def calc_precision_and_recall(estimations: DataFrame) -> Tuple[PrecisionList, RecallList]:
+    conf_increment = 0.01
+    confidences = arange(0, 1, conf_increment)
+    recall_x = [0] * len(confidences)
+    precision_y = [0] * len(confidences)
+    
+    for idx, conf in enumerate(confidences):
+        
+        def prediction_result(estimation: HpeEstimation) -> str:
+            return estimation.prediction_result(conf)
+
+        prediction_results = estimations.map(prediction_result)
+        counts = prediction_results.apply(Series.value_counts).fillna(0)
+        totals = counts.apply(sum, axis=1)
+        current_recall = _recall(totals)
+        current_precision = _precision(totals)
+        
+        recall_x[idx] = current_recall
+        precision_y[idx] = current_precision
+    
+    return precision_y, recall_x
+
+def calc_average_precision(precision_list: List[float], recall_list: List[float],
+        verbose: bool = False):
+    average_precision = 0
+    previous_recall = 0
+
+    for precision, recall in zip(precision_list, recall_list):
+        average_precision = average_precision + abs(recall - previous_recall) * precision
+        previous_recall = recall
+    
+    if verbose: print(f"Average precision is: {average_precision}")
+
+    return average_precision

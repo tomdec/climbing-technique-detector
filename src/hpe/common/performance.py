@@ -5,89 +5,12 @@ from numpy import ndarray, full, nan
 from pandas import DataFrame
 from sympy import true
 
+from src.hpe.common.typing import HpeEstimation
 from src.hpe.common.metrics import PerformanceMap, PCKh50, distance
 from src.common.helpers import imread, raise_not_implemented_error
-from src.hpe.common.helpers import eucl_distance, list_image_label_pairs
-from src.hpe.common.landmarks import KeyPoint, MyLandmark, PredictedKeyPoint, PredictedKeyPoints, \
+from src.hpe.common.helpers import list_image_label_pairs
+from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint, PredictedKeyPoints, \
     get_mylandmark_count, build_yolo_labels, YoloLabels, get_most_central
-
-class HpeEstimation:
-
-    @staticmethod
-    def from_dict(values: dict) -> 'HpeEstimation':
-        return HpeEstimation(
-            true_landmark=None if values['true_landmark'] is None else KeyPoint.from_dict(values['true_landmark']),
-            predicted_landmark=None if values['predicted_landmark'] is None else PredictedKeyPoint.from_dict(values['predicted_landmark']),
-            head_bone_link=values['head_bone_link'],
-            image_path=values['image_path'],
-            can_predict=values['can_predict']
-        )
-
-    @property
-    def true_landmark(self) -> KeyPoint | None:
-        return self._true_landmark
-
-    @property
-    def predicted_landmark(self) -> PredictedKeyPoint:
-        return self._predicted_landmark
-    
-    @property
-    def head_bone_link(self) -> float | None:
-        return self._head_bone_link
-    
-    @property
-    def image_path(self) -> str:
-        return self._image_path
-    
-    @property
-    def can_predict(self) -> bool:
-        return self._can_predict
-
-    def __init__(self, true_landmark: KeyPoint | None,
-            predicted_landmark: PredictedKeyPoint,
-            head_bone_link: float | None,
-            image_path: str,
-            can_predict: bool):
-        self._true_landmark = true_landmark
-        self._predicted_landmark = predicted_landmark
-        self._head_bone_link = head_bone_link
-        self._image_path = image_path
-        self._can_predict = can_predict
-
-    def __str__(self) -> str:
-        return f"{self.as_dict()}"
-
-    def _get_estimation(self, conf_threshold: float) -> PredictedKeyPoint | None:
-        if self._predicted_landmark.is_missing():
-            return None
-        elif self._predicted_landmark.visibility < conf_threshold:
-            return None
-        else:
-            return self._predicted_landmark
-
-    def prediction_result(self, conf_threshold: float = 0.5) -> str:
-        if not self._can_predict:
-            return ""
-        estimation = self._get_estimation(conf_threshold)
-        if self._true_landmark is None and estimation is None:
-            return "TN"
-        elif self._true_landmark is not None and estimation is None:
-            return "FN"
-        elif self._true_landmark is None and estimation is not None:
-            return "FP"
-        else:
-            limit = self._head_bone_link / 2
-            correct = eucl_distance(self._true_landmark.as_array(), self._predicted_landmark.as_array()) <= limit
-            return "TP" if correct else "FP"
-
-    def as_dict(self) -> dict:
-        return {
-            'true_landmark': None if self._true_landmark is None else self._true_landmark.as_dict(),
-            'predicted_landmark': self._predicted_landmark.as_dict(),
-            'head_bone_link': self._head_bone_link,
-            'image_path': self._image_path,
-            'can_predict': self._can_predict
-        }
 
 class AbstractPerformanceCollector:
     _data_root: str
