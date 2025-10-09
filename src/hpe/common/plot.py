@@ -47,3 +47,14 @@ def plot_distances_boxplot(
     if ylim is not None:
         figure.axes[0].set_ylim(ylim)
     plt.show()
+
+def plot_precision_recall_curve(precision_y: List[float], recall_x: List[float],
+        tight: bool = True):
+    plt.plot(recall_x, precision_y)
+    plt.title("Precision Recall Curve")
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+
+    if not tight:
+        plt.xlim(0, 1)
+        plt.ylim(0, 1)

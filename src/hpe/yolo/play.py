@@ -9,7 +9,7 @@ from src.hpe.yolo.draw import draw_my_landmarks
 def predict_and_draw(image: MatLike, model: YOLO) -> MatLike:
     image.flags.writeable = False                # Image is no longer writeable
     
-    _, results, _ = predict_landmarks(image, model)
+    results = predict_landmarks(image, model)
     image = draw_my_landmarks(image, results)
 
     return image

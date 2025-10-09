@@ -1,8 +1,112 @@
 from mediapipe.python.solutions.holistic import PoseLandmark, HandLandmark
-from typing import Dict
-from numpy import concatenate
+from numpy import concatenate, ndarray, array
+from typing import Dict, NamedTuple, override
 
-from src.hpe.common.landmarks import MyLandmark
+from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint, PredictedKeyPoints
+
+class MediaPipePredictedKeyPoints(PredictedKeyPoints):
+
+    @staticmethod
+    def __find_landmark(index, landmarks) -> PredictedKeyPoint:
+        if landmarks is None:
+            return PredictedKeyPoint.empty()
+        values = landmarks.landmark[index]
+        return PredictedKeyPoint(values.x, values.y, values.z, values.visibility)
+
+    @property
+    def pose_landmarks(self):
+        return self._values.pose_landmarks
+    
+    @property
+    def right_hand_landmarks(self):
+        return self._values.right_hand_landmarks
+    
+    @property
+    def left_hand_landmarks(self):
+        return self._values.left_hand_landmarks
+
+    @override
+    def __init__(self, values: NamedTuple):
+        self._values = values
+
+    @override
+    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint:
+        """Get landmark prediction for given index.
+        Returns an empty landmark when the landmark was not detected.
+        
+        For MediaPipe, when a landmark is not detected but a person, or body part, is, 
+        the landmark will be out of bounds.
+
+        Args:
+            index (MyLandmark): Landmark to get prediction for.
+
+        Raises:
+            Exception: When tool cannot predict given landmark.
+
+        Returns:
+            PredictedKeyPoint: Landmark prediction.
+        """
+        pose_landmark = get_pose_landmark(index)
+        if pose_landmark is not None:
+            return self.__find_landmark(pose_landmark, self._values.pose_landmarks)
+        
+        right_hand_landmark = get_right_hand_landmark(index)
+        if right_hand_landmark is not None:
+            return self.__find_landmark(right_hand_landmark, self._values.right_hand_landmarks)
+            
+        left_hand_landmark = get_left_hand_landmark(index)
+        if left_hand_landmark is not None:
+            return self.__find_landmark(left_hand_landmark, self._values.left_hand_landmarks)
+
+        raise Exception(f"Cannot get prediction for {index}, likely unable to predict this landmark")
+
+    @override
+    def no_person_detected(self):
+        return self.pose_landmarks is None and \
+            self.right_hand_landmarks is None and \
+            self.left_hand_landmarks is None
+
+    @override
+    def can_predict(self, landmark: MyLandmark):
+        return can_predict(landmark)
+
+    @override
+    def to_array(self) -> ndarray:
+        result_array = []
+    
+        for landmark in _used_pose_landmarks:
+            if (self._values.pose_landmarks is None):
+                result_array.append(None)
+                result_array.append(None)
+                result_array.append(None)
+                result_array.append(None)
+            else: 
+                result_array.append(self._values.pose_landmarks.landmark[landmark].x)
+                result_array.append(self._values.pose_landmarks.landmark[landmark].y)
+                result_array.append(self._values.pose_landmarks.landmark[landmark].z)
+                result_array.append(self._values.pose_landmarks.landmark[landmark].visibility)
+
+        for landmark in _used_hand_landmarks:
+            if (self._values.right_hand_landmarks is None):
+                result_array.append(None)
+                result_array.append(None)
+                result_array.append(None)
+            else: 
+                result_array.append(self._values.right_hand_landmarks.landmark[landmark].x)
+                result_array.append(self._values.right_hand_landmarks.landmark[landmark].y)
+                result_array.append(self._values.right_hand_landmarks.landmark[landmark].z)
+
+        for landmark in _used_hand_landmarks:
+            if (self._values.left_hand_landmarks is None):
+                result_array.append(None)
+                result_array.append(None)
+                result_array.append(None)
+            else: 
+                result_array.append(self._values.left_hand_landmarks.landmark[landmark].x)
+                result_array.append(self._values.left_hand_landmarks.landmark[landmark].y)
+                result_array.append(self._values.left_hand_landmarks.landmark[landmark].z)
+
+        return array(result_array)
 
 _used_pose_landmarks = list([
     PoseLandmark.NOSE,
@@ -105,3 +209,7 @@ def get_feature_labels():
 
     return concatenate([pose_feature, right_hand_features, left_hand_features])
 
+def can_predict(landmark: MyLandmark):
+    return landmark in _pose_landmark_mapping.keys() or \
+        landmark in _right_hand_landmark_mapping.keys() or \
+        landmark in _left_hand_landmark_mapping.keys()

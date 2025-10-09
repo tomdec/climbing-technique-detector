@@ -2,9 +2,11 @@ from cv2.typing import MatLike
 from ultralytics.engine.results import Results
 from supervision import VertexAnnotator, Color, KeyPoints as sv_Keypoints
 
-def draw_my_landmarks(image: MatLike, results: Results) -> MatLike:
+from src.hpe.yolo.landmarks import YoloPredictedKeyPoints
+
+def draw_my_landmarks(image: MatLike, results: YoloPredictedKeyPoints) -> MatLike:
     annotated = image.copy()
-    sv_keypoints = sv_Keypoints.from_ultralytics(results)
+    sv_keypoints = sv_Keypoints.from_ultralytics(results.values)
 
     vertex_annotator = VertexAnnotator(
         radius=5, 

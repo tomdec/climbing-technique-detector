@@ -1,16 +1,15 @@
 from cv2.typing import MatLike
-from ultralytics.engine.results import Results
 import matplotlib.pyplot as plt
 from numpy import ones
 
 from src.hpe.common.landmarks import YoloLabels, MyLandmark
 from src.hpe.common.plot import plot_average_distances
-from src.hpe.yolo.landmarks import get_pose_landmark
+from src.hpe.yolo.landmarks import YoloPredictedKeyPoints, get_pose_landmark
 from src.hpe.yolo.draw import draw_my_landmarks
 
 def compare_landmarks(image: MatLike, 
         labels: YoloLabels,
-        results: Results) -> MatLike:
+        results: YoloPredictedKeyPoints) -> MatLike:
     annotated = image.copy()
 
     annotated = labels.draw(annotated)

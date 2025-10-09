@@ -1,9 +1,11 @@
 from enum import Enum
-from numpy import array
+from numpy import array, ndarray
 from cv2.typing import MatLike
 from cv2 import circle, putText, FONT_HERSHEY_PLAIN
-from typing import List
+from typing import List, Any, Dict
+from torch import Tensor
 
+from src.common.helpers import raise_not_implemented_error
 from src.hpe.common.helpers import eucl_distance
 
 class MyLandmark(Enum):
@@ -73,17 +75,24 @@ class BoundingBox:
 
 class KeyPoint:
 
+    @staticmethod
+    def from_dict(values: dict) -> 'KeyPoint':
+        return KeyPoint(
+            x=values['x'], 
+            y=values['y'],
+            visibility=values['visibility'])
+
     _x: float
     _y: float
     _visibility: Visibility
 
-    def __init__(self, x, y, visible):
+    def __init__(self, x, y, visibility):
         self._x = float(x)
         self._y = float(y)
-        self._visibility = Visibility(int(visible))
+        self._visibility = visibility if type(visibility) is Visibility else Visibility(int(visibility))
 
     def __str__(self):
-        return f"{{'x': {self._x}, 'y': {self._y}, 'visibility': {self._visibility.name}}}"
+        return f"{self.as_dict()}"
     
     def draw(self, image: MatLike, label: str) -> MatLike:
         result = image.copy()
@@ -94,11 +103,18 @@ class KeyPoint:
         result = putText(result, label, center, FONT_HERSHEY_PLAIN, 10, (150, 1, 1), 10)
         return result
     
-    def as_array(self):
-        return array([self._x, self._y])
-    
     def is_missing(self) -> bool:
         return self._visibility == Visibility.MISSING
+
+    def as_array(self) -> ndarray:
+        return array([self._x, self._y])
+    
+    def as_dict(self) -> dict:
+        return {
+            'x': self._x,
+            'y': self._y,
+            'visibility': self._visibility
+        }
 
 class KeyPoints:
     _values: List[KeyPoint]
@@ -161,7 +177,130 @@ class YoloLabels:
     
     def distance_to(self, point) -> float:
         return self._bounding_box.distance_to(point)
+
+class PredictedKeyPoint:
+
+    @staticmethod
+    def from_dict(values: dict) -> 'PredictedKeyPoint':
+        return PredictedKeyPoint(
+            x=values['x'],
+            y=values['y'],
+            z=values['z'],
+            visibility=values['visibility']
+        )
+
+    @staticmethod
+    def empty() -> 'PredictedKeyPoint':
+        """To be used when a landmark is missing because the person (or body part) is not detected"""
+        return PredictedKeyPoint(0.0, 0.0, None, 0.5)
+
+    @property
+    def x(self) -> float:
+        """Normalized x-coordinate of the landmark."""
+        return self._x
     
+    @property
+    def y(self) -> float:
+        """Normalized y-coordinate of the landmark."""
+        return self._y
+    
+    @property
+    def z(self) -> float | None:
+        """Estimated z-coordinate (or depth) of the landmark. Uses scaling of x-axis."""
+        return self._z
+    
+    @property
+    def visibility(self) -> float:
+        """Likelihood of the landmark being visible, in range [0.0, 1.0]."""
+        return self._visibility
+    
+    def __init__(self, 
+            x: float, 
+            y: float, 
+            z: float | None, 
+            visibility: float):
+        self._x = x
+        self._y = y
+        self._z = z
+        self._visibility = visibility
+
+    def __str__(self) -> str:
+        return f"{self.as_dict()}"
+    
+    def is_missing(self) -> bool:
+        is_origin = (self._x == 0.0) and (self._y == 0.0)
+        is_out_of_bounds = (self._x < 0.0) or (1.0 < self._x) \
+            or (self._y < 0.0) or (1.0 < self._y)
+        
+        return is_origin or is_out_of_bounds
+
+    def as_array(self) -> ndarray:
+        return array([self._x, self._y])
+    
+    def as_dict(self) -> dict:
+        return {
+            'x': self.x,
+            'y': self.y,
+            'z': self.z,
+            'visibility': self.visibility
+        }
+
+class PredictedKeyPoints:
+
+    def __init__(self):
+        pass
+    
+    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint:
+        """Get landmark prediction for given index.
+        Returns an empty landmark when the landmark was not detected.
+
+        Args:
+            index (MyLandmark): Landmark to get prediction for.
+
+        Raises:
+            Exception: When tool cannot predict given landmark.
+
+        Returns:
+            PredictedKeyPoint: Landmark prediction.
+        """
+        raise_not_implemented_error(self.__class__.__name__, self.__getitem__.__name__)
+
+    def no_person_detected(self):
+        raise_not_implemented_error(self.__class__.__name__, self.no_person_detected.__name__)
+
+    def can_predict(self, landmark: MyLandmark) -> bool:
+        """Check if the tool can predict this landmark.
+
+        Args:
+            landmark (MyLandmark): Landmark to check.
+        """
+        raise_not_implemented_error(self.__class__.__name__, self.can_predict.__name__)
+
+    def ensure_empty(self) -> Dict[MyLandmark, bool | None]:
+        """
+        In the absence of a true object to detect landmarks,
+        return a mapping of MyLandmark to booleans:\n
+            - true, meaning no prediction (TN), 
+            - false, meaning an incorrect prediction (FP),
+            - None, if mediapipe is not able to predict this landmark.
+        """
+        def no_prediction_for_landmark(landmark: MyLandmark) -> bool | None:
+            if not self.can_predict(landmark):
+                return None
+            elif self.no_person_detected():
+                return True
+            else:
+                yhat = self[landmark]
+                return yhat is None
+
+        results = {}
+        for landmark in MyLandmark:
+            results[landmark] = no_prediction_for_landmark(landmark)
+        return results
+
+    def to_array(self) -> ndarray:
+        raise_not_implemented_error(self.__class__.__name__, self.to_array.__name__)
+
 def build_yolo_labels(file_path: str) -> List[YoloLabels]:
     result = list()
     
@@ -191,4 +330,4 @@ def get_most_central(label_list: List[YoloLabels]) -> YoloLabels:
     return result
 
 def get_mylandmark_count():
-    return len([x for x in MyLandmark])
+    return len(MyLandmark)
