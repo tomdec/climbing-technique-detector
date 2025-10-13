@@ -1,3 +1,5 @@
+from hpe.common.landmarks import MyLandmark
+from typing import Dict
 from src.hpe.common.helpers import eucl_distance
 from src.hpe.common.landmarks import KeyPoint, PredictedKeyPoint
 
@@ -109,3 +111,12 @@ class HpeEstimation:
             'image_path': self._image_path,
             'can_predict': self._can_predict
         }
+
+
+PerformanceMap = Dict[MyLandmark, bool | None]
+"""
+Dictionary that maps each value of MyLandmark to either:
+- True: the landmark was correctly detected
+- False: the landmark was not (correctly) detected
+- None: the tool cannot detect the landmark
+"""

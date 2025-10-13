@@ -4,6 +4,8 @@ from pandas import DataFrame
 from numpy import ones, average, nan, isnan
 from numpy.ma import masked_array
 
+from src.hpe.common.landmarks import MyLandmark
+
 def plot_average_distances(distances,
         title: str,
         save_location: str = ""):
@@ -48,13 +50,59 @@ def plot_distances_boxplot(
         figure.axes[0].set_ylim(ylim)
     plt.show()
 
-def plot_precision_recall_curve(precision_y: List[float], recall_x: List[float],
-        tight: bool = True):
-    plt.plot(recall_x, precision_y)
+def plot_precision_recall_curve(pnr: DataFrame, tight: bool = True, columns=None):
+    """Plot the precision-recall curves for each class in the DataFrame. 
+
+    Args:
+        pnr (DataFrame): DataFrame with 
+        tight (bool, optional): _description_. Defaults to True.
+        columns (_type_, optional): _description_. Defaults to None.
+    """
+    if columns is None:
+        columns = [landmark for landmark in MyLandmark]
+    
+    for landmark in columns:
+        plt.plot(
+            pnr[landmark.name].map(lambda x: x['r'])[:-1], 
+            pnr[landmark.name].map(lambda x: x['p'])[:-1])
+        
     plt.title("Precision Recall Curve")
     plt.xlabel("Recall")
     plt.ylabel("Precision")
+    #plt.legend([landmark.name for landmark in MyLandmark])
 
     if not tight:
-        plt.xlim(0, 1)
-        plt.ylim(0, 1)
+        plt.xlim(0, 1.05)
+        plt.ylim(0, 1.05)
+
+def plot_precision_and_recall(pnr: DataFrame, tight: bool = True):
+    
+    plt.figure()
+    plt.subplot(121)
+    for landmark in MyLandmark:
+        plt.plot(
+            pnr["CONFIDENCE"],
+            pnr[landmark.name].map(lambda x: x['p']))
+        
+    plt.title("Precision")
+    plt.xlabel("Confidence")
+    plt.ylabel("Precision")
+    #plt.legend([landmark.name for landmark in MyLandmark])
+
+    if not tight:
+        plt.xlim(0, 1.05)
+        plt.ylim(0, 1.05)
+
+    plt.subplot(122)
+    for landmark in MyLandmark:
+        plt.plot(
+            pnr["CONFIDENCE"],
+            pnr[landmark.name].map(lambda x: x['r']))
+        
+    plt.title("Recall")
+    plt.xlabel("Confidence")
+    plt.ylabel("Recall")
+    
+    if not tight:
+        plt.xlim(0, 1.05)
+        plt.ylim(0, 1.05)
