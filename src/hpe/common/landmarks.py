@@ -46,7 +46,7 @@ class Visibility(Enum):
     MISSING = 0
     OBSCURED = 1
     VISIBLE = 2
-    
+
 class BoundingBox:
 
     _x: float
@@ -94,7 +94,7 @@ class KeyPoint:
     def __str__(self):
         return f"{self.as_dict()}"
     
-    def draw(self, image: MatLike, label: str) -> MatLike:
+    def draw(self, image: MatLike, label: str = "") -> MatLike:
         result = image.copy()
         image_height, image_width, _ = result.shape
         center = (int(self._x * image_width), int(self._y * image_height))
@@ -227,6 +227,18 @@ class PredictedKeyPoint:
     def __str__(self) -> str:
         return f"{self.as_dict()}"
     
+    def draw(self, image: MatLike, label: str = "") -> MatLike:
+        result = image.copy()
+        if self.is_missing():
+            return result
+        
+        image_height, image_width, _ = result.shape
+        center = (int(self._x * image_width), int(self._y * image_height))
+        
+        result = circle(result, center, 25, (1,1,100), 10)
+        result = putText(result, label, center, FONT_HERSHEY_PLAIN, 10, (150, 1, 1), 10)
+        return result
+
     def is_missing(self) -> bool:
         is_origin = (self._x == 0.0) and (self._y == 0.0)
         is_out_of_bounds = (self._x < 0.0) or (1.0 < self._x) \

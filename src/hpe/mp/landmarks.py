@@ -1,6 +1,6 @@
 from mediapipe.python.solutions.holistic import PoseLandmark, HandLandmark
 from numpy import concatenate, ndarray, array
-from typing import Dict, NamedTuple, override
+from typing import Dict, NamedTuple, Set, override, List
 
 from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint, PredictedKeyPoints
 
@@ -74,7 +74,7 @@ class MediaPipePredictedKeyPoints(PredictedKeyPoints):
     def to_array(self) -> ndarray:
         result_array = []
     
-        for landmark in _used_pose_landmarks:
+        for landmark in used_pose_landmarks:
             if (self._values.pose_landmarks is None):
                 result_array.append(None)
                 result_array.append(None)
@@ -86,7 +86,7 @@ class MediaPipePredictedKeyPoints(PredictedKeyPoints):
                 result_array.append(self._values.pose_landmarks.landmark[landmark].z)
                 result_array.append(self._values.pose_landmarks.landmark[landmark].visibility)
 
-        for landmark in _used_hand_landmarks:
+        for landmark in used_hand_landmarks:
             if (self._values.right_hand_landmarks is None):
                 result_array.append(None)
                 result_array.append(None)
@@ -96,7 +96,7 @@ class MediaPipePredictedKeyPoints(PredictedKeyPoints):
                 result_array.append(self._values.right_hand_landmarks.landmark[landmark].y)
                 result_array.append(self._values.right_hand_landmarks.landmark[landmark].z)
 
-        for landmark in _used_hand_landmarks:
+        for landmark in used_hand_landmarks:
             if (self._values.left_hand_landmarks is None):
                 result_array.append(None)
                 result_array.append(None)
@@ -107,38 +107,6 @@ class MediaPipePredictedKeyPoints(PredictedKeyPoints):
                 result_array.append(self._values.left_hand_landmarks.landmark[landmark].z)
 
         return array(result_array)
-
-_used_pose_landmarks = list([
-    PoseLandmark.NOSE,
-    PoseLandmark.LEFT_SHOULDER,
-    PoseLandmark.LEFT_ELBOW,
-    PoseLandmark.LEFT_WRIST,
-    PoseLandmark.RIGHT_SHOULDER,
-    PoseLandmark.RIGHT_ELBOW,
-    PoseLandmark.RIGHT_WRIST,
-    PoseLandmark.LEFT_HIP,
-    PoseLandmark.LEFT_KNEE,
-    PoseLandmark.LEFT_ANKLE,
-    PoseLandmark.LEFT_HEEL,
-    PoseLandmark.LEFT_FOOT_INDEX,
-    PoseLandmark.RIGHT_HIP,
-    PoseLandmark.RIGHT_KNEE,
-    PoseLandmark.RIGHT_ANKLE,
-    PoseLandmark.RIGHT_HEEL,
-    PoseLandmark.RIGHT_FOOT_INDEX
-])
-
-_unused_pose_landmarks = set(PoseLandmark).difference(_used_pose_landmarks)
-
-_used_hand_landmarks = list([
-    HandLandmark.THUMB_MCP,
-    HandLandmark.THUMB_IP,
-    HandLandmark.THUMB_TIP,
-    HandLandmark.INDEX_FINGER_MCP,
-    HandLandmark.PINKY_MCP
-])
-
-_unused_hand_landmarks = set(HandLandmark).difference(_used_hand_landmarks)
 
 _pose_landmark_mapping: Dict[MyLandmark, PoseLandmark] = {
     MyLandmark.HEAD: PoseLandmark.NOSE,
@@ -157,8 +125,14 @@ _pose_landmark_mapping: Dict[MyLandmark, PoseLandmark] = {
     MyLandmark.RIGHT_ELBOW: PoseLandmark.RIGHT_ELBOW,
     MyLandmark.RIGHT_WRIST: PoseLandmark.RIGHT_WRIST,
     MyLandmark.LEFT_ANKLE: PoseLandmark.LEFT_ANKLE,
-    MyLandmark.RIGHT_ANKLE: PoseLandmark.RIGHT_ANKLE
+    MyLandmark.RIGHT_ANKLE: PoseLandmark.RIGHT_ANKLE,
+    MyLandmark.LEFT_EYE: PoseLandmark.LEFT_EYE,
+    MyLandmark.RIGHT_EYE: PoseLandmark.RIGHT_EYE,
+    MyLandmark.LEFT_EAR: PoseLandmark.LEFT_EAR,
+    MyLandmark.RIGHT_EAR: PoseLandmark.RIGHT_EAR
 }
+used_pose_landmarks: List[PoseLandmark] = list(_pose_landmark_mapping.values())
+unused_pose_landmarks: Set[PoseLandmark] = set(PoseLandmark).difference(used_pose_landmarks)
 
 def get_pose_landmark(key: MyLandmark) -> PoseLandmark | None:
     try:
@@ -173,6 +147,8 @@ _left_hand_landmark_mapping: Dict[MyLandmark, HandLandmark] = {
     MyLandmark.LEFT_THUMB_IP: HandLandmark.THUMB_IP,
     MyLandmark.LEFT_THUMB_TIP: HandLandmark.THUMB_TIP
 }
+used_hand_landmarks = list(_left_hand_landmark_mapping.values())
+unused_hand_landmarks = set(HandLandmark).difference(used_hand_landmarks)
 
 def get_left_hand_landmark(key: MyLandmark) -> HandLandmark | None:
     try:
@@ -203,9 +179,9 @@ def get_feature_labels():
         name = landmark.name
         return [f'{prefix}_{name}_x', f'{prefix}_{name}_y', f'{prefix}_{name}_z']
     
-    pose_feature = concatenate([to_pose_features(x) for x in _used_pose_landmarks])
-    right_hand_features = concatenate([to_hand_features(x, "RIGHT") for x in _used_hand_landmarks])
-    left_hand_features = concatenate([to_hand_features(x, "LEFT") for x in _used_hand_landmarks])
+    pose_feature = concatenate([to_pose_features(x) for x in used_pose_landmarks])
+    right_hand_features = concatenate([to_hand_features(x, "RIGHT") for x in used_hand_landmarks])
+    left_hand_features = concatenate([to_hand_features(x, "LEFT") for x in used_hand_landmarks])
 
     return concatenate([pose_feature, right_hand_features, left_hand_features])
 
