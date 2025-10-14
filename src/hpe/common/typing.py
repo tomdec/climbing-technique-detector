@@ -1,5 +1,6 @@
-from hpe.common.landmarks import MyLandmark
 from typing import Dict
+
+from src.hpe.common.landmarks import MyLandmark
 from src.hpe.common.helpers import eucl_distance
 from src.hpe.common.landmarks import KeyPoint, PredictedKeyPoint
 
