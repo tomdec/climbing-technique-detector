@@ -6,7 +6,7 @@ from os.path import join
 from ultralytics import YOLO 
 
 from src.hpe.common.typing import HpeEstimation
-from src.hpe.common.metrics import PerformanceMap
+from src.hpe.common.typing import PerformanceMap
 from src.hpe.common.performance import AbstractDistanceCollector, AbstractEstimationCollector, AbstractPerformanceLogger
 from src.hpe.yolo.landmarks import YoloPredictedKeyPoints
 from src.hpe.yolo.evaluate import predict_landmarks

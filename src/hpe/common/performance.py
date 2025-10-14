@@ -5,8 +5,9 @@ from numpy import ndarray, full, nan
 from pandas import DataFrame
 from sympy import true
 
+from src.hpe.common.typing import PerformanceMap
 from src.hpe.common.typing import HpeEstimation
-from src.hpe.common.metrics import PerformanceMap, PCKh50, distance
+from src.hpe.common.metrics import PCKh50, distance
 from src.common.helpers import imread, raise_not_implemented_error
 from src.hpe.common.helpers import list_image_label_pairs
 from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint, PredictedKeyPoints, \

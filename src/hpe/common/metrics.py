@@ -1,13 +1,10 @@
-from typing import Dict, Tuple, List
 from numpy import ndarray, array, nan, arange
 from pandas import DataFrame, Series
 
 from src.common.helpers import safe_index
 from src.hpe.common.helpers import eucl_distance
 from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoints, YoloLabels
-from src.hpe.common.typing import HpeEstimation
-
-PerformanceMap = Dict[MyLandmark, bool | None]
+from src.hpe.common.typing import HpeEstimation, PerformanceMap
 
 def PCKh50(ytrue: YoloLabels, yhat: PredictedKeyPoints) -> PerformanceMap:
     limit = ytrue.get_head_bone_link() / 2
@@ -60,6 +57,9 @@ def distance(ytrue: YoloLabels, yhat: PredictedKeyPoints) -> ndarray:
     return array(distances)
 
 def _precision(totals: DataFrame, verbose: bool = False) -> float:
+    if totals[""] > 0:
+        return nan
+    
     tp = safe_index(totals, "TP")
     fp = safe_index(totals, "FP")
 
@@ -77,6 +77,9 @@ def _precision(totals: DataFrame, verbose: bool = False) -> float:
     return result
 
 def _recall(totals: DataFrame, verbose: bool = False) -> float:
+    if totals[""] > 0:
+        return nan
+    
     tp = safe_index(totals, "TP")
     fn = safe_index(totals, "FN")
 
@@ -92,13 +95,33 @@ def _recall(totals: DataFrame, verbose: bool = False) -> float:
         print(f"{tp} / ({tp} + {fn}) = {result}")
     return result
 
-PrecisionList = List[float]
-RecallList = List[float]
-def calc_precision_and_recall(estimations: DataFrame) -> Tuple[PrecisionList, RecallList]:
+def calc_precision_and_recall(estimations: DataFrame) -> DataFrame:
+    """Calculate the precision and recall metrics for a range of confidence thresholds.
+
+    Args:
+        estimations (DataFrame): DataFrame containing HpeEstimation objects.
+        With the rows (index) being the sample images and the columns the detected classes.
+
+    Returns:
+        DataFrame: A new DataFrame containing dictionaries like:
+        ```
+        {
+            "p": 1.0,   # precision value
+            "r": 0.0    # recall value
+        }
+        ```
+        With each row (index) representing a confidence thresholds and each column still the 
+        detected classes, with "CONFIDENCE" appended for the actual confidence theshold values.
+    """
     conf_increment = 0.01
-    confidences = arange(0, 1, conf_increment)
-    recall_x = [0] * len(confidences)
-    precision_y = [0] * len(confidences)
+    confidences = arange(0, 1 + conf_increment, conf_increment)
+    result = DataFrame()
+    
+    def pnr_dict(totals: DataFrame, verbose: bool=False) -> dict:
+        return {
+            'p': _precision(totals, verbose),
+            'r': _recall(totals, verbose)
+        }
     
     for idx, conf in enumerate(confidences):
         
@@ -107,24 +130,37 @@ def calc_precision_and_recall(estimations: DataFrame) -> Tuple[PrecisionList, Re
 
         prediction_results = estimations.map(prediction_result)
         counts = prediction_results.apply(Series.value_counts).fillna(0)
-        totals = counts.apply(sum, axis=1)
-        current_recall = _recall(totals)
-        current_precision = _precision(totals)
         
-        recall_x[idx] = current_recall
-        precision_y[idx] = current_precision
-    
-    return precision_y, recall_x
+        landmark_precisions = counts.apply(pnr_dict, axis=0)
+        landmark_precisions.at["CONFIDENCE"] = conf
+        result[idx] = landmark_precisions
 
-def calc_average_precision(precision_list: List[float], recall_list: List[float],
-        verbose: bool = False):
+    return result.transpose()
+
+def calc_average_precision(column: Series, verbose: bool = False) -> float:
     average_precision = 0
-    previous_recall = 0
+    previous_recall = column[0]['r']
 
-    for precision, recall in zip(precision_list, recall_list):
+    if verbose: print("0")
+    
+    for cell in column[1:-1]:
+        precision = cell['p']
+        recall = cell['r']
+
         average_precision = average_precision + abs(recall - previous_recall) * precision
+
+        if verbose and (recall != previous_recall): 
+            print(f"  + |({recall} - {previous_recall})| * {precision} = {average_precision}")
+
         previous_recall = recall
     
     if verbose: print(f"Average precision is: {average_precision}")
 
     return average_precision
+
+def calc_average_precisions(pnr: DataFrame, verbose: bool = False) -> DataFrame:
+    pnr = pnr.drop("CONFIDENCE",axis=1)
+    return pnr.apply(func=(lambda x: calc_average_precision(column=x, verbose=verbose)), axis=0)
+
+def calc_mean_average_precision(pnr: DataFrame, verbose: bool = False) -> float:
+    return calc_average_precisions(pnr, verbose).mean(skipna=True)
