@@ -139,11 +139,11 @@ def calc_precision_and_recall(estimations: DataFrame) -> DataFrame:
 
 def calc_average_precision(column: Series, verbose: bool = False) -> float:
     average_precision = 0
-    previous_recall = column[0]['r']
+    previous_recall = 0
 
     if verbose: print("0")
     
-    for cell in column[1:-1]:
+    for cell in list(reversed(column))[1:]: #skip pnr point @ 1 confidence threshold, should not make a difference since p is always (?) 0
         precision = cell['p']
         recall = cell['r']
 

@@ -1,9 +1,10 @@
 from ultralytics import YOLO
 from cv2.typing import MatLike
+from cv2 import imread #YOLO works best with BGR images
 from typing import List, Any
 from numpy import ndarray
 
-from src.common.helpers import imread
+#from src.common.helpers import imread
 from src.labels import get_label_value_from_path
 from src.hpe.yolo.model import build_pose_model
 from src.hpe.yolo.landmarks import YoloPredictedKeyPoints
