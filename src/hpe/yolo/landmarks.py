@@ -109,3 +109,6 @@ def get_feature_labels() -> List[str]:
 
     used_landmarks = list(_pose_landmark_mapping.keys())
     return concatenate(list(map(get_features, used_landmarks)))
+
+def get_recognizable_landmarks():
+    return len(_pose_landmark_mapping.keys())

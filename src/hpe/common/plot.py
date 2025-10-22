@@ -6,10 +6,11 @@ from numpy.ma import masked_array
 
 from src.hpe.common.landmarks import MyLandmark
 
-def plot_average_distances(distances,
+def plot_average_distances(distances: DataFrame,
         title: str,
         save_location: str = ""):
-    limit = ones(37)
+    x_width = distances.shape[0]
+    limit = ones(x_width)
 
     plt.figure()
     plt.title(title)
@@ -22,13 +23,14 @@ def plot_average_distances(distances,
     masked_dist_av = average(masked_distances, 1)
     dist_av = masked_dist_av.filled(nan)
 
-    plt.bar(range(0, 37), dist_av)
+    plt.bar(range(0, x_width), dist_av)
 
     if save_location != "":
         plt.savefig(save_location)
         
 def plot_distances_boxplot(
         ylim: Tuple[int, int] | None  = None,
+        save_location: str = "",
         *distances: List[Tuple[str, DataFrame]]):
     
     def get_name(distance: Tuple[str, DataFrame]) -> str:
@@ -48,9 +50,14 @@ def plot_distances_boxplot(
     plt.boxplot(metrics, tick_labels=names)
     if ylim is not None:
         figure.axes[0].set_ylim(ylim)
-    plt.show()
 
-def plot_precision_recall_curve(pnr: DataFrame, tight: bool = True, columns=None):
+    if save_location != "":
+        plt.savefig(save_location)
+
+def plot_precision_recall_curve(pnr: DataFrame, 
+        tight: bool = True, 
+        columns=None, 
+        save_location: str = ""):
     """Plot the precision-recall curves for each class in the DataFrame. 
 
     Args:
@@ -74,6 +81,9 @@ def plot_precision_recall_curve(pnr: DataFrame, tight: bool = True, columns=None
     if not tight:
         plt.xlim(0, 1.05)
         plt.ylim(0, 1.05)
+
+    if save_location != "":
+        plt.savefig(save_location)
 
 def plot_precision_and_recall(pnr: DataFrame, tight: bool = True):
     

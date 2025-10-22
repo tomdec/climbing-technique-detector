@@ -3,18 +3,12 @@ from cv2.typing import MatLike
 from os.path import join
 from pandas import DataFrame, read_pickle
 
+from src.hpe.common.landmarks import MyLandmark
 from src.hpe.common.typing import HpeEstimation
-from src.hpe.common.performance import AbstractDistanceCollector, AbstractEstimationCollector, AbstractPerformanceLogger
+from src.hpe.common.performance import AbstractDistanceCollector, AbstractEstimationCollector
 from src.hpe.mp.evaluate import predict_landmarks
-from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints
+from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints, get_recognizable_landmarks
 from src.hpe.mp.model import build_holistic_model
-
-class PerformanceLogger(AbstractPerformanceLogger):
-
-    @override
-    def _get_predictions(self, image: MatLike) -> MediaPipePredictedKeyPoints:
-        with build_holistic_model() as model:
-            return predict_landmarks(image, model)
 
 class DistanceCollector(AbstractDistanceCollector):
 
@@ -48,3 +42,9 @@ def read_estimations(data_root: str = "data", name: str = "estimations") -> Data
     df = read_pickle(result_path)
     df = df.map(HpeEstimation.from_dict)
     return df
+
+def log_recognizable_landmarks():
+    total = len(MyLandmark)
+    recognizable = get_recognizable_landmarks()
+
+    print(f"MediaPipe can recognize {recognizable} of {total} landmarks")

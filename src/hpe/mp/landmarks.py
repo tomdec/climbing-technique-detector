@@ -189,3 +189,8 @@ def can_predict(landmark: MyLandmark):
     return landmark in _pose_landmark_mapping.keys() or \
         landmark in _right_hand_landmark_mapping.keys() or \
         landmark in _left_hand_landmark_mapping.keys()
+
+def get_recognizable_landmarks():
+    return len(_pose_landmark_mapping.keys()) + \
+        len(_right_hand_landmark_mapping.keys()) + \
+        len(_left_hand_landmark_mapping.keys())

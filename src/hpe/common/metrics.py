@@ -164,3 +164,17 @@ def calc_average_precisions(pnr: DataFrame, verbose: bool = False) -> DataFrame:
 
 def calc_mean_average_precision(pnr: DataFrame, verbose: bool = False) -> float:
     return calc_average_precisions(pnr, verbose).mean(skipna=True)
+
+def calc_throughput(estimations: DataFrame) -> float:
+    estimations = estimations.drop(columns=["NECK"])
+    detected = sum(sum(estimations.map(HpeEstimation.is_detected).values))
+    present = sum(sum(estimations.map(HpeEstimation.is_present).values))
+    
+    return detected / present
+
+def calc_accuracy(estimations: DataFrame) -> float:
+    estimations = estimations.drop(columns=["NECK"])
+    correct = sum(sum(estimations.map(HpeEstimation.is_correct).values))
+    present_and_recognizable = sum(sum(estimations.map(HpeEstimation.is_present_and_recognizable).values))
+    
+    return correct / present_and_recognizable

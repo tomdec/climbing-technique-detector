@@ -73,6 +73,37 @@ class HpeEstimation:
 
         return distance
 
+    def is_detected(self) -> bool:
+        """Checks if a labelled landmark is detected or not.
+
+        Returns:
+            bool: True when a landmark is detected, False when the landmark was not labeled or
+            not estimated.
+        """
+        return self.is_present() and \
+            not self.predicted_landmark.is_missing()
+    
+    def is_present(self) -> bool:
+        """Checks if the landmark is present.
+
+        Returns:
+            bool: True if the landmark is labeled, else False.
+        """
+        return self.true_landmark is not None and \
+            not self.true_landmark.is_missing()
+
+    def is_correct(self) -> bool:
+        """Checks if the estimation is correct, according to the PCKh50 metric, 
+        without considering a confidence threshold.
+
+        Returns:
+            bool: True if labeled and estimated landmark are close enough, else False.
+        """
+        return self.prediction_result() == "TP"
+
+    def is_present_and_recognizable(self) -> bool:
+        return self.can_predict and self.is_present()
+
     def prediction_result(self, conf_threshold: float = 0.0,
             verbose: bool = False) -> str:
         if not self._can_predict:

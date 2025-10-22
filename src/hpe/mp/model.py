@@ -5,4 +5,5 @@ def build_holistic_model():
         static_image_mode=True,
         model_complexity=2,
         enable_segmentation=False,
-        refine_face_landmarks=False)
+        refine_face_landmarks=False,
+        min_detection_confidence=0.0)

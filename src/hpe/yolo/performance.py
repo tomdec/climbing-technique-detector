@@ -5,26 +5,12 @@ from pandas import DataFrame, read_pickle
 from os.path import join
 from ultralytics import YOLO 
 
+from src.hpe.common.landmarks import MyLandmark
 from src.hpe.common.typing import HpeEstimation
-from src.hpe.common.typing import PerformanceMap
-from src.hpe.common.performance import AbstractDistanceCollector, AbstractEstimationCollector, AbstractPerformanceLogger
-from src.hpe.yolo.landmarks import YoloPredictedKeyPoints
+from src.hpe.common.performance import AbstractDistanceCollector, AbstractEstimationCollector
+from src.hpe.yolo.landmarks import YoloPredictedKeyPoints, get_recognizable_landmarks
 from src.hpe.yolo.evaluate import predict_landmarks
 from src.hpe.yolo.model import build_pose_model
-
-class PerformanceLogger(AbstractPerformanceLogger):
-    _model: YOLO | None = None
-
-    @override
-    def _get_predictions(self, image: MatLike) -> YoloPredictedKeyPoints:
-        if self._model is None:
-            self._model = build_pose_model()
-        return predict_landmarks(image, self._model)
-    
-    @override
-    def _post_process(self, name: str, results: List[PerformanceMap]):
-        self._model = None
-        super()._post_process(name, results)
 
 class DistanceCollector(AbstractDistanceCollector):
     _model: YOLO | None
@@ -75,3 +61,9 @@ def read_estimations(data_root: str = "data", name: str = "estimations") -> Data
     df = read_pickle(result_path)
     df = df.map(HpeEstimation.from_dict)
     return df
+
+def log_recognizable_landmarks():
+    total = len(MyLandmark)
+    recognizable = get_recognizable_landmarks()
+
+    print(f"YOLO can recognize {recognizable} of {total} landmarks")

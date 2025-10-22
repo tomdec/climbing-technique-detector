@@ -1,17 +1,15 @@
-from typing import Callable, Any, List, Dict, Tuple, override
+from typing import Callable, Any, List, Tuple, override
 from cv2.typing import MatLike
 from os.path import join
 from numpy import ndarray, full, nan
 from pandas import DataFrame
-from sympy import true
 
-from src.hpe.common.typing import PerformanceMap
 from src.hpe.common.typing import HpeEstimation
-from src.hpe.common.metrics import PCKh50, distance
+from src.hpe.common.metrics import calc_accuracy, calc_throughput, distance
 from src.common.helpers import imread, raise_not_implemented_error
 from src.hpe.common.helpers import list_image_label_pairs
 from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint, PredictedKeyPoints, \
-    get_mylandmark_count, build_yolo_labels, YoloLabels, get_most_central
+    build_yolo_labels, YoloLabels, get_most_central
 
 class AbstractPerformanceCollector:
     _data_root: str
@@ -53,22 +51,6 @@ class AbstractPerformanceCollector:
 
     def _post_process(self, name: str, results: List[Any]) -> Any:
         raise_not_implemented_error(self.__class__.__name__, self._post_process.__name__)
-    
-class AbstractPerformanceLogger(AbstractPerformanceCollector):
-    
-    @override
-    def _process(self, labels: List[YoloLabels], predictions: PredictedKeyPoints) -> PerformanceMap:
-        if len(labels) == 0:
-            # True Negative and False Positives
-            return predictions.ensure_empty()
-        elif len(labels) == 1:
-            return PCKh50(labels[0], predictions)
-        else:
-            return PCKh50(get_most_central(labels), predictions)
-
-    @override
-    def _post_process(self, name: str, results: List[PerformanceMap]):
-        log_overall_performance(results, name)
 
 class AbstractDistanceCollector(AbstractPerformanceCollector):
     __num_landmarks: int = len(MyLandmark)
@@ -174,30 +156,10 @@ class AbstractEstimationCollector(AbstractPerformanceCollector):
         df_dict.to_pickle(result_path)
         return df
 
-def count_values(map: PerformanceMap, value: bool | None):
-    count = 0
-    for landmark in MyLandmark:
-        if map[landmark] == value:
-            count += 1
+def log_performance(data: DataFrame, name: str = "model"):
 
-    return count
+    throughput = calc_throughput(data)
+    print(f"{name} has throughput of: {throughput:.2%}")
 
-def performance(map: PerformanceMap):
-    correct_num = count_values(map, True)
-    cant_detect = count_values(map, None)
-
-    return correct_num, get_mylandmark_count() - cant_detect
-
-def log_overall_performance(maps: List[PerformanceMap],
-        model_name: str = "The model"):
-    total_correct = 0
-    max_possible = 0
-    _, detected = performance(maps[0])
-    
-    for map in maps:
-        correct, possible = performance(map)
-        total_correct += correct
-        max_possible += possible
-
-    print(f'Percentage of landmarks detected correctly: {total_correct / max_possible}%')
-    print(f'{model_name} can only detect {detected} landmarks of our {get_mylandmark_count()} labels')
+    accuracy = calc_accuracy(data)
+    print(f"{name} has accuracy of: {accuracy:.2%}")
