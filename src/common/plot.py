@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from numpy import ndarray
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from sklearn.metrics import ConfusionMatrixDisplay
 from os.path import dirname
 from os import makedirs
@@ -9,6 +9,9 @@ from src.common.kfold import AbstractFoldCrossValidation
 from src.labels import iterate_valid_labels
 
 __TICKS = [label for label in iterate_valid_labels()]
+
+def _save_current_figure(save_location: str):
+    plt.savefig(save_location, dpi=300, bbox_inches="tight")
 
 def plot_confusion_matrix(labels: ndarray, predictions: ndarray,
         save_path: Optional[str] = None,
@@ -49,3 +52,48 @@ def box_plot_accuracies(*kfold_models: List[AbstractFoldCrossValidation]):
     plt.title("Comparison of test accuracies")
     plt.boxplot(metrics, tick_labels=names)
     plt.show()
+
+def plot_histograms(names: List[str],
+        data: List[List[float]],
+        save_location: str = "",
+        title: str = "",
+        legend_location: str = "upper right",
+        xlabel: str = "",
+        xlim: Tuple[float, float] | None = None,
+        weights: List[List[float]] | None = None):
+    
+    if weights:
+        for name, arr, weight_arr in zip(names, data, weights):
+            plt.hist(arr, bins=100, label=name, weights=weight_arr)
+    else:
+        for name, arr in zip(names, data):
+            plt.hist(arr, bins=100, label=name)
+
+    plt.legend(loc=legend_location)
+    
+    if title: plt.title(title)
+    if xlabel: plt.xlabel(xlabel)
+    if xlim: plt.xlim(xlim)
+
+    if save_location: _save_current_figure(save_location)
+
+def plot_histogram_grid(names: List[str],
+        data: List[List[float]],
+        grid: Tuple[int, int],
+        save_location: str = "",
+        title: str = "",
+        xlabel: str = ""):
+    
+    if len(names) != grid[0] * grid[1]:
+        raise Exception("Should provide an equal amount of data as requested grids.")
+
+    fig, axes = plt.subplots(grid[0], grid[1], sharex="col")
+    axes: List[plt.Axes] = axes.reshape(-1)    
+    for name, arr, ax, idx in zip(names, data, axes, range(len(names))):
+        ax.hist(arr, bins=[x / 100 for x in range(100)], label=name)
+        
+        ax.set_title(name)
+        if xlabel and idx == len(data)-1: 
+            ax.set_xlabel(xlabel)
+
+    if save_location: _save_current_figure(save_location)

@@ -72,6 +72,10 @@ class HpeEstimation:
             print(f"Euclidian distance: {distance}")
 
         return distance
+    
+    def get_relative_distance(self, verbose: bool = False) -> float:
+        abs_dist = self.get_distance(verbose=verbose)
+        return abs_dist / (self.head_bone_link / 2)
 
     def is_detected(self) -> bool:
         """Checks if a labelled landmark is detected or not.
