@@ -96,6 +96,9 @@ class KeyPoint:
     
     def draw(self, image: MatLike, label: str = "") -> MatLike:
         result = image.copy()
+        if self.is_missing():
+            return result
+
         image_height, image_width, _ = result.shape
         center = (int(self._x * image_width), int(self._y * image_height))
         
