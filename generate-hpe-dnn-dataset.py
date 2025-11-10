@@ -7,7 +7,6 @@ from src.hpe.mp.evaluate import extract_features as extract_with_mp
 from src.hpe.yolo.landmarks import get_feature_labels as get_yolo_features
 from src.hpe.yolo.evaluate import extract_features as extract_with_yolo
 
-
 __data_root = "data"
 
 if __name__ == '__main__':

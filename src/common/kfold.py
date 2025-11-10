@@ -8,7 +8,8 @@ from os.path import join, exists
 from copy import deepcopy
 
 from src.common.helpers import raise_not_implemented_error
-from src.common.model import ClassificationModel, ModelConstructorArgs, MultiRunTrainArgs, TestArgs, TrainArgs
+from src.common.model import ClassificationModel, ModelConstructorArgs, MultiRunTrainArgs, TestArgs,\
+    TrainArgs
 
 class AbstractFoldCrossValidation:
 
