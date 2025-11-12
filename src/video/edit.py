@@ -7,7 +7,7 @@ from src.labels import value_to_name
 def write_label(frame: MatLike, label: int | str) -> MatLike:
     if type(label) is int:
         label = value_to_name(label)
-    return write_text(frame, label.name)
+    return write_text(frame, label)
 
 def write_text(frame: MatLike, text: str) -> MatLike:
     result = frame.copy()

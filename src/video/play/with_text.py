@@ -1,35 +1,19 @@
 from cv2 import VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_COUNT, CAP_PROP_POS_FRAMES, imshow, waitKey, destroyAllWindows
+from cv2.typing import MatLike
 
 from src.labels import get_label_name
+from src.video.play.common import play_video
 from src.video.edit import write_label, write_text
 
 def play_with_label(video_path: str):
     label_path = video_path.replace("/videos/", "/labels/").replace(".mp4", ".csv")
-    vid_capture = VideoCapture(video_path)
-    frame_num = 0
-    if not vid_capture.isOpened():
-        print(f"Cannot open video file '{video_path}'")
-        exit()
-    
-    fps = vid_capture.get(CAP_PROP_FPS)
 
-    while vid_capture.isOpened():
-        ret, frame = vid_capture.read()
-        if ret == False:
-            print(f"Could not read frame nr {frame_num}")
-            break
-
+    def mutator(img: MatLike, frame_num: int):
         label = get_label_name(label_path, frame_num)
-        frame = write_label(frame, label)
+        img = write_label(img, label)
+        return img
 
-        imshow(video_path, frame)
-        if waitKey(int(1000/fps)) & 0xFF == ord('q'):
-            break
-        
-        frame_num += 1
-
-    vid_capture.release()
-    destroyAllWindows()
+    play_video(video_path, mutators=[mutator])
 
 # Might be platform dependent, check with: https://stackoverflow.com/questions/14494101/using-other-keys-for-the-waitkey-function-of-opencv
 __Q = ord('q')

@@ -1,5 +1,6 @@
 from typing import List, Callable, Any
-from cv2 import VideoCapture, CAP_PROP_FPS, imshow, waitKey, destroyAllWindows
+from cv2 import VideoCapture, CAP_PROP_FPS, imshow, waitKey, destroyAllWindows,\
+    namedWindow, moveWindow
 from cv2.typing import MatLike
 
 def play_video(video_path: str,
@@ -13,7 +14,12 @@ def play_video(video_path: str,
     
     fps = vid_capture.get(CAP_PROP_FPS)
 
+    namedWindow(video_path)
+    moveWindow(video_path, 100, 100)
+
     while vid_capture.isOpened():
+        if context is None:
+            context = frame_num
         ret, frame = vid_capture.read()
         if ret == False:
             print(f"Could not read frame nr {frame_num}")

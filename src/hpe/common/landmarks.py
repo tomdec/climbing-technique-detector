@@ -1,9 +1,9 @@
 from enum import Enum
 from numpy import array, ndarray
+from math import sqrt, pi
 from cv2.typing import MatLike
 from cv2 import circle, putText, FONT_HERSHEY_PLAIN
-from typing import List, Any, Dict
-from torch import Tensor
+from typing import List, Dict
 
 from src.common.helpers import raise_not_implemented_error
 from src.hpe.common.helpers import eucl_distance
@@ -230,15 +230,20 @@ class PredictedKeyPoint:
     def __str__(self) -> str:
         return f"{self.as_dict()}"
     
-    def draw(self, image: MatLike, label: str = "") -> MatLike:
+    def draw(self, 
+            image: MatLike, 
+            label: str = "",
+            relative_size: float = 0.01,
+            relative_thickness: float = 0.2) -> MatLike:
         result = image.copy()
         if self.is_missing():
             return result
         
         image_height, image_width, _ = result.shape
         center = (int(self._x * image_width), int(self._y * image_height))
-        
-        result = circle(result, center, 25, (1,1,100), 10)
+        radius = max(1, int(sqrt(relative_size * image_height * image_width / pi)))
+        thickness = max(1, int(relative_thickness * radius))
+        result = circle(result, center, radius, (1,1,100), thickness)
         result = putText(result, label, center, FONT_HERSHEY_PLAIN, 10, (150, 1, 1), 10)
         return result
 
