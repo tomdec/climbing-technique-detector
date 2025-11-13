@@ -5,6 +5,8 @@ from numpy import array
 from pandas import DataFrame, read_pickle
 from cv2 import imread as cv2_imread, cvtColor, COLOR_BGR2RGB
 from cv2.typing import MatLike
+from typing import Tuple
+from screeninfo import get_monitors
 
 def get_filename(path: str):
     _, tail = split(path)
@@ -69,3 +71,8 @@ def make_file(filepath):
 def imread(file_path: str) -> MatLike:
     image = cv2_imread(file_path)
     return cvtColor(image, COLOR_BGR2RGB)
+
+def get_center_coordinates() -> Tuple[int, int]:
+    ms = get_monitors()
+    center_monitor = ms[0]
+    return (center_monitor.x + int(center_monitor.width / 2), center_monitor.y + int(center_monitor.height / 2))
