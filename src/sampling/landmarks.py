@@ -158,4 +158,5 @@ def validate_accepted_segments(label: str):
     else:
         print(f"Only extracted landmarks for {len(evaluated_segments)} out of {len(segments)} segments")
 
-    print(f"Accepted the landmarks of {len(accepted_segments)} out of {len(segments)} segments")
+    percentage = len(accepted_segments) / len(segments)
+    print(f"Accepted the landmarks of {len(accepted_segments)} out of {len(segments)} segments ({percentage:.2%})")

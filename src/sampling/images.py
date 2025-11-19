@@ -1,11 +1,12 @@
+from glob import glob
 from os.path import join
 from os import listdir
 from random import randint, random
 from cv2 import VideoCapture, CAP_PROP_FRAME_COUNT, CAP_PROP_FPS, CAP_PROP_POS_FRAMES, imwrite
 from matplotlib.pyplot import subplots, subplots_adjust, Axes
-from numpy import mean
+from numpy import mean, load
 
-from src.labels import make_label_dirs, get_dataset_name
+from src.labels import make_label_dirs, get_dataset_name, iterate_valid_labels
 from src.common.helpers import get_filename, get_split_limits
 
 def build_image_dirs(dataset_dir):
@@ -86,21 +87,24 @@ def __generate_image_dataset(video_path,
 
     sample_video.release()
 
-def generate_image_dataset_from_samples(data_root,
-        data_split = (0.7, 0.15, 0.15)):
-    
-    samples_root = join(data_root, "samples")
-
+def generate_image_dataset_from_samples(data_root,           
+        data_split = (0.7, 0.15, 0.15),
+        only_accepted: bool = False):
     dataset_name = get_dataset_name()
     dataset_dir = join(data_root, "img", dataset_name)
-    
     build_image_dirs(dataset_dir)
+    
+    for label in iterate_valid_labels():
+        if only_accepted:
+            segments = load(join(data_root, "df", "segments", label, "accepted.npy"))
+        else:
+            dataset_dir = dataset_dir + "_full"
+            segments = glob(join(data_root, "samples", label, "*.*"))
+        
+        for segment_path in segments:
+            print(segment_path)
+            __generate_image_dataset(segment_path, dataset_dir, label, data_split)
 
-    for label in listdir(samples_root):
-        label_path = join(samples_root, label)
-        for video in listdir(label_path):
-            video_path = join(label_path, video)
-            __generate_image_dataset(video_path, dataset_dir, label, data_split)
 
 def plot_frame_count_distributions(samples_root_dir: str):
     frames_dict = {}
