@@ -1,11 +1,12 @@
 from enum import Enum
 from numpy import array, ndarray
 from math import sqrt, pi
-from cv2.typing import MatLike
+from cv2.typing import MatLike, Scalar
 from cv2 import circle, putText, FONT_HERSHEY_PLAIN
 from typing import List, Dict
 
 from src.common.helpers import raise_not_implemented_error
+from src.hpe.common.helpers import LEFT_COLOR, RIGHT_COLOR, CENTER_COLOR
 from src.hpe.common.helpers import eucl_distance
 
 class MyLandmark(Enum):
@@ -217,19 +218,34 @@ class PredictedKeyPoint:
         """Likelihood of the landmark being visible, in range [0.0, 1.0]."""
         return self._visibility
     
+    @property
+    def name(self) -> str:
+        """
+        Name of the predicted landmark
+        """
+        return self._name
+
     def __init__(self, 
             x: float, 
             y: float, 
             z: float | None, 
-            visibility: float):
+            visibility: float,
+            name: str | None):
         self._x = x
         self._y = y
         self._z = z
         self._visibility = visibility
+        self._name = name
 
     def __str__(self) -> str:
         return f"{self.as_dict()}"
     
+    def get_color(self) -> Scalar:
+        cp = self.get_coronal_projection()
+        if cp == 'L': return LEFT_COLOR
+        if cp == 'R': return RIGHT_COLOR
+        return CENTER_COLOR
+
     def draw(self, 
             image: MatLike, 
             label: str = "",
@@ -243,7 +259,8 @@ class PredictedKeyPoint:
         center = (int(self._x * image_width), int(self._y * image_height))
         radius = max(1, int(sqrt(relative_size * image_height * image_width / pi)))
         thickness = max(1, int(relative_thickness * radius))
-        result = circle(result, center, radius, (1,1,100), thickness)
+        color = self.get_color()
+        result = circle(result, center, radius, color, thickness)
         result = putText(result, label, center, FONT_HERSHEY_PLAIN, 10, (150, 1, 1), 10)
         return result
 
@@ -253,6 +270,18 @@ class PredictedKeyPoint:
             or (self._y < 0.0) or (1.0 < self._y)
         
         return is_origin or is_out_of_bounds
+
+    def get_coronal_projection(self) -> str:
+        """
+        Get where the landmark is projected on the coronal plane.
+        Possible values: 'L' (left), 'R' (right), 'C' (center)
+        This is based on the name, if there is no value for name, defaults to 'C'.
+        """
+        if self.name is None: return 'C'
+        if self.name.startswith('LEFT'): return 'L'
+        if self.name.startswith('RIGHT'): return 'R'
+        return 'C'
+
 
     def as_array(self) -> ndarray:
         return array([self._x, self._y])

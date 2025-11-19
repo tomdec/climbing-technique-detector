@@ -16,6 +16,9 @@ if __name__ == "__main__":
     parser.add_argument("label",
         choices=list(iterate_valid_labels()),
         help="Label to extract hpe segments for.")
+    parser.add_argument("--inspect", 
+        action="store_true",
+        help="Inspect the extracted landmarks and accepted segments.")
     args = parser.parse_args()
 
     from src.sampling.landmarks import extract_segment_landmarks
@@ -38,6 +41,7 @@ if __name__ == "__main__":
             print(f"Skipping '{segment_path}', already evaluated")
             continue
         
+        print(f"Evaluating: {segment_path}")
         context, response = extract_segment_landmarks(segment_path)
 
         if response == 'q': break

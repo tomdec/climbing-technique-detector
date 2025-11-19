@@ -1,5 +1,5 @@
 from typing import List
-from cv2.typing import MatLike
+from cv2.typing import MatLike, Scalar
 
 from src.common.helpers import imread
 from src.hpe.common.typing import HpeEstimation

@@ -1,11 +1,12 @@
-from typing import Any, List
+from glob import glob
+from typing import Any, List, Tuple
 from cv2 import COLOR_BGR2RGB, cvtColor
 from cv2.typing import MatLike
 from mediapipe.python.solutions.holistic import Holistic
-from numpy import ndarray
+from numpy import ndarray, array, save, load
 from pandas import DataFrame
 from re import search
-from os.path import join
+from os.path import join, exists
 from os import makedirs
 
 from src.common.helpers import read_dataframe
@@ -90,19 +91,21 @@ class SegmentContext:
 def ask_input():
     print("What would you like to do?:",
         "r: replay segment",
+        "s: replay at half speed (accumulative)",
         "y: accept landmarks of segment",
         "n: don't use landmarks for training",
         "q: quit iteration",
         sep='\n')
     response = input("answer:")    
-    if response in ['r', 'y', 'n', 'q']:
+    if response in ['r', 's', 'y', 'n', 'q']:
         return response
     else:
         print("incorrect input")
         return ask_input()
 
 def extract_segment_landmarks(segment_path: str, 
-        context: SegmentContext | None = None):
+        context: SegmentContext | None = None,
+        playback_speed: float = 1):
     
     if context is None:
         context = SegmentContext(segment_path)
@@ -115,10 +118,44 @@ def extract_segment_landmarks(segment_path: str,
         context.increment_frame()
         return img
 
-    play_video(segment_path, context=context, mutators=[mutator])
+    play_video(segment_path, 
+        context=context, 
+        mutators=[mutator], 
+        playback_speed=playback_speed)
 
     response = ask_input()
     if response == 'r':
-        return extract_segment_landmarks(segment_path, context)
+        return extract_segment_landmarks(segment_path, context, playback_speed)
+    if response == 's':
+        return extract_segment_landmarks(segment_path, context, 0.5*playback_speed)
     else:
         return context, response
+    
+def remove_non_existing_segments(accepted_segments: List[str], segments: List[str]) -> Tuple[List[str], bool]:
+    result = [accepted_segment for accepted_segment in accepted_segments if accepted_segment in segments]
+    changed = len(result) != len(accepted_segments)
+    if changed:
+        removed = [accepted_segment for accepted_segment in accepted_segments if accepted_segment not in segments]
+        print(f"Removed {len(removed)} segments:")
+        print(removed)
+    return result, changed
+    
+def validate_accepted_segments(label: str):
+    segments = glob(join("data", "samples", label, "*.*"), recursive=True)
+    evaluated_segments = glob(join("data", "df", "segments", label, "*.pkl"), recursive=True)
+
+    accepted_segments_path = join("data", "df", "segments", label, "accepted.npy")
+    if exists(accepted_segments_path):
+        accepted_segments = load(accepted_segments_path)
+        accepted_segments, changed = remove_non_existing_segments(accepted_segments, segments)
+        if changed:
+            save(accepted_segments_path, array(accepted_segments))
+    else:
+        accepted_segments = []
+
+    if len(segments) == len(evaluated_segments):
+        print("Landmarks are extracted for all segments")
+    else:
+        print(f"Only extracted landmarks for {len(evaluated_segments)} out of {len(segments)} segments")
+
+    print(f"Accepted the landmarks of {len(accepted_segments)} out of {len(segments)} segments")
