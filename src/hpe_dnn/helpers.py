@@ -42,7 +42,7 @@ def df_to_dataset(dataframe: DataFrame,
     labels = df.pop("label")
     _ = df.pop("image_path")
     
-    imp = SimpleImputer(missing_values=nan, strategy='mean')
+    imp = SimpleImputer(missing_values=nan, strategy='constant', fill_value=0)
     df = DataFrame(imp.fit_transform(df), columns=df.keys())
     df = {key: value.to_numpy()[:,tf.newaxis] for key, value in df.items()}
 
@@ -51,12 +51,12 @@ def df_to_dataset(dataframe: DataFrame,
     ds = tf.data.Dataset.from_tensor_slices((dict(df), y))
     
     if shuffle:
-        ds = ds.shuffle(buffer_size=len(dataframe))
+        ds = ds.shuffle(buffer_size=ds.cardinality(), reshuffle_each_iteration=True)
     
     if batch_size:
         ds = ds.batch(batch_size)
     
     if prefetch:
-        ds = ds.prefetch(batch_size)
+        ds = ds.prefetch(tf.data.AUTOTUNE)
     
     return ds
