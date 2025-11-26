@@ -1,10 +1,11 @@
 from typing import List
-from cv2.typing import MatLike, Scalar
+from cv2.typing import MatLike
 
 from src.common.helpers import imread
 from src.hpe.common.typing import HpeEstimation, KeypointDrawConfig
 
 def draw_estimations(estimations: List[HpeEstimation],
+        label_draw_config: KeypointDrawConfig = KeypointDrawConfig(),
         predictions_draw_config: KeypointDrawConfig = KeypointDrawConfig()) -> MatLike:
     image_path = estimations[0].image_path
     image = imread(image_path)
@@ -15,7 +16,8 @@ def draw_estimations(estimations: List[HpeEstimation],
                 f"on image {image_path}")
         
         if estimation.true_landmark is not None:
-            image = estimation.true_landmark.draw(image)
+            image = estimation.true_landmark.draw(image,
+                config=label_draw_config)
         
         image = estimation.predicted_landmark.draw(image, 
             config=predictions_draw_config)

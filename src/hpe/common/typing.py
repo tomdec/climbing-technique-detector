@@ -1,6 +1,6 @@
 from enum import Enum
 from math import pi, sqrt
-from typing import Dict
+from typing import Dict, override
 from cv2 import FONT_HERSHEY_PLAIN, circle, putText
 from cv2.typing import Scalar, MatLike
 from numpy import array, ndarray
@@ -28,41 +28,95 @@ class KeypointDrawConfig:
         self.right_color = right_color
         self.center_color = center_color
 
-class KeyPoint:
+class DrawableKeyPoint:
+    
+    @property
+    def x(self) -> float:
+        """Normalized x-coordinate of the landmark."""
+        return self._x
 
-    @staticmethod
-    def from_dict(values: dict) -> 'KeyPoint':
-        return KeyPoint(
-            x=values['x'],
-            y=values['y'],
-            visibility=values['visibility'])
+    @property
+    def y(self) -> float:
+        """Normalized y-coordinate of the landmark."""
+        return self._y
+    
+    @property
+    def name(self) -> str:
+        """
+        Name of the predicted landmark
+        """
+        return self._name
+    
+    def __init__(self, x: float, y: float, name: str):
+        self._x = x
+        self._y = y
+        self._name = name
+    
+    def __get_coronal_projection(self) -> str:
+        """
+        Get where the landmark is projected on the coronal plane.
+        Possible values: 'L' (left), 'R' (right), 'C' (center)
+        This is based on the name, if there is no value for name, defaults to 'C'.
+        """
+        if self.name is None: return 'C'
+        if self.name.startswith('LEFT'): return 'L'
+        if self.name.startswith('RIGHT'): return 'R'
+        return 'C'
 
-    _x: float
-    _y: float
-    _visibility: Visibility
+    def __get_color(self, config: KeypointDrawConfig) -> Scalar:
+        cp = self.__get_coronal_projection()
+        if cp == 'L': return config.left_color
+        if cp == 'R': return config.right_color
+        return config.center_color
 
-    def __init__(self, x, y, visibility):
-        self._x = float(x)
-        self._y = float(y)
-        self._visibility = visibility\
-            if type(visibility) is Visibility\
-            else Visibility(int(visibility))
+    def is_missing(self) -> bool:
+        is_origin = (self._x == 0.0) and (self._y == 0.0)
+        is_out_of_bounds = (self._x < 0.0) or (1.0 < self._x) \
+            or (self._y < 0.0) or (1.0 < self._y)
 
-    def __str__(self):
-        return f"{self.as_dict()}"
+        return is_origin or is_out_of_bounds
 
-    def draw(self, image: MatLike, label: str = "") -> MatLike:
+    def draw(self,
+            image: MatLike,
+            label: str = "",
+            config: KeypointDrawConfig = KeypointDrawConfig()) -> MatLike:
         result = image.copy()
         if self.is_missing():
             return result
 
         image_height, image_width, _ = result.shape
         center = (int(self._x * image_width), int(self._y * image_height))
-
-        result = circle(result, center, 25, (1,100,1), 10)
+        radius = max(1, int(sqrt(config.relative_size * image_height * image_width / pi)))
+        thickness = max(1, int(config.relative_thickness * radius))
+        color = self.__get_color(config)
+        result = circle(result, center, radius, color, thickness)
         result = putText(result, label, center, FONT_HERSHEY_PLAIN, 10, (150, 1, 1), 10)
         return result
 
+
+class LabelKeyPoint(DrawableKeyPoint):
+
+    @staticmethod
+    def from_dict(values: dict, name: str) -> 'LabelKeyPoint':
+        return LabelKeyPoint(
+            x=values['x'],
+            y=values['y'],
+            visibility=values['visibility'],
+            name=name)
+
+    _visibility: Visibility
+
+    def __init__(self, x, y, visibility, name: str | None = None):
+        DrawableKeyPoint.__init__(self, x=float(x), y=float(y), 
+            name="" if name is None else name)
+        self._visibility = visibility\
+            if type(visibility) is Visibility\
+            else Visibility(int(visibility))
+        
+    def __str__(self):
+        return f"{self.as_dict()}"
+
+    @override
     def is_missing(self) -> bool:
         return self._visibility == Visibility.MISSING
 
@@ -73,10 +127,11 @@ class KeyPoint:
         return {
             'x': self._x,
             'y': self._y,
-            'visibility': self._visibility
+            'visibility': self._visibility,
+            #'name': self._name
         }
 
-class PredictedKeyPoint:
+class PredictedKeyPoint(DrawableKeyPoint):
 
     @staticmethod
     def from_dict(values: dict, name: str) -> 'PredictedKeyPoint':
@@ -96,16 +151,6 @@ class PredictedKeyPoint:
         return PredictedKeyPoint(x=0.0, y=0.0, z=None, visibility=1, name="")
 
     @property
-    def x(self) -> float:
-        """Normalized x-coordinate of the landmark."""
-        return self._x
-
-    @property
-    def y(self) -> float:
-        """Normalized y-coordinate of the landmark."""
-        return self._y
-
-    @property
     def z(self) -> float | None:
         """Estimated z-coordinate (or depth) of the landmark. Uses scaling of x-axis."""
         return self._z
@@ -115,68 +160,18 @@ class PredictedKeyPoint:
         """Likelihood of the landmark being visible, in range [0.0, 1.0]."""
         return self._visibility
 
-    @property
-    def name(self) -> str:
-        """
-        Name of the predicted landmark
-        """
-        return self._name
-
     def __init__(self,
             x: float,
             y: float,
             z: float | None,
             visibility: float,
             name: str):
-        self._x = x
-        self._y = y
+        DrawableKeyPoint.__init__(self, x, y, name)
         self._z = z
         self._visibility = visibility
-        self._name = name
 
     def __str__(self) -> str:
         return f"{self.as_dict()}"
-
-    def __get_color(self, config: KeypointDrawConfig) -> Scalar:
-        cp = self.__get_coronal_projection()
-        if cp == 'L': return config.left_color
-        if cp == 'R': return config.right_color
-        return config.center_color
-
-    def draw(self,
-            image: MatLike,
-            label: str = "",
-            config: KeypointDrawConfig = KeypointDrawConfig()) -> MatLike:
-        result = image.copy()
-        if self.is_missing():
-            return result
-
-        image_height, image_width, _ = result.shape
-        center = (int(self._x * image_width), int(self._y * image_height))
-        radius = max(1, int(sqrt(config.relative_size * image_height * image_width / pi)))
-        thickness = max(1, int(config.relative_thickness * radius))
-        color = self.__get_color(config)
-        result = circle(result, center, radius, color, thickness)
-        result = putText(result, label, center, FONT_HERSHEY_PLAIN, 10, (150, 1, 1), 10)
-        return result
-
-    def is_missing(self) -> bool:
-        is_origin = (self._x == 0.0) and (self._y == 0.0)
-        is_out_of_bounds = (self._x < 0.0) or (1.0 < self._x) \
-            or (self._y < 0.0) or (1.0 < self._y)
-
-        return is_origin or is_out_of_bounds
-
-    def __get_coronal_projection(self) -> str:
-        """
-        Get where the landmark is projected on the coronal plane.
-        Possible values: 'L' (left), 'R' (right), 'C' (center)
-        This is based on the name, if there is no value for name, defaults to 'C'.
-        """
-        if self.name is None: return 'C'
-        if self.name.startswith('LEFT'): return 'L'
-        if self.name.startswith('RIGHT'): return 'R'
-        return 'C'
 
     def as_array(self) -> ndarray:
         return array([self._x, self._y])
@@ -198,7 +193,9 @@ class HpeEstimation:
             name=values['name'],
             true_landmark= None 
                 if values['true_landmark'] is None 
-                else KeyPoint.from_dict(values['true_landmark']),
+                else LabelKeyPoint.from_dict(
+                    values['true_landmark'],
+                    name=values['name']),
             predicted_landmark=None 
                 if values['predicted_landmark'] is None 
                 else PredictedKeyPoint.from_dict(
@@ -214,7 +211,7 @@ class HpeEstimation:
         return self._name
 
     @property
-    def true_landmark(self) -> KeyPoint | None:
+    def true_landmark(self) -> LabelKeyPoint | None:
         return self._true_landmark
 
     @property
@@ -235,7 +232,7 @@ class HpeEstimation:
 
     def __init__(self, 
             name: str,
-            true_landmark: KeyPoint | None,
+            true_landmark: LabelKeyPoint | None,
             predicted_landmark: PredictedKeyPoint,
             head_bone_link: float | None,
             image_path: str,

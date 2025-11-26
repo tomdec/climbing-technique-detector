@@ -2,7 +2,7 @@ from numpy import array, ndarray
 from cv2.typing import MatLike
 from typing import List, Dict
 
-from src.hpe.common.typing import KeyPoint, MyLandmark, PredictedKeyPoint, Visibility
+from src.hpe.common.typing import LabelKeyPoint, MyLandmark, PredictedKeyPoint, Visibility
 from src.common.helpers import raise_not_implemented_error
 from src.hpe.common.helpers import eucl_distance
 
@@ -27,20 +27,28 @@ class BoundingBox:
         self._y_width = float(y_width)
 
     def __str__(self):
-        return f"{{'x': {self._x}, 'y': {self._y}, 'x_width': {self._x_width}, 'y_width': {self._y_width}}}"
+        return f"{self.as_dict()}"
     
+    def as_dict(self) -> dict:
+        return {
+            'x': self._x, 
+            'y': self._y, 
+            'x_width': self._x_width, 
+            'y_width': self._y_width
+        }
+
     def distance_to(self, point) -> float:
         return eucl_distance(array([self._x, self._y]), point)
 
 class KeyPoints:
-    _values: List[KeyPoint]
+    _values: List[LabelKeyPoint]
 
     def __init__(self, values):
         self._values = list()
         start_index = 0
         while(len(values) >= start_index + 3):
             stop_index = start_index + 3
-            self._values.append(KeyPoint(*values[start_index:stop_index]))
+            self._values.append(LabelKeyPoint(*values[start_index:stop_index]))
             start_index = stop_index
 
     def __getitem__(self, key: MyLandmark | int):
@@ -88,7 +96,7 @@ class YoloLabels:
 
         return eucl_distance(head.as_array(), neck.as_array())
     
-    def get_keypoint(self, key: MyLandmark) -> KeyPoint:
+    def get_keypoint(self, key: MyLandmark) -> LabelKeyPoint:
         return self._key_points[key]
     
     def distance_to(self, point) -> float:
