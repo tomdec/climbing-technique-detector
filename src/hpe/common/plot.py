@@ -5,8 +5,9 @@ from numpy import ones, average, nan, isnan
 from numpy.ma import masked_array
 from seaborn import stripplot
 
+from src.hpe.common.typing import MyLandmark
 from src.common.plot import plot_histograms, plot_histogram_grid, _save_current_figure
-from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint
+from src.hpe.common.typing import PredictedKeyPoint
 from src.hpe.common.metrics import calc_precision_and_recall, calc_average_precisions
 from src.hpe.common.typing import HpeEstimation
 

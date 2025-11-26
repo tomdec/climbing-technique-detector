@@ -2,7 +2,8 @@ from cv2.typing import MatLike
 import matplotlib.pyplot as plt
 from numpy import ones
 
-from src.hpe.common.landmarks import YoloLabels, MyLandmark
+from src.hpe.common.typing import MyLandmark
+from src.hpe.common.landmarks import YoloLabels
 from src.hpe.common.plot import plot_average_distances
 from src.hpe.yolo.landmarks import YoloPredictedKeyPoints, get_pose_landmark
 from src.hpe.yolo.draw import draw_my_landmarks

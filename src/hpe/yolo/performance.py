@@ -5,7 +5,7 @@ from pandas import DataFrame, read_pickle
 from os.path import join
 from ultralytics import YOLO 
 
-from src.hpe.common.landmarks import MyLandmark
+from src.hpe.common.typing import MyLandmark
 from src.hpe.common.typing import HpeEstimation
 from src.hpe.common.performance import AbstractDistanceCollector, AbstractEstimationCollector
 from src.hpe.yolo.landmarks import YoloPredictedKeyPoints, get_recognizable_landmarks

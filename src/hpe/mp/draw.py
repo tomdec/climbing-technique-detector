@@ -7,7 +7,7 @@ from numpy import ndarray
 from math import isnan
 
 from src.hpe.common.helpers import LEFT_COLOR, RIGHT_COLOR
-from src.hpe.common.landmarks import PredictedKeyPoint
+from src.hpe.common.typing import PredictedKeyPoint
 from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints,\
     _pose_landmark_mapping, _left_hand_landmark_mapping, _right_hand_landmark_mapping,\
     used_pose_landmarks, unused_pose_landmarks, used_hand_landmarks, unused_hand_landmarks
@@ -59,17 +59,27 @@ def draw_features(img: MatLike, features: ndarray) -> MatLike:
 
         @staticmethod
         def from_features(features: ndarray, names: List[str]) -> 'LandmarkList':
-            landmarks = [PredictedKeyPoint(feature[0], feature[1], None, 1, name) for (feature, name) in zip(features, names)]
+            landmarks = [
+                PredictedKeyPoint(
+                    x=feature[0], 
+                    y=feature[1], 
+                    z=None, 
+                    visibility=1,
+                    name=name) 
+                for (feature, name) in zip(features, names)]
             return LandmarkList(landmarks)
 
         def __init__(self, landmarks: List[PredictedKeyPoint]):
             self.landmark = landmarks
 
-    pose = features.iloc[0:4*len(used_pose_landmarks)].values.reshape(-1, 4)
+    pose_start_idx = 0
+    right_hand_start_idx = 4*len(used_pose_landmarks)
+    left_hand_start_idx = 4*len(used_pose_landmarks) + 3*len(used_hand_landmarks)
+    pose = features.iloc[pose_start_idx:right_hand_start_idx].values.reshape(-1, 4)
     pose_names = [landmark.name for landmark in _pose_landmark_mapping.keys()]
-    right_hand = features.iloc[4*len(used_pose_landmarks):4*len(used_pose_landmarks) + 3*len(used_hand_landmarks)].values.reshape(-1, 3)
+    right_hand = features.iloc[right_hand_start_idx:left_hand_start_idx].values.reshape(-1, 3)
     right_hand_names = [landmark.name for landmark in _right_hand_landmark_mapping.keys()]
-    left_hand = features.iloc[4*len(used_pose_landmarks) + 3*len(used_hand_landmarks):].values.reshape(-1, 3)
+    left_hand = features.iloc[left_hand_start_idx:].values.reshape(-1, 3)
     left_hand_names = [landmark.name for landmark in _left_hand_landmark_mapping.keys()]
     
     pose = LandmarkList.from_features(pose, pose_names)
@@ -78,7 +88,8 @@ def draw_features(img: MatLike, features: ndarray) -> MatLike:
 
     annotated = img.copy()
     annotated = putText(annotated, 'L', (0, 100), FONT_HERSHEY_PLAIN, 10, LEFT_COLOR, 10)
-    annotated = putText(annotated, 'R', (img.shape[1]-100, 100), FONT_HERSHEY_PLAIN, 10, RIGHT_COLOR, 10)
+    annotated = putText(annotated, 'R', (img.shape[1]-100, 100), FONT_HERSHEY_PLAIN, 10,
+        RIGHT_COLOR, 10)
 
     relative_size=0.0003
     relative_thickness=0.5

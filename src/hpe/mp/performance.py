@@ -3,7 +3,7 @@ from cv2.typing import MatLike
 from os.path import join
 from pandas import DataFrame, read_pickle
 
-from src.hpe.common.landmarks import MyLandmark
+from src.hpe.common.typing import MyLandmark
 from src.hpe.common.typing import HpeEstimation
 from src.hpe.common.performance import AbstractDistanceCollector, AbstractEstimationCollector
 from src.hpe.mp.evaluate import predict_landmarks
