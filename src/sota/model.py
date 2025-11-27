@@ -28,7 +28,8 @@ class SOTAConstructorArgs(ModelConstructorArgs):
             dataset_name: str = "techniques"):
         
         if (model_arch == ""):
-            model_arch = name + ".yaml"
+            model_arch = "yolo11n-cls"
+            #model_arch = name + ".yaml"
         ModelConstructorArgs.__init__(self, name, model_arch, data_root_path, dataset_name)
 
 class SOTATrainArgs(TrainArgs):

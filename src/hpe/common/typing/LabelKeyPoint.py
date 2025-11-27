@@ -1,6 +1,9 @@
 from numpy import array, ndarray
 from typing import override
 
+from src.hpe.common.typing.DrawableKeyPoint import DrawableKeyPoint
+from src.hpe.common.typing.Visibility import Visibility
+
 class LabelKeyPoint(DrawableKeyPoint):
 
     @staticmethod

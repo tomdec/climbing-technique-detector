@@ -1,25 +1,11 @@
 from typing import List
 from cv2.typing import MatLike
 
-from src.common.helpers import imread
-from src.hpe.common.typing import HpeEstimation, KeypointDrawConfig
+from src.hpe.common.typing import HpeEstimation, KeypointDrawConfig, HpeEstimations
 
 def draw_estimations(estimations: List[HpeEstimation],
         label_draw_config: KeypointDrawConfig = KeypointDrawConfig(),
         predictions_draw_config: KeypointDrawConfig = KeypointDrawConfig()) -> MatLike:
-    image_path = estimations[0].image_path
-    image = imread(image_path)
     
-    for estimation in estimations:
-        if estimation.image_path != image_path:
-            raise Exception(f"Trying to draw estimations from image {estimation.image_path}" +
-                f"on image {image_path}")
-        
-        if estimation.true_landmark is not None:
-            image = estimation.true_landmark.draw(image,
-                config=label_draw_config)
-        
-        image = estimation.predicted_landmark.draw(image, 
-            config=predictions_draw_config)
-
-    return image
+    est_list = HpeEstimations(estimations)
+    return est_list.draw(label_draw_config, predictions_draw_config)

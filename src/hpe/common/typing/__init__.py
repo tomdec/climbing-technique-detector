@@ -7,6 +7,7 @@ from src.hpe.common.typing.PredictedKeyPoint import PredictedKeyPoint
 from src.hpe.common.typing.LabelKeyPoint import LabelKeyPoint
 from src.hpe.common.typing.KeypointDrawConfig import KeypointDrawConfig
 from src.hpe.common.typing.HpeEstimation import HpeEstimation
+from src.hpe.common.typing.HpeEstimations import HpeEstimations
 
 PerformanceMap = Dict[MyLandmark, bool | None]
 """

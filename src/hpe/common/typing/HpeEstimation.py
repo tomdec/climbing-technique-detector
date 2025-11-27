@@ -157,9 +157,14 @@ class HpeEstimation:
             return result
 
     def draw(self, image: MatLike,
-            prediction_config: KeypointDrawConfig = KeypointDrawConfig()):
-
-        pass
+            label_config: KeypointDrawConfig = KeypointDrawConfig(),
+            prediction_config: KeypointDrawConfig = KeypointDrawConfig()) -> MatLike:
+        
+        if self.true_landmark is not None:
+            image = self.true_landmark.draw(image, config=label_config)
+        
+        image = self.predicted_landmark.draw(image, config=prediction_config)
+        return image
 
     def as_dict(self) -> dict:
         return {

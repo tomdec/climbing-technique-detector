@@ -5,11 +5,9 @@ from numpy import ones, average, nan, isnan
 from numpy.ma import masked_array
 from seaborn import stripplot
 
-from src.hpe.common.typing import MyLandmark
-from src.common.plot import plot_histograms, plot_histogram_grid, _save_current_figure
-from src.hpe.common.typing import PredictedKeyPoint
+from src.common.plot import plot_histograms, plot_histogram_grid, save_current_figure
+from src.hpe.common.typing import PredictedKeyPoint, HpeEstimation, MyLandmark
 from src.hpe.common.metrics import calc_precision_and_recall, calc_average_precisions
-from src.hpe.common.typing import HpeEstimation
 
 def plot_average_distances(distances: DataFrame,
         title: str,
@@ -80,9 +78,11 @@ def plot_landmark_confidence_distributions(
         xlabel="confidence")
 
 def plot_distances_boxplot(
+        title: str = "Comparison of relative distances",
         ylim: Tuple[int, int] | None  = None,
-        save_location: str = "",
-        *estimations: List[Tuple[str, DataFrame]]):
+        save_location: str | None = None,
+        ylabel: str | None = None,
+        estimations: List[Tuple[str, DataFrame]] = []):
     
     def get_name(estimation: Tuple[str, DataFrame]) -> str:
         return estimation[0]
@@ -101,16 +101,14 @@ def plot_distances_boxplot(
     names = list(map(get_name, estimations))
     
     figure = plt.figure()
-    plt.title("Comparison of relative distances")
-
+    
+    if title: plt.title(title)
     plt.axhline(1, c='r', label="PCKh50 limit", linestyle='--', linewidth=1)
-
     plt.boxplot(metrics, tick_labels=names)
-    if ylim is not None:
-        figure.axes[0].set_ylim(ylim)
+    if ylim: figure.axes[0].set_ylim(ylim)
+    if ylabel: plt.ylabel(ylabel)
 
-    if save_location != "":
-        plt.savefig(save_location)
+    if save_location: save_current_figure(save_location)
 
 def plot_distances_swarmplot(
         names: List[str],
@@ -216,7 +214,7 @@ def plot_precision_recall_curve(pnr: DataFrame,
         plt.xlim(0, 1.05)
         plt.ylim(0, 1.05)
 
-    if save_location: _save_current_figure(save_location)
+    if save_location: save_current_figure(save_location)
 
 def plot_precision_and_recall(pnr: DataFrame, tight: bool = True):
     
