@@ -5,6 +5,8 @@ from numpy import array
 from pandas import DataFrame, read_pickle
 from cv2 import imread as cv2_imread, cvtColor, COLOR_BGR2RGB
 from cv2.typing import MatLike
+from typing import Tuple
+from screeninfo import get_monitors
 
 def get_filename(path: str):
     _, tail = split(path)
@@ -23,7 +25,6 @@ def get_split_limits(data_split_ratios):
 
 def get_runs(root_path: str, run_type: str):
     return [dir for dir in listdir(root_path) if dir.startswith(run_type)]
-
 
 def safe_index(totals: DataFrame, index: str, fallback = 0) -> int:
     return totals[index] if index in totals.keys() else fallback

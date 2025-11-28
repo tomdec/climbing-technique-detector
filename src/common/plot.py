@@ -10,7 +10,7 @@ from src.labels import iterate_valid_labels
 
 __TICKS = [label for label in iterate_valid_labels()]
 
-def _save_current_figure(save_location: str):
+def save_current_figure(save_location: str):
     plt.savefig(save_location, dpi=300, bbox_inches="tight")
 
 def plot_confusion_matrix(labels: ndarray, predictions: ndarray,
@@ -33,7 +33,7 @@ def plot_confusion_matrix(labels: ndarray, predictions: ndarray,
 
     if save_path:
         makedirs(dirname(save_path), exist_ok=True)
-        plt.savefig(save_path, bbox_inches="tight")
+        save_current_figure(save_path)
     else:
         plt.show()
 
@@ -60,7 +60,8 @@ def plot_histograms(names: List[str],
         legend_location: str = "upper right",
         xlabel: str = "",
         xlim: Tuple[float, float] | None = None,
-        weights: List[List[float]] | None = None):
+        weights: List[List[float]] | None = None,
+        logscale: bool = False):
     
     if weights:
         for name, arr, weight_arr in zip(names, data, weights):
@@ -74,8 +75,11 @@ def plot_histograms(names: List[str],
     if title: plt.title(title)
     if xlabel: plt.xlabel(xlabel)
     if xlim: plt.xlim(xlim)
+    if logscale:
+        plt.xscale('log')
+        plt.yscale('log')
 
-    if save_location: _save_current_figure(save_location)
+    if save_location: save_current_figure(save_location)
 
 def plot_histogram_grid(names: List[str],
         data: List[List[float]],
@@ -96,4 +100,4 @@ def plot_histogram_grid(names: List[str],
         if xlabel and idx == len(data)-1: 
             ax.set_xlabel(xlabel)
 
-    if save_location: _save_current_figure(save_location)
+    if save_location: save_current_figure(save_location)

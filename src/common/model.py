@@ -2,8 +2,8 @@ from json import dump, load
 from typing import Any
 from os.path import exists, join
 
-from src.common.helpers import get_runs, raise_not_implemented_error, get_next_train_run, get_current_train_run,\
-    get_current_test_run
+from src.common.helpers import get_runs, raise_not_implemented_error, get_next_train_run, \
+    get_current_train_run, get_current_test_run
 
 class ModelConstructorArgs:
 
@@ -21,7 +21,8 @@ class ModelConstructorArgs:
     def data_root_path(self) -> str:
         """
         Path to the `data` folder relative to the directory where to code is executed.
-        Default: "data", path relative to the jupyter notebook and when running code from the root of the project.
+        Default: "data", path relative to the jupyter notebook and when running code from the 
+        root of the project.
         """
         return self._data_root_path
     

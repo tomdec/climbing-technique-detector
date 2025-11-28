@@ -1,9 +1,16 @@
+from cv2 import putText, FONT_HERSHEY_PLAIN
 from cv2.typing import MatLike
 from mediapipe.python.solutions.drawing_utils import draw_landmarks, DrawingSpec
 from mediapipe.python.solutions.holistic import POSE_CONNECTIONS, HAND_CONNECTIONS
-from typing import Mapping
+from typing import Mapping, List
+from numpy import ndarray
+from math import isnan
 
-from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints, used_pose_landmarks, unused_pose_landmarks, used_hand_landmarks, unused_hand_landmarks
+from src.hpe.common.helpers import LEFT_COLOR, RIGHT_COLOR
+from src.hpe.common.typing import PredictedKeyPoint
+from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints,\
+    _pose_landmark_mapping, _left_hand_landmark_mapping, _right_hand_landmark_mapping,\
+    used_pose_landmarks, unused_pose_landmarks, used_hand_landmarks, unused_hand_landmarks
 
 _pose_landmark_style = {
     tuple(used_pose_landmarks): DrawingSpec(color=(80,22,10), thickness=3, circle_radius=5),
@@ -44,4 +51,52 @@ def draw_my_landmarks(image: MatLike, results: MediaPipePredictedKeyPoints) -> M
         get_my_hand_landmark_styles(),
         DrawingSpec(color=(80,44,121), thickness=3, circle_radius=5))
     
+    return annotated
+
+def draw_features(img: MatLike, features: ndarray) -> MatLike:
+    
+    class LandmarkList:
+
+        @staticmethod
+        def from_features(features: ndarray, names: List[str]) -> 'LandmarkList':
+            landmarks = [
+                PredictedKeyPoint(
+                    x=feature[0], 
+                    y=feature[1], 
+                    z=None, 
+                    visibility=1,
+                    name=name) 
+                for (feature, name) in zip(features, names)]
+            return LandmarkList(landmarks)
+
+        def __init__(self, landmarks: List[PredictedKeyPoint]):
+            self.landmark = landmarks
+
+    pose_start_idx = 0
+    right_hand_start_idx = 4*len(used_pose_landmarks)
+    left_hand_start_idx = 4*len(used_pose_landmarks) + 3*len(used_hand_landmarks)
+    pose = features.iloc[pose_start_idx:right_hand_start_idx].values.reshape(-1, 4)
+    pose_names = [landmark.name for landmark in _pose_landmark_mapping.keys()]
+    right_hand = features.iloc[right_hand_start_idx:left_hand_start_idx].values.reshape(-1, 3)
+    right_hand_names = [landmark.name for landmark in _right_hand_landmark_mapping.keys()]
+    left_hand = features.iloc[left_hand_start_idx:].values.reshape(-1, 3)
+    left_hand_names = [landmark.name for landmark in _left_hand_landmark_mapping.keys()]
+    
+    pose = LandmarkList.from_features(pose, pose_names)
+    right_hand = LandmarkList.from_features(right_hand, right_hand_names)
+    left_hand = LandmarkList.from_features(left_hand, left_hand_names)
+
+    annotated = img.copy()
+    annotated = putText(annotated, 'L', (0, 100), FONT_HERSHEY_PLAIN, 10, LEFT_COLOR, 10)
+    annotated = putText(annotated, 'R', (img.shape[1]-100, 100), FONT_HERSHEY_PLAIN, 10,
+        RIGHT_COLOR, 10)
+
+    relative_size=0.0003
+    relative_thickness=0.5
+    for kp in [*pose.landmark, *right_hand.landmark, *left_hand.landmark]:
+        if not isnan(kp.x) and not isnan(kp.y): 
+            annotated = kp.draw(annotated, 
+                relative_size=relative_size,
+                relative_thickness=relative_thickness)
+
     return annotated

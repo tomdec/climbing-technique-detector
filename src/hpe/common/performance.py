@@ -4,11 +4,12 @@ from os.path import join
 from numpy import ndarray, full, nan
 from pandas import DataFrame
 
+from src.hpe.common.typing import MyLandmark, PredictedKeyPoint
 from src.hpe.common.typing import HpeEstimation
 from src.hpe.common.metrics import calc_accuracy, calc_throughput, distance
 from src.common.helpers import imread, raise_not_implemented_error
 from src.hpe.common.helpers import list_image_label_pairs
-from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint, PredictedKeyPoints, \
+from src.hpe.common.landmarks import PredictedKeyPoints, \
     build_yolo_labels, YoloLabels, get_most_central
 
 class AbstractPerformanceCollector:
@@ -122,6 +123,7 @@ class AbstractEstimationCollector(AbstractPerformanceCollector):
             prediction = predictions[landmark] if can_predict else PredictedKeyPoint.empty()
 
             return HpeEstimation(
+                name=landmark.name,
                 true_landmark=None,
                 predicted_landmark=prediction,
                 head_bone_link=None,
@@ -139,6 +141,7 @@ class AbstractEstimationCollector(AbstractPerformanceCollector):
             prediction = predictions[landmark] if can_predict else PredictedKeyPoint.empty()
 
             return HpeEstimation(
+                name=landmark.name,
                 true_landmark=labels.get_keypoint(landmark),
                 predicted_landmark=prediction,
                 head_bone_link=labels.get_head_bone_link(),

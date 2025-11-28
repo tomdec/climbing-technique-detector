@@ -30,7 +30,6 @@ class HpeDnnConstructorArgs(ModelConstructorArgs):
             dataset_name: str = "techniques_mp"):
         ModelConstructorArgs.__init__(self, name, model_arch, data_root_path, dataset_name)
 
-
 class HpeDnnTrainArgs(TrainArgs):
 
     @property

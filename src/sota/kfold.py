@@ -11,7 +11,8 @@ from src.sota.model import SOTA, SOTAConstructorArgs, SOTAMultiRunTrainArgs
 
 class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
 
-    def evaluation_instance(name: str, model: str):
+    @staticmethod
+    def evaluation_instance(name: str, model: str) -> 'SOTAFoldCrossValidation':
         """Create instance of the SOTA fold cross validation model only used for evaluation.
 
         Args:

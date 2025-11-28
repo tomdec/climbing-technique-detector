@@ -1,9 +1,10 @@
 from numpy import ndarray, array, nan, arange
 from pandas import DataFrame, Series
 
+from src.hpe.common.typing import MyLandmark
 from src.common.helpers import safe_index
 from src.hpe.common.helpers import eucl_distance
-from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoints, YoloLabels
+from src.hpe.common.landmarks import PredictedKeyPoints, YoloLabels
 from src.hpe.common.typing import HpeEstimation, PerformanceMap
 
 def PCKh50(ytrue: YoloLabels, yhat: PredictedKeyPoints) -> PerformanceMap:

@@ -3,7 +3,8 @@ from ultralytics.engine.results import Results
 from numpy import ndarray, array
 
 from numpy import concatenate
-from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoints, PredictedKeyPoint
+from src.hpe.common.typing import MyLandmark, PredictedKeyPoint
+from src.hpe.common.landmarks import PredictedKeyPoints
 
 class YoloPredictedKeyPoints(PredictedKeyPoints):
 
@@ -16,7 +17,7 @@ class YoloPredictedKeyPoints(PredictedKeyPoints):
         self._values = values
 
     @override
-    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint:
+    def __getitem__(self, my_landmark: MyLandmark) -> PredictedKeyPoint:
         """Get landmark prediction for given index.
         Returns an empty landmark when the landmark was not detected.
         
@@ -32,9 +33,9 @@ class YoloPredictedKeyPoints(PredictedKeyPoints):
         Returns:
             PredictedKeyPoint: Landmark prediction.
         """
-        pose_landmark = get_pose_landmark(index)
+        pose_landmark = get_pose_landmark(my_landmark)
         if pose_landmark is None:
-            raise Exception(f"Cannot get prediction for {index}, likely unable to predict this landmark")
+            raise Exception(f"Cannot get prediction for {my_landmark}, likely unable to predict this landmark")
         
         if self.no_person_detected():
             return PredictedKeyPoint.empty()
@@ -48,7 +49,12 @@ class YoloPredictedKeyPoints(PredictedKeyPoints):
         if visibility.device.type == 'cuda':
             visibility = visibility.cpu()
 
-        return PredictedKeyPoint(float(coordinates[0]), float(coordinates[1]), None, float(visibility))
+        return PredictedKeyPoint(
+            x=float(coordinates[0]), 
+            y=float(coordinates[1]), 
+            z=None,
+            visibility=float(visibility),
+            name=my_landmark.name)
     
     @override
     def no_person_detected(self) -> bool:

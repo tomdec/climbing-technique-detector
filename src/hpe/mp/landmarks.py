@@ -1,17 +1,26 @@
 from mediapipe.python.solutions.holistic import PoseLandmark, HandLandmark
 from numpy import concatenate, ndarray, array
-from typing import Dict, NamedTuple, Set, override, List
+from typing import Dict, NamedTuple, Set, override, List, Any
 
-from src.hpe.common.landmarks import MyLandmark, PredictedKeyPoint, PredictedKeyPoints
+from src.hpe.common.typing import MyLandmark, PredictedKeyPoint
+from src.hpe.common.landmarks import PredictedKeyPoints
 
 class MediaPipePredictedKeyPoints(PredictedKeyPoints):
 
     @staticmethod
-    def __find_landmark(index, landmarks) -> PredictedKeyPoint:
+    def __find_landmark(index: int, 
+            landmarks: List[Any],
+            name: str) -> PredictedKeyPoint:
         if landmarks is None:
             return PredictedKeyPoint.empty()
+        
         values = landmarks.landmark[index]
-        return PredictedKeyPoint(values.x, values.y, values.z, values.visibility)
+        return PredictedKeyPoint(
+            x=values.x, 
+            y=values.y, 
+            z=values.z, 
+            visibility=values.visibility, 
+            name=name)
 
     @property
     def pose_landmarks(self):
@@ -30,7 +39,7 @@ class MediaPipePredictedKeyPoints(PredictedKeyPoints):
         self._values = values
 
     @override
-    def __getitem__(self, index: MyLandmark) -> PredictedKeyPoint:
+    def __getitem__(self, my_landmark: MyLandmark) -> PredictedKeyPoint:
         """Get landmark prediction for given index.
         Returns an empty landmark when the landmark was not detected.
         
@@ -46,19 +55,26 @@ class MediaPipePredictedKeyPoints(PredictedKeyPoints):
         Returns:
             PredictedKeyPoint: Landmark prediction.
         """
-        pose_landmark = get_pose_landmark(index)
-        if pose_landmark is not None:
-            return self.__find_landmark(pose_landmark, self._values.pose_landmarks)
+        if not self.can_predict(my_landmark):
+            raise Exception(f"Cannot get prediction for {my_landmark}, likely unable to predict this landmark")
         
-        right_hand_landmark = get_right_hand_landmark(index)
+        pose_landmark = get_pose_landmark(my_landmark)
+        if pose_landmark is not None:
+            return self.__find_landmark(index=pose_landmark, 
+                landmarks=self._values.pose_landmarks,
+                name=my_landmark.name)
+        
+        right_hand_landmark = get_right_hand_landmark(my_landmark)
         if right_hand_landmark is not None:
-            return self.__find_landmark(right_hand_landmark, self._values.right_hand_landmarks)
+            return self.__find_landmark(index=right_hand_landmark, 
+                landmarks=self._values.right_hand_landmarks,
+                name=my_landmark.name)
             
-        left_hand_landmark = get_left_hand_landmark(index)
+        left_hand_landmark = get_left_hand_landmark(my_landmark)
         if left_hand_landmark is not None:
-            return self.__find_landmark(left_hand_landmark, self._values.left_hand_landmarks)
-
-        raise Exception(f"Cannot get prediction for {index}, likely unable to predict this landmark")
+            return self.__find_landmark(index=left_hand_landmark, 
+                landmarks=self._values.left_hand_landmarks,
+                name=my_landmark.name)
 
     @override
     def no_person_detected(self):
@@ -139,7 +155,7 @@ def get_pose_landmark(key: MyLandmark) -> PoseLandmark | None:
         return _pose_landmark_mapping[key]
     except KeyError:
         return None
-    
+
 _left_hand_landmark_mapping: Dict[MyLandmark, HandLandmark] = {
     MyLandmark.LEFT_INDEX: HandLandmark.INDEX_FINGER_MCP,
     MyLandmark.LEFT_THUMB_MCP: HandLandmark.THUMB_MCP,

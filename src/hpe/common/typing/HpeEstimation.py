@@ -1,23 +1,37 @@
-from typing import Dict
+from cv2.typing import MatLike
 
-from src.hpe.common.landmarks import MyLandmark
 from src.hpe.common.helpers import eucl_distance
-from src.hpe.common.landmarks import KeyPoint, PredictedKeyPoint
+from src.hpe.common.typing.LabelKeyPoint import LabelKeyPoint
+from src.hpe.common.typing.PredictedKeyPoint import PredictedKeyPoint 
+from src.hpe.common.typing.KeypointDrawConfig import KeypointDrawConfig
 
 class HpeEstimation:
 
     @staticmethod
     def from_dict(values: dict) -> 'HpeEstimation':
         return HpeEstimation(
-            true_landmark=None if values['true_landmark'] is None else KeyPoint.from_dict(values['true_landmark']),
-            predicted_landmark=None if values['predicted_landmark'] is None else PredictedKeyPoint.from_dict(values['predicted_landmark']),
+            name=values['name'],
+            true_landmark=None
+                if values['true_landmark'] is None
+                else LabelKeyPoint.from_dict(
+                    values=values['true_landmark'],
+                    name=values['name']),
+            predicted_landmark=None
+                if values['predicted_landmark'] is None
+                else PredictedKeyPoint.from_dict(
+                    values=values['predicted_landmark'],
+                    name=values['name']),
             head_bone_link=values['head_bone_link'],
             image_path=values['image_path'],
             can_predict=values['can_predict']
         )
 
     @property
-    def true_landmark(self) -> KeyPoint | None:
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def true_landmark(self) -> LabelKeyPoint | None:
         return self._true_landmark
 
     @property
@@ -36,11 +50,14 @@ class HpeEstimation:
     def can_predict(self) -> bool:
         return self._can_predict
 
-    def __init__(self, true_landmark: KeyPoint | None,
+    def __init__(self,
+            name: str,
+            true_landmark: LabelKeyPoint | None,
             predicted_landmark: PredictedKeyPoint,
             head_bone_link: float | None,
             image_path: str,
             can_predict: bool):
+        self._name = name
         self._true_landmark = true_landmark
         self._predicted_landmark = predicted_landmark
         self._head_bone_link = head_bone_link
@@ -72,7 +89,7 @@ class HpeEstimation:
             print(f"Euclidian distance: {distance}")
 
         return distance
-    
+
     def get_relative_distance(self, verbose: bool = False) -> float:
         abs_dist = self.get_distance(verbose=verbose)
         return abs_dist / (self.head_bone_link / 2)
@@ -86,7 +103,7 @@ class HpeEstimation:
         """
         return self.is_present() and \
             not self.predicted_landmark.is_missing()
-    
+
     def is_present(self) -> bool:
         """Checks if the landmark is present.
 
@@ -139,20 +156,24 @@ class HpeEstimation:
 
             return result
 
+    def draw(self, image: MatLike,
+            label_config: KeypointDrawConfig = KeypointDrawConfig(),
+            prediction_config: KeypointDrawConfig = KeypointDrawConfig()) -> MatLike:
+        
+        if self.true_landmark is not None:
+            image = self.true_landmark.draw(image, config=label_config)
+        
+        image = self.predicted_landmark.draw(image, config=prediction_config)
+        return image
+
     def as_dict(self) -> dict:
         return {
-            'true_landmark': None if self._true_landmark is None else self._true_landmark.as_dict(),
+            'name': self._name,
+            'true_landmark': None 
+                if self._true_landmark is None 
+                else self._true_landmark.as_dict(),
             'predicted_landmark': self._predicted_landmark.as_dict(),
             'head_bone_link': self._head_bone_link,
             'image_path': self._image_path,
             'can_predict': self._can_predict
         }
-
-
-PerformanceMap = Dict[MyLandmark, bool | None]
-"""
-Dictionary that maps each value of MyLandmark to either:
-- True: the landmark was correctly detected
-- False: the landmark was not (correctly) detected
-- None: the tool cannot detect the landmark
-"""

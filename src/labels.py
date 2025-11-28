@@ -7,6 +7,7 @@ from pandas import DataFrame, read_csv
 
 __LABELS_PATH = "data/labels/labels.yml"
 __labels = None
+LabelsCSV = DataFrame
 
 if __labels is None:
     if not exists(__LABELS_PATH):
@@ -59,8 +60,15 @@ def get_label_name(label_path: str, frame_number: int) -> str:
             else:
                 return value_to_name(0)
 
-def get_labels_as_dataframe(label_path) -> DataFrame:
+def get_labels_as_dataframe(label_path) -> LabelsCSV:
     return read_csv(label_path, header=None, names=["start", "stop", "label"])
+
+def get_label_by_frame_num(labels: LabelsCSV, frame_num: int) -> str:
+    row = labels.query(f"start <= {frame_num} and {frame_num} < stop")
+    if len(row) == 0:
+        return value_to_name(0)
+    return value_to_name(row.iloc[0]['label'])
+
 
 def validate_label(file_path) -> List[str]:
     errors = []

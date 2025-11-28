@@ -1,31 +1,52 @@
 from pandas import DataFrame, concat
-from os.path import join, isdir, exists
+from os.path import join, isdir, exists, basename
 from os import listdir, makedirs, mkdir
 from numpy import zeros
 from glob import glob
 from typing import Any, List, Callable
+from re import search
 
-from src.labels import get_label_value_from_path, name_to_value
+from src.labels import get_label_value_from_path, value_to_name
 from src.common.helpers import read_dataframe
+from src.hpe.mp.landmarks import get_feature_labels
 
-def generate_hpe_feature_df(data_path,
-        feature_names: List[str],
-        evaluate_func: Callable[[List[str]], List[List[Any]]],
-        img_dataset_name = "techniques",
-        df_dataset_name = "techniques"):
+def __fetch_from_segment_features(image_paths: List[str]) -> List[List[Any]]:
+    segment_df = None
+    segment_name = ""
+    result = []
 
-    column_names = [*feature_names, "label", "image_path"]
-    
-    img_path = join(data_path, "img", img_dataset_name)
-    df_path = join(data_path, "df", df_dataset_name)
-    if (not exists(df_path)):
-        makedirs(df_path)
+    for image_path in image_paths:
+        image_name = basename(image_path)
+        label = value_to_name(get_label_value_from_path(image_path))
+
+        m = search(r"(.+)__(\d+)__(\d+)\.png", image_name)
+        video_name = m.group(1)
+        segment_start = int(m.group(2))
+        image_idx = int(m.group(3))
+
+        if segment_df is None or segment_name != f"{video_name}__{segment_start}.pkl":
+            segment_name = f"{video_name}__{segment_start}.pkl"
+            segment_df = read_dataframe(join("data", "df", "segments", label, segment_name))
+
+        features = segment_df.iloc[image_idx].drop("frame_num").values
+        result.append([*features, image_path])
+
+    return result
+
+def generate_hpe_feature_df(data_root, dataset_name):
+
+    img_path = join(data_root, "img", dataset_name)
+    df_path = join(data_root, "df", dataset_name)
+    makedirs(df_path, exist_ok=True)
+
+    feature_names = get_feature_labels()
+    column_names = ["label", *feature_names, "image_path"]
 
     for data_split in listdir(img_path):
         data_split_path = join(img_path, data_split)
         if (isdir(data_split_path)):
             image_paths = glob(data_split_path + "/**/*.*", recursive=True)
-            matrix = evaluate_func(image_paths)
+            matrix = __fetch_from_segment_features(image_paths)
             df = DataFrame(data=matrix, columns=column_names)
             df.to_pickle(join(df_path, f"{data_split}.pkl"))
 
