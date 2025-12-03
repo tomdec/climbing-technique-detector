@@ -154,7 +154,6 @@ class AugmentationPipeline:
         appended = [[*coordinates, visibility] for coordinates, visibility in zipped]
         result_array = [element for element in array(appended).reshape(-1) if element != None]
         
-        result_array.append(input["label"])
-        result_array.append(input["image_path"])
+        result_array = [input["label"], *result_array, input["image_path"]]
 
         return Series(data=result_array, index=input.index)

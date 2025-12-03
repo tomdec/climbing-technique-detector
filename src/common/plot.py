@@ -8,8 +8,6 @@ from os import makedirs
 from src.common.kfold import AbstractFoldCrossValidation
 from src.labels import iterate_valid_labels
 
-__TICKS = [label for label in iterate_valid_labels()]
-
 def save_current_figure(save_location: str):
     plt.savefig(save_location, dpi=300, bbox_inches="tight")
 
@@ -20,7 +18,6 @@ def plot_confusion_matrix(labels: ndarray, predictions: ndarray,
     disp = ConfusionMatrixDisplay.from_predictions(y_true=labels, 
         y_pred=predictions, 
         normalize="true" if normalized else None,
-        display_labels=__TICKS,
         xticks_rotation=45,
         cmap="Blues", 
         values_format="0.2f" if normalized else "g",

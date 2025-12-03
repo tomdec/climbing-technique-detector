@@ -91,6 +91,8 @@ def generate_image_dataset_from_samples(data_root,
         data_split = (0.7, 0.15, 0.15),
         only_accepted: bool = False):
     dataset_name = get_dataset_name()
+    if not only_accepted:
+        dataset_name += "_full"
     dataset_dir = join(data_root, "img", dataset_name)
     build_image_dirs(dataset_dir)
     
@@ -98,7 +100,6 @@ def generate_image_dataset_from_samples(data_root,
         if only_accepted:
             segments = load(join(data_root, "df", "segments", label, "accepted.npy"))
         else:
-            dataset_dir = dataset_dir + "_full"
             segments = glob(join(data_root, "samples", label, "*.*"))
         
         for segment_path in segments:

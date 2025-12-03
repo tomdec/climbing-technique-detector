@@ -184,6 +184,10 @@ class ClassificationModel:
         model_dir = self._get_model_dir()
         return get_current_train_run(model_dir)
 
+    def _get_current_train_dir(self):
+        model_dir = self._get_model_dir()
+        return join(model_dir, get_current_train_run(model_dir))
+
     def _get_current_test_run_path(self):
         model_dir = self._get_model_dir()
         return join(model_dir, get_current_test_run(model_dir))

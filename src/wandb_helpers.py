@@ -1,5 +1,5 @@
 from typing import Dict, Callable
-from wandb import Api
+from wandb.apis import PublicApi
 from wandb.apis.public.runs import Run
 
 def no_update(_: Run) -> Dict:
@@ -13,7 +13,7 @@ hpe_dnn_filter: Dict = {"$and": [{"group": { "$eq": "hpe_dnn" }}]}
 
 def update_run_config(filters: Dict = {},
         config_patcher: Callable[[Run], Dict] = no_update):
-    api = Api()
+    api = PublicApi()
     entity = api.default_entity
     project = "detect-climbing-technique"
 

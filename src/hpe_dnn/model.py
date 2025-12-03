@@ -1,3 +1,4 @@
+import shutil
 import tensorflow as tf
 from keras import Model
 from os.path import join
@@ -6,12 +7,17 @@ from keras._tf_keras.keras.callbacks import ModelCheckpoint, CSVLogger, EarlySto
 from os import makedirs
 from keras._tf_keras.keras.models import load_model
 from typing import Optional, override
-from wandb import init, finish, Image
+from wandb.sdk import init, finish
+from wandb.data_types import Image
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 from numpy import concatenate, argmax
+from sklearn.preprocessing import LabelBinarizer
 
-from src.common.model import ClassificationModel, ModelConstructorArgs, ModelInitializeArgs, TestArgs, TrainArgs, MultiRunTrainArgs
-from src.common.helpers import get_current_test_run, get_current_train_run, get_next_test_run, read_dataframe, make_file, get_next_train_run
+from src.labels import iterate_valid_labels
+from src.common.model import ClassificationModel, ModelConstructorArgs, ModelInitializeArgs,\
+    TestArgs, TrainArgs, MultiRunTrainArgs
+from src.common.helpers import get_current_test_run, get_current_train_run, get_next_test_run,\
+    read_dataframe, make_file, get_next_train_run
 from src.hpe_dnn.architecture import DnnArch, get_model_factory
 from src.hpe_dnn.helpers import df_to_dataset
 from src.common.plot import plot_confusion_matrix
@@ -27,7 +33,7 @@ class HpeDnnConstructorArgs(ModelConstructorArgs):
     def __init__(self, name: str, 
             model_arch: DnnArch = DnnArch.ARCH1,
             data_root_path: str = "data",
-            dataset_name: str = "techniques_mp"):
+            dataset_name: str = "techniques"):
         ModelConstructorArgs.__init__(self, name, model_arch, data_root_path, dataset_name)
 
 class HpeDnnTrainArgs(TrainArgs):
@@ -133,27 +139,32 @@ class HpeDnn(ClassificationModel):
         makedirs(checkpoint_dir)
         makedirs(log_dir)
         make_file(results_file)
-        
-        checkpoint_path = join(checkpoint_dir, "epoch_{epoch:02d}__val_accuracy_{val_categorical_accuracy:.4f}.keras")
-        cp_callback = ModelCheckpoint(checkpoint_path, 
-            save_best_only=True, 
-            save_weights_only=False, 
-            verbose=1,
-            monitor="val_categorical_accuracy")
-        
-        csv_callback = CSVLogger(filename=results_file)
+        try:
 
-        early_stopping_callback = EarlyStopping(monitor="val_categorical_accuracy", patience=3)
+            checkpoint_path = join(checkpoint_dir, "epoch_{epoch:02d}__val_accuracy_{val_categorical_accuracy:.4f}.keras")
+            cp_callback = ModelCheckpoint(checkpoint_path, 
+                save_best_only=True, 
+                save_weights_only=False, 
+                verbose=1,
+                monitor="val_categorical_accuracy")
+            
+            csv_callback = CSVLogger(filename=results_file)
 
-        self.model.fit(train_ds, epochs=args.epochs, validation_data=val_ds, 
-            callbacks=[cp_callback,
-                csv_callback, 
-                WandbMetricsLogger(), 
-                WandbModelCheckpoint(join(log_dir, "wandb.keras")),
-                early_stopping_callback
-            ])
-        
-        finish()
+            early_stopping_callback = EarlyStopping(monitor="val_categorical_accuracy", patience=3)
+
+            self.model.fit(train_ds, epochs=args.epochs, validation_data=val_ds, 
+                callbacks=[cp_callback,
+                    csv_callback, 
+                    WandbMetricsLogger(), 
+                    WandbModelCheckpoint(join(log_dir, "wandb.keras")),
+                    early_stopping_callback
+                ])
+            
+            finish()
+        except Exception as e:
+            # remove result files
+            shutil.rmtree(self._get_current_train_dir())
+            raise e
 
     @override
     def _get_model_dir(self):
@@ -191,12 +202,16 @@ class HpeDnn(ClassificationModel):
         test_run_path = join(model_path, test_run)
         mkdir(test_run_path)
 
-        test_data = self.__get_data_from_split(split="test", augment=False, balance=False, shuffle=False)
+        test_data = self.__get_data_from_split(split="test", 
+            augment=False, balance=False, shuffle=False)
         
         predictions = self.model.predict(test_data)
         labels = concatenate([y for _, y in test_data], axis=0)
-        predictions = argmax(predictions, axis=1)
-        labels = argmax(labels, axis=1)
+
+        lb = LabelBinarizer()
+        lb.fit(list(iterate_valid_labels()))
+        predictions = lb.inverse_transform(predictions)
+        labels = lb.inverse_transform(labels)
         
         plot_confusion_matrix(labels, predictions, 
             save_path=join(test_run_path, "confusion_matrix.png"),
@@ -210,8 +225,8 @@ class HpeDnn(ClassificationModel):
 
         if args.write_to_wandb:
             config = self.__get_test_wandb_config(args)
-            wandb_run = init(project="detect-climbing-technique", job_type="test", group="hpe_dnn", name=self.name, 
-                config=config, dir=self.data_root_path)
+            wandb_run = init(project="detect-climbing-technique", job_type="test", group="hpe_dnn", 
+                name=self.name, config=config, dir=self.data_root_path)
             callbacks.append(WandbMetricsLogger())
 
         results = self.model.evaluate(test_data, return_dict=True, callbacks=callbacks)
@@ -220,7 +235,8 @@ class HpeDnn(ClassificationModel):
             wandb_run.log(results)
             wandb_run.log({
                 'confusion_matrix': Image(join(test_run_path, "confusion_matrix.png")),
-                'confusion_matrix_normalized': Image(join(test_run_path, "confusion_matrix_normalized.png")),
+                'confusion_matrix_normalized': Image(join(test_run_path, 
+                    "confusion_matrix_normalized.png")),
             })
             wandb_run.finish()
 
@@ -248,5 +264,6 @@ class HpeDnn(ClassificationModel):
         return join(self.data_root_path, "df", self.dataset_name)
 
     def __get_data_from_split(self, split: str, augment, balance, shuffle) -> tf.data.Dataset:
-        df = read_dataframe(join(self.__get_dataset_dir(), f"{split}.pkl"))
+        df_path = join(self.__get_dataset_dir(), f"{split}.pkl")
+        df = read_dataframe(df_path)
         return df_to_dataset(df, augment=augment, balance=balance, shuffle=shuffle)

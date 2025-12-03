@@ -69,7 +69,6 @@ def get_label_by_frame_num(labels: LabelsCSV, frame_num: int) -> str:
         return value_to_name(0)
     return value_to_name(row.iloc[0]['label'])
 
-
 def validate_label(file_path) -> List[str]:
     errors = []
     with open(file_path, 'r', newline='') as csvfile:
