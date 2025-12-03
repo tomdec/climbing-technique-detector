@@ -47,6 +47,15 @@ class ModelConstructorArgs:
         self._data_root_path = data_root_path
         self._dataset_name = dataset_name
 
+    def swap_to_full_dataset(self):
+        if not self.dataset_name.endswith("_full_kf"):
+            self._dataset_name = self.dataset_name.replace("_kf", "_full_kf")
+
+    def swap_to_kf_dataset(self):
+        if self.dataset_name.endswith("_full_kf"):
+            self._dataset_name = self.dataset_name.replace("_full_kf", "_kf")
+
+
 class TrainArgs:
 
     @property
@@ -98,6 +107,8 @@ class ModelInitializeArgs:
 
 class MultiRunTrainArgs:
 
+    #TODO: decouple training and model initialing. 
+    # Testing also required model initializing
     @property
     def model_initialize_args(self) -> ModelInitializeArgs:
         """Arguments for initializing the AI model."""

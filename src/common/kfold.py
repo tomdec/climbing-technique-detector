@@ -175,7 +175,8 @@ class AbstractFoldCrossValidation:
             self.build_fold(fold_num, train, val, test, full_data)
             
             additional_config = self._get_additional_config(context_config={
-                "fold": fold_num
+                "fold": fold_num,
+                "on_full": False
             })
             model.test_model(args=TestArgs(write_to_wandb=True, 
                 additional_config=additional_config))
@@ -183,3 +184,32 @@ class AbstractFoldCrossValidation:
             self.clear_fold()
 
         self.print_box_plot()
+
+    def test_folds_on_full(self):
+        self._model_args.swap_to_full_dataset()
+        try:
+            full_data = self.get_full_data_list()
+
+            for i, (_, test) in enumerate(self._kf.split(full_data)):
+                fold_num = i + 1
+                
+                model = self._init_fold_model(fold_num)
+                model_dir = model._get_model_dir()
+                
+                self.build_fold(fold_num, array([]), array([]), test, full_data)
+                
+                additional_config = self._get_additional_config(context_config={
+                    "fold": fold_num,
+                    "on_full": True
+                })
+                model.test_model(args=TestArgs(write_to_wandb=True, 
+                    additional_config=additional_config))
+
+                self.clear_fold()
+
+            self.print_box_plot()
+        finally:
+            self._model_args.swap_to_kf_dataset()
+        
+
+
