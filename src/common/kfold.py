@@ -31,12 +31,8 @@ class AbstractFoldCrossValidation:
         self._train_ratio = (self.__N_SPLITS - 2) / (self.__N_SPLITS - 1)
         
         self._model_args = model_args \
-            if model_args.dataset_name.endswith('_kf') \
-            else ModelConstructorArgs(
-                name=model_args.name,
-                model_arch=model_args.model_arch,
-                data_root_path=model_args.data_root_path,
-                dataset_name=model_args.dataset_name + '_kf')
+            if model_args.dataset_name.endswith("_kf") \
+            else model_args.copy_with(dataset_name=model_args.dataset_name + "_kf")
 
         self._train_run_args = train_run_args
         self._model_type = model_type
@@ -48,11 +44,10 @@ class AbstractFoldCrossValidation:
         raise_not_implemented_error(self.__class__.__name__, self.build_fold.__name__)
 
     def _init_fold_model(self, fold_num: int) -> ClassificationModel:
-        adapted_args = ModelConstructorArgs(
+        adapted_args = self._model_args.copy_with(
             name=f"{self._model_args.name}-fold{fold_num}",
-            model_arch=self._model_args.model_arch,
-            data_root_path=self._model_args.data_root_path,
-            dataset_name=join(self._model_args.dataset_name, "current_fold"))
+            dataset_name=join(self._model_args.dataset_name, "current_fold")
+        )
         
         return self._model_type(adapted_args)
 

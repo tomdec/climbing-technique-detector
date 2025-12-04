@@ -34,6 +34,10 @@ class ModelConstructorArgs:
         """
         return self._dataset_name
 
+    @property
+    def base_name(self) -> str:
+        return self._base_name
+
     def __init__(self, name: str, 
             model_arch: Any,
             data_root_path: str = "data",
@@ -46,6 +50,19 @@ class ModelConstructorArgs:
         self._model_arch = model_arch
         self._data_root_path = data_root_path
         self._dataset_name = dataset_name
+        
+        idx = name.find("-fold")
+        self._base_name = name if (idx == -1) else name[:idx]
+
+    def copy_with(self, 
+            name: str | None = None, 
+            dataset_name: str | None = None) -> 'ModelConstructorArgs':
+        
+        return ModelConstructorArgs(
+            name = self.name if name is None else name,
+            model_arch = self.model_arch,
+            data_root_path = self.data_root_path,
+            dataset_name = self.dataset_name if dataset_name is None else dataset_name)
 
     def swap_to_full_dataset(self):
         if not self.dataset_name.endswith("_full_kf"):
@@ -142,12 +159,14 @@ class ClassificationModel:
 
     data_root_path: str
     dataset_name: str
+    base_name: str
     
     def __init__(self, args: ModelConstructorArgs):
         self.name = args.name
         self._model_arch = args.model_arch
         self.data_root_path = args.data_root_path
         self.dataset_name = args.dataset_name
+        self.base_name = args.base_name
 
     def initialize_model(self, args: ModelInitializeArgs):
         if (self.__has_trained()):
@@ -206,7 +225,8 @@ class ClassificationModel:
     def _get_common_wandb_config(self) -> dict:
         return {
             'model_arch': self.model_arch,
-            'dataset_name': self.dataset_name
+            'dataset_name': self.dataset_name,
+            'base_name': self.base_name
         }
     
     def _save_test_metrics(self, metrics: dict):
