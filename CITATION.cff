@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: Decoutere
+    given-names: Tom
+title: "Climbing Technique Detector"
+version: 2.0.4
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.1234
+date-released: 2025-12-10
+preferred-citation:
+  type: software
+  authors:
+    - family-names: Decoutere
+      given-names: Tom
+  title: "Climbing Technique Detector"
+  
