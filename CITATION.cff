@@ -5,16 +5,13 @@ authors:
     given-names: Tom
 title: "Climbing Technique Detector"
 version: 2.0.4
-identifiers:
-  - type: doi
-    value: 10.5281/zenodo.1234
 date-released: 2025-12-10
 url: https://github.com/tomdec/climbing-technique-detector
 preferred-citation:
-  type: software
+  type: software-code
   authors:
     - family-names: Decoutere
       given-names: Tom
   title: "Climbing Technique Detector"
   year: 2025
-  url: https://github.com/tomdec/climbing-technique-detector
+  howpublished: https://github.com/tomdec/climbing-technique-detector
