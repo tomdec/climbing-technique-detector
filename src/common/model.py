@@ -226,7 +226,8 @@ class ClassificationModel:
         return {
             'model_arch': self.model_arch,
             'dataset_name': self.dataset_name,
-            'base_name': self.base_name
+            'base_name': self.base_name,
+            'on_full': "_full" in self.dataset_name
         }
     
     def _save_test_metrics(self, metrics: dict):

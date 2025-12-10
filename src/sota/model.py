@@ -7,11 +7,11 @@ from typing import Optional, override
 from wandb.sdk import init, finish
 from wandb.data_types import Image
 from wandb.integration.ultralytics import add_wandb_callback
-from json import dump, load
 from glob import glob
 
 from src.labels import get_label_value_from_path, name_to_value, value_to_name
-from src.common.model import ModelConstructorArgs, ModelInitializeArgs, TestArgs, TrainArgs, MultiRunTrainArgs, ClassificationModel
+from src.common.model import ModelConstructorArgs, ModelInitializeArgs, TestArgs, TrainArgs,\
+    MultiRunTrainArgs, ClassificationModel
 from src.common.plot import plot_confusion_matrix
 from src.sota.balancing import WeightedTrainer
 
@@ -189,7 +189,7 @@ class SOTA(ClassificationModel):
                 wandb_run.log(saved_metrics)
 
         except Exception as ex:
-            print(f"stopped with error: {ex.message}")
+            print(f"stopped with error: {ex}")
             raise ex
         finally:
             rename(join(dataset_path, "val"), join(dataset_path, "test"))

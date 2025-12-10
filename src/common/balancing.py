@@ -4,7 +4,10 @@ from numpy import zeros, int32, where, random
 class BalancedSampler:
 
     _samples_classes: List[int]
-    """List of indexes of `self._classes` for each sample, constructed from the `samples` argument in `count_classes`"""
+    """
+    List of indexes of `self._classes` for each sample, constructed from the `samples` argument 
+    in `count_classes`
+    """
 
     def __init__(self, classes, verbose = False):
         self._classes = classes

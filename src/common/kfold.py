@@ -170,8 +170,7 @@ class AbstractFoldCrossValidation:
             self.build_fold(fold_num, train, val, test, full_data)
             
             additional_config = self._get_additional_config(context_config={
-                "fold": fold_num,
-                "on_full": False
+                "fold": fold_num
             })
             model.test_model(args=TestArgs(write_to_wandb=True, 
                 additional_config=additional_config))
@@ -191,7 +190,7 @@ class AbstractFoldCrossValidation:
                 model = self._init_fold_model(fold_num)
                 model_dir = model._get_model_dir()
                 
-                self.build_fold(fold_num, array([]), array([]), test, full_data)
+                self.build_fold(fold_num, array([0]), array([0]), test, full_data)
                 
                 additional_config = self._get_additional_config(context_config={
                     "fold": fold_num,
