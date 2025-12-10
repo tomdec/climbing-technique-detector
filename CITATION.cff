@@ -14,4 +14,4 @@ preferred-citation:
       given-names: Tom
   title: "Climbing Technique Detector"
   year: 2025
-  howpublished: https://github.com/tomdec/climbing-technique-detector
+  url: https://github.com/tomdec/climbing-technique-detector
