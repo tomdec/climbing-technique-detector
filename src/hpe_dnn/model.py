@@ -125,7 +125,8 @@ class HpeDnn(ClassificationModel):
         if self.model is None:
             raise Exception("Cannot train before model is initialized")
         
-        train_ds = self.__get_data_from_split("train", augment=args.augment, balance=args.balanced, shuffle=True)
+        train_ds = self.__get_data_from_split("train", augment=args.augment, balance=args.balanced, 
+            shuffle=True)
         val_ds = self.__get_data_from_split("val", augment=False, balance=False, shuffle=False)
 
         checkpoint_dir = self.__get_checkpoint_dir()

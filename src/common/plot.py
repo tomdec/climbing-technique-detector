@@ -6,7 +6,6 @@ from os.path import dirname
 from os import makedirs
 
 from src.common.kfold import AbstractFoldCrossValidation
-from src.labels import iterate_valid_labels
 
 def save_current_figure(save_location: str):
     plt.savefig(save_location, dpi=300, bbox_inches="tight")
@@ -34,7 +33,8 @@ def plot_confusion_matrix(labels: ndarray, predictions: ndarray,
     else:
         plt.show()
 
-def box_plot_accuracies(*kfold_models: List[AbstractFoldCrossValidation]):
+def box_plot_accuracies(kfold_models: List[AbstractFoldCrossValidation],
+        save_path: str | None = None):
     
     def get_name(fold_model: AbstractFoldCrossValidation) -> str:
         return fold_model._model_args.name
@@ -48,7 +48,13 @@ def box_plot_accuracies(*kfold_models: List[AbstractFoldCrossValidation]):
     plt.figure()
     plt.title("Comparison of test accuracies")
     plt.boxplot(metrics, tick_labels=names)
-    plt.show()
+    plt.ylabel("Test accuracy [%]")
+    
+    if save_path:
+        save_current_figure(save_path)
+    else:
+        plt.show()
+    
 
 def plot_histograms(names: List[str],
         data: List[List[float]],
