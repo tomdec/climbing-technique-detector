@@ -1,15 +1,15 @@
 from ctypes import ArgumentError
 from os import makedirs
 from sklearn.model_selection import KFold
-from typing import Tuple, Type, Dict, List
+from typing import Tuple, Type, Dict, List, Any
 from numpy import ndarray, array, save, load
 from random import sample
 from os.path import join, exists
 from copy import deepcopy
 
 from src.common.helpers import raise_not_implemented_error
-from src.common.model import ClassificationModel, ModelConstructorArgs, MultiRunTrainArgs, TestArgs,\
-    TrainArgs
+from src.common.model import ClassificationModel, ModelConstructorArgs, MultiRunTrainArgs,\
+    TestArgs,TrainArgs
 
 class AbstractFoldCrossValidation:
 
@@ -31,28 +31,23 @@ class AbstractFoldCrossValidation:
         self._train_ratio = (self.__N_SPLITS - 2) / (self.__N_SPLITS - 1)
         
         self._model_args = model_args \
-            if model_args.dataset_name.endswith('_kf') \
-            else ModelConstructorArgs(
-                name=model_args.name,
-                model_arch=model_args.model_arch,
-                data_root_path=model_args.data_root_path,
-                dataset_name=model_args.dataset_name + '_kf')
+            if model_args.dataset_name.endswith("_kf") \
+            else model_args.copy_with(dataset_name=model_args.dataset_name + "_kf")
 
         self._train_run_args = train_run_args
         self._model_type = model_type
 
-    def get_full_data_list(self):
+    def get_full_data_list(self) -> Any:
         raise_not_implemented_error(self.__class__.__name__, self.get_full_data_list.__name__)
 
     def build_fold(self, fold_num, train, val, test, full_data):
         raise_not_implemented_error(self.__class__.__name__, self.build_fold.__name__)
 
     def _init_fold_model(self, fold_num: int) -> ClassificationModel:
-        adapted_args = ModelConstructorArgs(
+        adapted_args = self._model_args.copy_with(
             name=f"{self._model_args.name}-fold{fold_num}",
-            model_arch=self._model_args.model_arch,
-            data_root_path=self._model_args.data_root_path,
-            dataset_name=join(self._model_args.dataset_name, "current_fold"))
+            dataset_name=join(self._model_args.dataset_name, "current_fold")
+        )
         
         return self._model_type(adapted_args)
 
@@ -99,44 +94,64 @@ class AbstractFoldCrossValidation:
     def _get_additional_config(self, context_config: Dict={}) -> Dict:
         return context_config
 
-    def train_folds(self,
-            train_run_args: MultiRunTrainArgs | None = None):
-
+    def __resolve_train_args(self, train_run_args: MultiRunTrainArgs | None = None):
         if train_run_args is not None:
             self._train_run_args = train_run_args
 
         if self.train_run_args is None:
-            raise(ArgumentError("Provide 'train_run_args' argument in either the constructor or 'train_folds' method to execute training."))
+            raise(ArgumentError("Provide 'train_run_args' argument in either the constructor or " \
+            "'train_folds' method to execute training."))
+    
+    def __train_fold(self, fold_num: int,
+            full_data: Any,
+            train: ndarray,
+            test: ndarray):
+        model = self._init_fold_model(fold_num)
+        model_dir = model._get_model_dir()
+        
+        if self.__split_files_exist(model_dir):
+            (train, val, test) = self._load_split(model_dir)
+        else:
+            (train, val, test) = self.__split_val(train, test)
+            self.__save_split(model_dir, (train, val, test))
+        
+        self.build_fold(fold_num, train, val, test, full_data)
+        
+        additional_config = self._get_additional_config(context_config={
+            "fold": fold_num
+        })
+        train_run_args = deepcopy(self._train_run_args)
+        train_run_args.train_args.additional_config = additional_config
+        model.execute_train_runs(train_run_args)
 
+        model.test_model(args=TestArgs(write_to_wandb=True, 
+            additional_config=additional_config))
+
+        self.clear_fold()
+        
+    def train_folds(self,
+            train_run_args: MultiRunTrainArgs | None = None):
+        self.__resolve_train_args(train_run_args)
         full_data = self.get_full_data_list()
 
         for i, (train, test) in enumerate(self._kf.split(full_data)):
             fold_num = i + 1
-            
-            model = self._init_fold_model(fold_num)
-            model_dir = model._get_model_dir()
-            
-            if self.__split_files_exist(model_dir):
-                (train, val, test) = self._load_split(model_dir)
-            else:
-                (train, val, test) = self.__split_val(train, test)
-                self.__save_split(model_dir, (train, val, test))
-            
-            self.build_fold(fold_num, train, val, test, full_data)
-            
-            additional_config = self._get_additional_config(context_config={
-                "fold": fold_num
-            })
-            train_run_args = deepcopy(self._train_run_args)
-            train_run_args.train_args.additional_config = additional_config
-            model.execute_train_runs(train_run_args)
-
-            model.test_model(args=TestArgs(write_to_wandb=True, 
-                additional_config=additional_config))
-
-            self.clear_fold()
+            self.__train_fold(fold_num, full_data, train, test)
 
         self.print_box_plot()
+
+    def train_single_fold(self, fold_num: int,       
+            train_run_args: MultiRunTrainArgs | None = None):
+        if fold_num > self._kf.get_n_splits():
+            raise Exception(f"Fold number {fold_num} is too high, model is configured with " +
+                f"{self._kf.get_n_splits()} folds.")
+        
+        self.__resolve_train_args(train_run_args)
+
+        full_data = self.get_full_data_list()
+        train, test = list(self._kf.split(full_data))[fold_num-1]
+
+        self.__train_fold(fold_num, full_data, train, test)
 
     def test_folds(self):
         full_data = self.get_full_data_list()
@@ -163,3 +178,32 @@ class AbstractFoldCrossValidation:
             self.clear_fold()
 
         self.print_box_plot()
+
+    def test_folds_on_full(self):
+        self._model_args.swap_to_full_dataset()
+        try:
+            full_data = self.get_full_data_list()
+
+            for i, (_, test) in enumerate(self._kf.split(full_data)):
+                fold_num = i + 1
+                
+                model = self._init_fold_model(fold_num)
+                model_dir = model._get_model_dir()
+                
+                self.build_fold(fold_num, array([0]), array([0]), test, full_data)
+                
+                additional_config = self._get_additional_config(context_config={
+                    "fold": fold_num,
+                    "on_full": True
+                })
+                model.test_model(args=TestArgs(write_to_wandb=True, 
+                    additional_config=additional_config))
+
+                self.clear_fold()
+
+            self.print_box_plot()
+        finally:
+            self._model_args.swap_to_kf_dataset()
+        
+
+

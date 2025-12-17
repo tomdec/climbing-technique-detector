@@ -47,7 +47,8 @@ class SOTAFoldCrossValidation(AbstractFoldCrossValidation):
         build_image_dirs(path_to_current)
         
         print(f"Building fold {fold_num} ...")
-        print(f"Fold {fold_num}: Train size = {len(train)}, Val size = {len(val)}, Test size = {len(test)}")
+        print(f"Fold {fold_num}: Train size = {len(train)}, Val size = {len(val)}, " +
+            f"Test size = {len(test)}")
 
         for filename_idx in train:
             src = full_data[filename_idx]

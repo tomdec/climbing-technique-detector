@@ -68,6 +68,11 @@ f"{model.overrides["model"]}".split('.')[0]
 ```
 
 #### Mismatch with GPU drivers and cuda libraries
+Getting an error log like:
+```
+E0000 00:00:1764603865.710806   60625 cuda_dnn.cc:522] Loaded runtime CuDNN library: 9.1.0 but source was compiled with: 9.3.0.  CuDNN library needs to have matching major version and equal or higher minor version. If using a binary install, upgrade your CuDNN library.  If building from sources, make sure the library loaded at runtime is compatible with the version specified during compile configuration.
+```
+
 Pytorch has very strict requirements about the used cudu libraries, so it will complain when trying to upgrade the cuda libraries, which is necessary after upgrading your GPU drivers.
 I have found that (at least for some cases) reinstalling tensorflow with: 
 ```

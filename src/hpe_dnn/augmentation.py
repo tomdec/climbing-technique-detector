@@ -99,16 +99,17 @@ class AugmentationPipeline:
 
         transform_pipeline = Compose([
             #A.RandomCrop(width=300, height=300),
-            ShiftScaleRotate(shift_limit=0.1, scale_limit=0.5, rotate_limit=0),
+            ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=0),
             HorizontalFlip(p=0.5),
             #A.Mosaic(grid_yx=(2, 2)),
-            Erasing(p=0.4),
-            Perspective(p=0.2),
-            RandomBrightnessContrast(p=0.4)
+            #Erasing(p=0.4),
+            Perspective(p=0.3),
+            #RandomBrightnessContrast(p=0.4)
         ], keypoint_params=KeypointParams(format(self.keypoint_format), remove_invisible=False))
         
         transformed = transform_pipeline(image=image, keypoints=coordinates)
-        coordinates, visibility = self.__mark_removed_keypoints(transformed['image'], transformed['keypoints'], visibility)
+        coordinates, visibility = self.__mark_removed_keypoints(transformed['image'], 
+            transformed['keypoints'], visibility)
 
         return coordinates, visibility
 
@@ -154,7 +155,6 @@ class AugmentationPipeline:
         appended = [[*coordinates, visibility] for coordinates, visibility in zipped]
         result_array = [element for element in array(appended).reshape(-1) if element != None]
         
-        result_array.append(input["label"])
-        result_array.append(input["image_path"])
+        result_array = [input["label"], *result_array, input["image_path"]]
 
         return Series(data=result_array, index=input.index)

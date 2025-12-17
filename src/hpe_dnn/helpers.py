@@ -5,6 +5,7 @@ from pandas import DataFrame, Series
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import LabelBinarizer
 
+from src.labels import iterate_valid_labels
 from src.hpe_dnn.balancing import balance_func_factory
 from src.hpe_dnn.augmentation import AugmentationPipeline
 
@@ -21,7 +22,8 @@ def demo_batch(dataset: tf.data.Dataset):
 
 def __binarize_labels(labels: Series) -> ndarray:
     encoder = LabelBinarizer()
-    return encoder.fit_transform(labels)
+    encoder.fit(list(iterate_valid_labels()))
+    return encoder.transform(labels)
 
 def df_to_dataset(dataframe: DataFrame, 
         balance=False,
