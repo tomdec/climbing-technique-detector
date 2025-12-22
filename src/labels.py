@@ -47,27 +47,38 @@ def get_label_value_from_path(path: str) -> int:
         
     raise Exception(f"did not find label in path: {path}")
 
-def get_label_name(label_path: str, frame_number: int) -> str:
-    with open(label_path, 'r', newline='') as csvfile:
-        reader = csv_reader(csvfile)
-        for row in reader:
-            current_start = int(row[0])
-            current_stop = int(row[1])
-            if current_stop <= frame_number:
-                continue
-            elif current_start <= frame_number and frame_number < current_stop:
-                return value_to_name(int(row[2]))
-            else:
-                return value_to_name(0)
-
 def get_labels_as_dataframe(label_path) -> LabelsCSV:
-    return read_csv(label_path, header=None, names=["start", "stop", "label"])
+    return read_csv(label_path, header=None, names=["start", "stop", "label", "cvs_start"])
 
 def get_label_by_frame_num(labels: LabelsCSV, frame_num: int) -> str:
     row = labels.query(f"start <= {frame_num} and {frame_num} < stop")
     if len(row) == 0:
         return value_to_name(0)
     return value_to_name(row.iloc[0]['label'])
+
+def get_labels_from_video(video_path: str) -> str:
+    return video_path.replace("/videos/", "/labels/").replace(".mp4", ".csv")
+
+def find_valid_segments(label_path: str):
+    labels = get_labels_as_dataframe(label_path)
+
+    valid_segments = []
+    current_segment = None
+    for _, row in labels.iterrows():
+        start = row["start"]
+        stop = row["stop"]
+
+        if current_segment is None:
+            current_segment = [start, stop]
+        elif current_segment[1] == start:
+            current_segment = [current_segment[0], stop]
+        else:
+            valid_segments.append(current_segment)
+            current_segment = [start, stop]
+
+    print(f"Reduced {labels.index.size} individual segments to {len(valid_segments)} continuous " + 
+        "valid segments.")
+    return valid_segments
 
 def validate_label(file_path) -> List[str]:
     errors = []
@@ -76,12 +87,13 @@ def validate_label(file_path) -> List[str]:
         last_stop = -1
         for idx, row in enumerate(reader):
             #print(f'{idx}: {row}')
-            if len(row) != 3:
-                error = f'Line {idx+1}: {row} - Expected three values'
-                errors.append(error) 
+            if len(row) != 4:
+                error = f'Line {idx+1}: {row} - Expected four values'
+                errors.append(error)
                 print(error)
                 continue
-            if not row[0].isdigit() or not row[1].isdigit() or not row[2].isdigit():
+            if not row[0].isdigit() or not row[1].isdigit() or not row[2].isdigit()\
+                    or not row[3].isdigit():
                 error = f'Line {idx+1}: {row} - not a number'
                 errors.append(error) 
                 print(error)
@@ -92,7 +104,8 @@ def validate_label(file_path) -> List[str]:
                 print(error)
                 continue
             if int(row[2]) < 0 or len(__labels['values']) <= int(row[2]):
-                error = f'Line {idx+1}: {row} - third value not a valid label, according to the yaml file.'
+                error = f'Line {idx+1}: {row} - third value not a valid label, according to the " +\
+                    f"yaml file.'
                 errors.append(error) 
                 print(error)
                 continue
@@ -106,7 +119,15 @@ def validate_label(file_path) -> List[str]:
                 errors.append(error) 
                 print(error)
                 continue
+            if int(row[3]) not in [0, 1]:
+                error = f'Line {idx+1}: {row} - fourth value represent a bool, must be 0 or 1.'
+                errors.append(error) 
+                print(error)
+                continue
             last_stop = int(row[1])
+    
+    for error in errors:
+        print(error)
     return errors
 
 def validate_all(labels_path) -> List[str]:
@@ -120,41 +141,3 @@ def validate_all(labels_path) -> List[str]:
             errors = [*errors, *file_errors]
     print("Done validating")
     return errors
-
-def __correct_fps(label_path, output_path):
-    '''
-    One-time-use code. Can be ignored unless needed
-    Example: 
-        correct_fps("./data/labels/How to Flag - A Climbing Technique for Achieving Balance.csv", 
-            "./data/labels/How to Flag - A Climbing Technique for Achieving Balance corrected.csv")
-    '''
-    actual = 29.97
-    current = 23.976
-    with open(label_path, 'r', newline='') as original:
-        reader = csv_reader(original)
-            
-        with open(output_path, 'w', newline='') as new:
-            writer = csv_writer(new)
-            for row in reader:
-                start = int(row[0])
-                stop = int(row[1])
-                label = int(row[2])
-                writer.writerow([int(start / current * actual), int(stop / current * actual), label])
-
-def __correct_all_labelling(labels_path):
-    '''
-    One-time-use code. Can be ignored unless needed
-    '''
-    files = [file for file in listdir(labels_path) if file.endswith('.csv')]
-    for file_name in files:
-        file_path = join(labels_path, file_name)
-        __correct_labelling(file_path)
-
-def __correct_labelling(file_path):
-    '''
-    One-time-use code. Can be ignored unless needed
-    Still needs manual removal of trailing newline. Did not find how to tell pandas not to store that.
-    '''
-    label_df = get_labels_as_dataframe(file_path)
-    label_df['label'] = label_df['label'].replace({7: 6, 8: 7})
-    label_df.to_csv(file_path, header=False, index=False)

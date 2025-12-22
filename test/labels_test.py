@@ -12,18 +12,6 @@ def test_get_dataset_name():
     assert actual == "test-techniques"
 
 @pytest.mark.parametrize("input,expected", [
-    (100, "INVALID"),
-    (500, "NONE"),
-    (1500, "NONE")
-])
-def test_get_label_name(input, expected):
-    valid_label_file = "test/data/labels/valid.csv"
-
-    actual = mut.get_label_name(valid_label_file, input)
-
-    assert actual == expected
-
-@pytest.mark.parametrize("input,expected", [
     ("INVALID", 0),
     ("NONE", 1),
     ("FOOT_SWAP", 2),
