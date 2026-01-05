@@ -1,12 +1,10 @@
 from argparse import ArgumentError
-from os import listdir
-from os.path import splitext, split, exists
+from os import listdir, makedirs
+from os.path import splitext, split, exists, dirname
 from numpy import array
 from pandas import DataFrame, read_pickle
 from cv2 import imread as cv2_imread, cvtColor, COLOR_BGR2RGB
 from cv2.typing import MatLike
-from typing import Tuple
-from screeninfo import get_monitors
 
 def get_filename(path: str):
     _, tail = split(path)
@@ -56,13 +54,19 @@ def get_current_test_run(root_path: str):
     return __get_current_run(root_path, "test")
 
 def raise_not_implemented_error(class_name, function_name):
-    raise NotImplementedError(f"Invalid use of the class '{class_name}', it needs to implement the function '{function_name}'.")
+    raise NotImplementedError(f"Invalid use of the class '{class_name}', it needs to implement" +
+        f"the function '{function_name}'.")
 
 def read_dataframe(location, verbose=False) -> DataFrame:
     data_frame = read_pickle(location)
     if verbose and (data_frame is DataFrame):
         print(data_frame.head())
     return data_frame
+
+def save_dataframe(location: str, df: DataFrame):
+    path_to_location = dirname(location)
+    makedirs(path_to_location, exist_ok=True)
+    df.to_pickle(location)
 
 def make_file(filepath):
     with open(filepath, 'w'):

@@ -67,15 +67,17 @@ def find_valid_segments(label_path: str):
     for _, row in labels.iterrows():
         start = row["start"]
         stop = row["stop"]
+        cvs_start = row["cvs_start"]
 
         if current_segment is None:
             current_segment = [start, stop]
-        elif current_segment[1] == start:
+        elif not cvs_start:
             current_segment = [current_segment[0], stop]
         else:
             valid_segments.append(current_segment)
             current_segment = [start, stop]
-
+        
+    valid_segments.append(current_segment)
     print(f"Reduced {labels.index.size} individual segments to {len(valid_segments)} continuous " + 
         "valid segments.")
     return valid_segments

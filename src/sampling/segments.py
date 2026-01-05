@@ -1,8 +1,10 @@
 from os.path import exists, join
 from os import listdir
-from cv2 import VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT, CAP_PROP_POS_FRAMES, VideoWriter_fourcc, VideoWriter
+from cv2 import VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_WIDTH, CAP_PROP_FRAME_HEIGHT,\
+    CAP_PROP_POS_FRAMES, VideoWriter_fourcc, VideoWriter
 
-from src.labels import get_labels_as_dataframe, make_label_dirs, value_to_name
+from src.labels import get_labels_as_dataframe, make_label_dirs, value_to_name,\
+    get_labels_from_video
 from src.common.helpers import get_filename
 
 def build_sample_dirs(rootpath):
@@ -24,7 +26,7 @@ def generate_from_labels(video_path,
         frame_height = original_video.get(CAP_PROP_FRAME_HEIGHT)
         frame_size = int(frame_width), int(frame_height)
 
-        label_path = video_path.replace("/videos/", "/labels/").replace(".mp4", ".csv")
+        label_path = get_labels_from_video(video_path)
         labels = get_labels_as_dataframe(label_path)
 
         if run_build_sample_dirs:

@@ -10,14 +10,13 @@ from typing import Optional, override
 from wandb.sdk import init, finish
 from wandb.data_types import Image
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
-from numpy import concatenate, argmax
+from numpy import concatenate
 from sklearn.preprocessing import LabelBinarizer
 
 from src.labels import iterate_valid_labels
 from src.common.model import ClassificationModel, ModelConstructorArgs, ModelInitializeArgs,\
     TestArgs, TrainArgs, MultiRunTrainArgs
-from src.common.helpers import get_current_test_run, get_current_train_run, get_next_test_run,\
-    read_dataframe, make_file, get_next_train_run
+from src.common.helpers import get_current_train_run, get_next_test_run,read_dataframe, make_file
 from src.hpe_dnn.architecture import DnnArch, get_model_factory
 from src.hpe_dnn.helpers import df_to_dataset
 from src.common.plot import plot_confusion_matrix
