@@ -45,8 +45,9 @@ def print_all_results(evaluation_root: str):
     print_results(df)
     avg_hpe = sum(df["hpe_speed_seq"]) / len(df.index)
     avg_inference = sum(df["inference_speed_seq"]) / len(df.index)
+    print(f"Average HPE sequential time: {avg_hpe} s")
+    print(f"Average inference sequential time: {avg_inference} s")
     ratio_hpe = avg_hpe / (avg_hpe + avg_inference)
     ratio_inference = 1 - ratio_hpe
     print(f"Ratio between HPE extraction and DNN inference: {ratio_hpe:.1%}/{ratio_inference:.1%}")
-
     

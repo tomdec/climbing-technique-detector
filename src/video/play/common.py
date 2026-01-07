@@ -4,7 +4,7 @@ from cv2 import INTER_LINEAR, VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_HEIGHT,
 from cv2.typing import MatLike
 from screeninfo import get_monitors, Monitor
 from typing import List, Callable, Any, Tuple
-
+from time import time
 ImgShape = Tuple[int, int]
 PlaybackContext = Any
 
@@ -70,6 +70,7 @@ def play_video(video_path: str,
         m = get_monitors()[0]
         
         while vid_capture.isOpened() and frame_num < stop_frame:
+            start_time = time()
             if use_frame_num_as_context:
                 context = frame_num
             ret, frame = vid_capture.read()
@@ -83,7 +84,9 @@ def play_video(video_path: str,
             im_size = place_on_monitor("segment", m, (vid_width, vid_height))
             frame = resize(frame, im_size, interpolation=INTER_LINEAR)
             imshow("segment", frame)
-            if waitKey(int(1000/(fps * playback_speed))) & 0xFF == ord('q'):
+            elapsed_time = (time() - start_time) * 1000
+            wait_time = max(1, int(1000 / (fps * playback_speed) - elapsed_time))
+            if waitKey(wait_time) & 0xFF == ord('q'):
                 break
             
             frame_num += 1
