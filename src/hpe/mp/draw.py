@@ -4,61 +4,79 @@ from mediapipe.python.solutions.drawing_utils import draw_landmarks, DrawingSpec
 from mediapipe.python.solutions.holistic import POSE_CONNECTIONS, HAND_CONNECTIONS
 from typing import Mapping, List
 from numpy import ndarray
-from math import isnan
+from math import isnan, sqrt, pi
+from pandas import Series
 
-from src.hpe.common.helpers import LEFT_COLOR, RIGHT_COLOR
-from src.hpe.common.typing import PredictedKeyPoint
+from src.common.draw import BLUE, GREEN
+from src.hpe.common.typing import PredictedKeyPoint, KeypointDrawConfig
 from src.hpe.mp.landmarks import MediaPipePredictedKeyPoints,\
     _pose_landmark_mapping, _left_hand_landmark_mapping, _right_hand_landmark_mapping,\
     used_pose_landmarks, unused_pose_landmarks, used_hand_landmarks, unused_hand_landmarks
 
-_pose_landmark_style = {
-    tuple(used_pose_landmarks): DrawingSpec(color=(80,22,10), thickness=3, circle_radius=5),
-    tuple(unused_pose_landmarks): DrawingSpec(color=(1,1,1), thickness=1, circle_radius=1)
-}
+PURPLE = (80, 44, 121)
 
-def get_my_pose_landmark_styles() -> Mapping[int, DrawingSpec]:
+def __get_my_pose_landmark_styles(height: int, width: int, 
+        config: KeypointDrawConfig = KeypointDrawConfig()) -> Mapping[int, DrawingSpec]:
     result = {}
-    for keys, value in _pose_landmark_style.items():
-        for key in keys:
-            result[key] = value
-    return result
+    radius = max(1, int(sqrt(config.relative_size * height * width / pi)))
+    thickness = max(1, int(config.relative_thickness * radius))
+    color = config.right_color
 
-_hand_landmark_style = {
-    tuple(used_hand_landmarks): DrawingSpec(color=(80,22,10), thickness=3, circle_radius=5),
-    tuple(unused_hand_landmarks): DrawingSpec(color=(1,1,1), thickness=1, circle_radius=1)
-}
-
-def get_my_hand_landmark_styles() -> Mapping[int, DrawingSpec]:
-    result = {}
-    for keys, value in _hand_landmark_style.items():
-        for key in keys:
-            result[key] = value
-    return result
-
-def draw_my_landmarks(image: MatLike, results: MediaPipePredictedKeyPoints) -> MatLike:
-    annotated = image.copy()
+    for key in used_pose_landmarks:
+        result[key] = DrawingSpec(color=color, thickness=thickness, circle_radius=radius)
     
+    for key in unused_pose_landmarks:
+        result[key] = DrawingSpec(color=(1,1,1), thickness=0, circle_radius=1)
+
+    return result
+
+def __get_my_hand_landmark_styles(height: int, width: int, 
+        config: KeypointDrawConfig = KeypointDrawConfig()) -> Mapping[int, DrawingSpec]:
+    result = {}
+    radius = max(1, int(sqrt(config.relative_size * height * width / pi)))
+    thickness = max(1, int(config.relative_thickness * radius))
+    color = config.right_color
+
+    for key in used_hand_landmarks:
+        result[key] = DrawingSpec(color=color, thickness=thickness, circle_radius=radius)
+    
+    for key in unused_hand_landmarks:
+        result[key] = DrawingSpec(color=(1,1,1), thickness=0, circle_radius=1)
+
+    return result
+
+def draw_my_landmarks(image: MatLike, results: MediaPipePredictedKeyPoints,
+        config: KeypointDrawConfig = KeypointDrawConfig()) -> MatLike:
+    annotated = image.copy()
+
+    image_height, image_width, _ = annotated.shape
+    
+    radius = max(1, int(sqrt(config.relative_size * image_height * image_width / pi)))
+    thickness = max(1, int(config.relative_thickness * radius))
+    connection_thinkness = max(1, int(thickness / 2))
+    connection_color = PURPLE
+    connection_drawing_spec=DrawingSpec(color=connection_color, thickness=connection_thinkness)
+
     draw_landmarks(annotated, results.pose_landmarks, POSE_CONNECTIONS, 
-        get_my_pose_landmark_styles(), 
-        DrawingSpec(color=(80,44,121), thickness=3, circle_radius=5))
+        landmark_drawing_spec=__get_my_pose_landmark_styles(image_height, image_width, config),
+        connection_drawing_spec=connection_drawing_spec)
     
     draw_landmarks(annotated, results.left_hand_landmarks, HAND_CONNECTIONS,
-        get_my_hand_landmark_styles(),
-        DrawingSpec(color=(80,44,121), thickness=3, circle_radius=5))
+        landmark_drawing_spec=__get_my_hand_landmark_styles(image_height, image_width, config),
+        connection_drawing_spec=connection_drawing_spec)
     
     draw_landmarks(annotated, results.right_hand_landmarks, HAND_CONNECTIONS,
-        get_my_hand_landmark_styles(),
-        DrawingSpec(color=(80,44,121), thickness=3, circle_radius=5))
+        landmark_drawing_spec=__get_my_hand_landmark_styles(image_height, image_width, config),
+        connection_drawing_spec=connection_drawing_spec)
     
     return annotated
 
-def draw_features(img: MatLike, features: ndarray) -> MatLike:
+def draw_features(img: MatLike, features: Series) -> MatLike:
     
     class LandmarkList:
 
         @staticmethod
-        def from_features(features: ndarray, names: List[str]) -> 'LandmarkList':
+        def from_features(features: Series, names: List[str]) -> 'LandmarkList':
             landmarks = [
                 PredictedKeyPoint(
                     x=feature[0], 
@@ -87,16 +105,18 @@ def draw_features(img: MatLike, features: ndarray) -> MatLike:
     left_hand = LandmarkList.from_features(left_hand, left_hand_names)
 
     annotated = img.copy()
-    annotated = putText(annotated, 'L', (0, 100), FONT_HERSHEY_PLAIN, 10, LEFT_COLOR, 10)
+    annotated = putText(annotated, 'L', (0, 100), FONT_HERSHEY_PLAIN, 10, BLUE, 10)
     annotated = putText(annotated, 'R', (img.shape[1]-100, 100), FONT_HERSHEY_PLAIN, 10,
-        RIGHT_COLOR, 10)
+        GREEN, 10)
 
     relative_size=0.0003
     relative_thickness=0.5
     for kp in [*pose.landmark, *right_hand.landmark, *left_hand.landmark]:
         if not isnan(kp.x) and not isnan(kp.y): 
             annotated = kp.draw(annotated, 
-                relative_size=relative_size,
-                relative_thickness=relative_thickness)
+                config=KeypointDrawConfig(
+                    relative_size=relative_size,
+                    relative_thickness=relative_thickness
+                ))
 
     return annotated

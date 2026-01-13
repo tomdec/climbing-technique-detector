@@ -6,10 +6,6 @@ from os import listdir
 from os.path import join
 from typing import List, Tuple
 
-LEFT_COLOR: Scalar = (100,1,1)
-RIGHT_COLOR: Scalar = (1,100,1)
-CENTER_COLOR: Scalar = (1,1,100)
-
 def eucl_distance(start: ArrayLike, stop: ArrayLike) -> float:
     return norm(start - stop)
 

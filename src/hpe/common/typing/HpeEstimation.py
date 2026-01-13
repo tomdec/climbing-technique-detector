@@ -144,10 +144,6 @@ class HpeEstimation:
             limit = self._head_bone_link / 2
             distance = self.get_distance(verbose)
             correct = distance <= limit
-            #TODO: maybe this needs to be different?
-            #Should an incorrect landmark count as both:
-            # - a FP, for the predicted landmark that is incorrect
-            # - and FN, for the true landmark that is not detected?
             result = "TP" if correct else "FP"
 
             if verbose:

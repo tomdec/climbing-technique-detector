@@ -55,7 +55,6 @@ def box_plot_accuracies(kfold_models: List[AbstractFoldCrossValidation],
     else:
         plt.show()
     
-
 def plot_histograms(names: List[str],
         data: List[List[float]],
         save_location: str = "",

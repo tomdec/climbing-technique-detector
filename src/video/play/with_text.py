@@ -1,27 +1,38 @@
-from cv2 import VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_COUNT, CAP_PROP_POS_FRAMES, imshow, waitKey, destroyAllWindows
+from cv2 import VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_COUNT, CAP_PROP_POS_FRAMES, imshow,\
+    waitKey, destroyAllWindows
 from cv2.typing import MatLike
 
-from src.labels import get_label_name
+from src.labels import get_label_by_frame_num, get_labels_from_video, get_labels_as_dataframe
+from src.common.draw import write_label, write_text
 from src.video.play.common import play_video
-from src.video.edit import write_label, write_text
 
 def play_with_label(video_path: str):
-    label_path = video_path.replace("/videos/", "/labels/").replace(".mp4", ".csv")
+    label_path = get_labels_from_video(video_path)
+    labels = get_labels_as_dataframe(label_path)
 
     def mutator(img: MatLike, frame_num: int):
-        label = get_label_name(label_path, frame_num)
+        label = get_label_by_frame_num(labels, frame_num)
         img = write_label(img, label)
         return img
 
     play_video(video_path, mutators=[mutator])
 
-# Might be platform dependent, check with: https://stackoverflow.com/questions/14494101/using-other-keys-for-the-waitkey-function-of-opencv
+def play_with_frame_num(video_path: str, start_frame: int = 0, stop_frame: int | None = None):
+    
+    def mutator(img: MatLike, frame_num: int):
+        img = write_text(img, f"{frame_num}")
+        return img
+
+    play_video(video_path, mutators=[mutator], start_frame=start_frame, stop_frame=stop_frame)
+
+# Might be platform dependent, check with: 
+# https://stackoverflow.com/questions/14494101/using-other-keys-for-the-waitkey-function-of-opencv
 __Q = ord('q')
 __LeftKey = ord('Q')
 __RightKey = ord('S')
 __Space = ord(' ')
 
-def play_with_frame_num(video_path: str):
+def play_with_frame_num_detailed(video_path: str):
     vid_capture = VideoCapture(video_path)
     if not vid_capture.isOpened():
         print(f"Cannot open video file '{video_path}'")

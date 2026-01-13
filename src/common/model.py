@@ -1,6 +1,7 @@
 from json import dump, load
 from typing import Any
 from os.path import exists, join
+from cv2.typing import MatLike
 
 from src.common.helpers import get_runs, raise_not_implemented_error, get_next_train_run, \
     get_current_train_run, get_current_test_run
@@ -71,7 +72,6 @@ class ModelConstructorArgs:
     def swap_to_kf_dataset(self):
         if self.dataset_name.endswith("_full_kf"):
             self._dataset_name = self.dataset_name.replace("_full_kf", "_kf")
-
 
 class TrainArgs:
 
@@ -186,6 +186,17 @@ class ClassificationModel:
     def test_model(self, args: TestArgs):
         raise_not_implemented_error(self.__class__.__name__, self.test_model.__name__)
 
+    def get_test_metrics(self) -> dict:
+        file_path = join(self._get_current_test_run_path(), "metrics.json")
+        with open(file_path, 'r') as file:
+            return load(file)
+        
+    def get_test_accuracy_metric(self) -> float:
+        raise_not_implemented_error(self.__class__.__name__, self.get_test_accuracy_metric.__name__)
+
+    # def evaluate(self, image: MatLike) -> str:
+    #     raise_not_implemented_error(self.__class__.__name__, self.evaluate.__name__)
+
     def _get_model_dir(self):
         raise_not_implemented_error(self.__class__.__name__, self._get_model_dir.__name__)
 
@@ -234,14 +245,6 @@ class ClassificationModel:
         file_path = join(self._get_current_test_run_path(), "metrics.json")
         with open(file_path, 'w') as file:
             dump(metrics, file)
-
-    def get_test_metrics(self) -> dict:
-        file_path = join(self._get_current_test_run_path(), "metrics.json")
-        with open(file_path, 'r') as file:
-            return load(file)
-        
-    def get_test_accuracy_metric(self) -> float:
-        raise_not_implemented_error(self.__class__.__name__, self.get_test_accuracy_metric.__name__)
 
     def __has_trained(self) -> bool:
         model_dir = self._get_model_dir()

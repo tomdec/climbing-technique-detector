@@ -151,7 +151,7 @@ class SOTA(ClassificationModel):
         self.model = YOLO(best_weights_path)
 
     @override
-    def _fresh_model(self, _: ModelInitializeArgs):
+    def _fresh_model(self, _: SOTAModelInitializeArgs):
         print(f"loading a fresh model '{self.model_arch}'")
         self.model = YOLO(self.model_arch)
     
@@ -202,7 +202,6 @@ class SOTA(ClassificationModel):
         predictions = [self.__get_label_value_from_prediction(prediction) for prediction in y_pred]
 
         labels = list(map(value_to_name, labels))
-        predictions = list(map(value_to_name, predictions))
 
         test_run_path = self._get_current_test_run_path()        
         plot_confusion_matrix(labels, predictions, 
@@ -226,9 +225,9 @@ class SOTA(ClassificationModel):
     def get_test_accuracy_metric(self) -> float:
         return self.get_test_metrics()["metrics/accuracy_top1"]
 
-    def __get_label_value_from_prediction(self, prediction: Results) -> int:
+    def __get_label_value_from_prediction(self, prediction: Results) -> str:
         pred_name = prediction.names[prediction.probs.top1]
-        return name_to_value(pred_name)
+        return pred_name
 
     def __get_dataset_dir(self):
         return join(self.data_root_path, "img", self.dataset_name)

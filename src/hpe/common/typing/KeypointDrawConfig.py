@@ -1,6 +1,6 @@
 from cv2.typing import Scalar
 
-from src.hpe.common.helpers import CENTER_COLOR, LEFT_COLOR, RIGHT_COLOR
+from src.common.draw import RED, BLUE, GREEN
 
 class KeypointDrawConfig:
 
@@ -8,9 +8,9 @@ class KeypointDrawConfig:
             label: str = "",
             relative_size: float = 0.01,
             relative_thickness: float = 0.2,
-            left_color: Scalar = LEFT_COLOR,
-            right_color: Scalar = RIGHT_COLOR,
-            center_color: Scalar = CENTER_COLOR):
+            left_color: Scalar = BLUE,
+            right_color: Scalar = GREEN,
+            center_color: Scalar = RED):
         self.label = label
         self.relative_size = relative_size
         self.relative_thickness = relative_thickness

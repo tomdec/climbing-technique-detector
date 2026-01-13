@@ -1,10 +1,12 @@
-from cv2 import INTER_LINEAR, VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_HEIGHT, CAP_PROP_FRAME_WIDTH, WINDOW_NORMAL,\
-    imshow, waitKey, destroyAllWindows, namedWindow, moveWindow, resizeWindow, resize
+from cv2 import INTER_LINEAR, VideoCapture, CAP_PROP_FPS, CAP_PROP_FRAME_HEIGHT,\
+    CAP_PROP_FRAME_WIDTH, WINDOW_NORMAL, CAP_PROP_POS_FRAMES, CAP_PROP_FRAME_COUNT, imshow,\
+    waitKey, destroyAllWindows, namedWindow, moveWindow, resizeWindow, resize
 from cv2.typing import MatLike
 from screeninfo import get_monitors, Monitor
 from typing import List, Callable, Any, Tuple
-
+from time import time
 ImgShape = Tuple[int, int]
+PlaybackContext = Any
 
 def scale_image_to_monitor(m_width, m_height, im_width, im_height) -> ImgShape:
     lower_boundary = 0.7
@@ -32,7 +34,6 @@ def scale_image_to_monitor(m_width, m_height, im_width, im_height) -> ImgShape:
 
     return im_width, im_height
 
-
 def place_on_monitor(window_name: str, m: Monitor, img_size: ImgShape) -> ImgShape:
     center_x, center_y = (m.x + int(m.width / 2), m.y + int(m.height / 2))
     image_width, image_height = img_size
@@ -45,15 +46,22 @@ def place_on_monitor(window_name: str, m: Monitor, img_size: ImgShape) -> ImgSha
     return int(image_width * 0.9), int(image_height * 0.9)
 
 def play_video(video_path: str,
-        context: Any = None,
-        mutators: List[Callable[[MatLike, Any], MatLike]] = [],
-        playback_speed: float = 1):
+        context: PlaybackContext | None = None,
+        mutators: List[Callable[[MatLike, PlaybackContext | int], MatLike]] = [],
+        playback_speed: float = 1,
+        start_frame: int = 0,
+        stop_frame: int | None = None):
+    use_frame_num_as_context = context is None
     vid_capture = VideoCapture(video_path)
     try:
-        frame_num = 0
+        frame_num = start_frame
+        if frame_num > 0:
+            vid_capture.set(CAP_PROP_POS_FRAMES, frame_num)
         if not vid_capture.isOpened():
             print(f"Cannot open video file '{video_path}'")
             exit()
+        if not stop_frame:
+            stop_frame = vid_capture.get(CAP_PROP_FRAME_COUNT)
         
         fps = vid_capture.get(CAP_PROP_FPS)
         vid_width = vid_capture.get(CAP_PROP_FRAME_WIDTH)
@@ -61,8 +69,9 @@ def play_video(video_path: str,
 
         m = get_monitors()[0]
         
-        while vid_capture.isOpened():
-            if context is None:
+        while vid_capture.isOpened() and frame_num < stop_frame:
+            start_time = time()
+            if use_frame_num_as_context:
                 context = frame_num
             ret, frame = vid_capture.read()
             if ret == False:
@@ -75,7 +84,9 @@ def play_video(video_path: str,
             im_size = place_on_monitor("segment", m, (vid_width, vid_height))
             frame = resize(frame, im_size, interpolation=INTER_LINEAR)
             imshow("segment", frame)
-            if waitKey(int(1000/(fps * playback_speed))) & 0xFF == ord('q'):
+            elapsed_time = (time() - start_time) * 1000
+            wait_time = max(1, int(1000 / (fps * playback_speed) - elapsed_time))
+            if waitKey(wait_time) & 0xFF == ord('q'):
                 break
             
             frame_num += 1

@@ -44,7 +44,8 @@ def df_to_dataset(dataframe: DataFrame,
     labels = df.pop("label")
     _ = df.pop("image_path")
     
-    imp = SimpleImputer(missing_values=nan, strategy='constant', fill_value=0)
+    imp = SimpleImputer(missing_values=nan, strategy='constant', fill_value=0, 
+        keep_empty_features=True)
     df = DataFrame(imp.fit_transform(df), columns=df.keys())
     df = {key: value.to_numpy()[:,tf.newaxis] for key, value in df.items()}
 
