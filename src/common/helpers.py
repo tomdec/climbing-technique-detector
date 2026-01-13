@@ -72,6 +72,8 @@ def make_file(filepath):
     with open(filepath, 'w'):
         pass
 
-def imread(file_path: str) -> MatLike:
+def imread(file_path: str, convert_to_rgb: bool = True) -> MatLike:
     image = cv2_imread(file_path)
-    return cvtColor(image, COLOR_BGR2RGB)
+    if convert_to_rgb:
+        image = cvtColor(image, COLOR_BGR2RGB)
+    return image

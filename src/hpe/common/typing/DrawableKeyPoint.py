@@ -52,9 +52,7 @@ class DrawableKeyPoint:
 
         return is_origin or is_out_of_bounds
 
-    def draw(self,
-            image: MatLike,
-            label: str = "",
+    def draw(self, image: MatLike, label: str = "", 
             config: KeypointDrawConfig = KeypointDrawConfig()) -> MatLike:
         result = image.copy()
         if self.is_missing():

@@ -5,6 +5,8 @@ from numpy import ndarray, array
 from itertools import zip_longest
 from albumentations import Compose, ShiftScaleRotate, HorizontalFlip, Perspective, KeypointParams
 from math import isnan, nan
+from matplotlib import pyplot as plt
+from PIL import Image
 
 from src.common.helpers import imread
 
@@ -157,3 +159,13 @@ class AugmentationPipeline:
         result_array = [input["label"], *result_array, input["image_path"]]
 
         return Series(data=result_array, index=input.index)
+
+def demo_augmentation(original: MatLike, augmentation: Compose, save_path: str | None = None):
+    transformed = augmentation(image=original)['image']
+    _, axarr = plt.subplots(1, 2)
+    axarr[0].imshow(original)
+    axarr[1].imshow(transformed)
+    
+    if save_path:
+        transformed_pil = Image.fromarray(transformed)
+        transformed_pil.save(save_path)
