@@ -15,7 +15,7 @@ from src.hpe.yolo.landmarks import get_feature_labels as get_yolo_features
 from src.hpe_dnn.augmentation import AugmentationFunc, AugmentationPipeline
 
 
-def __get_test_df(features: List[str]) -> DataFrame:
+def __get_test_df(features: List[str], value: float = 1.0) -> DataFrame:
 
     def append_test_image_path():
         test_image_path = "test/data/img/NONE/test_image.jpg"
@@ -24,21 +24,21 @@ def __get_test_df(features: List[str]) -> DataFrame:
     columns = ["label", *features, "image_path"]
     labels = range(1, 8)
 
-    matrix = generate_correlated_data(features, labels)
+    matrix = generate_correlated_data(features, labels, value=value)
     matrix = list(map(prepend_to_row, matrix, labels))
     matrix = list(map(append_test_image_path(), matrix))
 
     return DataFrame(data=matrix, columns=columns)
 
 
-def __get_mp_test_df() -> DataFrame:
+def __get_mp_test_df(value: float = 1.0) -> DataFrame:
     features = get_mp_features()
-    return __get_test_df(features)
+    return __get_test_df(features, value)
 
 
-def __get_yolo_test_df() -> DataFrame:
+def __get_yolo_test_df(value: float = 1.0) -> DataFrame:
     features = get_yolo_features()
-    return __get_test_df(features)
+    return __get_test_df(features, value)
 
 
 identity_augmentation: AugmentationFunc = lambda _, coordinates, visibility: (
@@ -66,9 +66,8 @@ def test_identity_transformations(test_data: DataFrame, dim: int):
     test_data.apply(assert_indentity_transformation, axis=1)
 
 
-@pytest.mark.parametrize("test_data", [__get_mp_test_df(), __get_yolo_test_df()])
+@pytest.mark.parametrize("test_data", [__get_mp_test_df(0.5), __get_yolo_test_df(0.5)])
 def test_tranformations(test_data: DataFrame):
-    test_data = test_data.sample(1)
     aug_pipeline = AugmentationPipeline.for_dataframe(test_data)
 
     def assert_transformation(input: Series):
@@ -77,8 +76,6 @@ def test_tranformations(test_data: DataFrame):
 
         for header in input.index:
             if header.endswith("visibility"):
-                assert (input[header] == output[header]) or (
-                    isnan(input[header]) and isnan(output[header])
-                )
+                assert (input[header] == output[header]) or (output[header] == 0)
 
     test_data.apply(assert_transformation, axis=1)

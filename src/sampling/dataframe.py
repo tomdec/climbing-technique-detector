@@ -57,7 +57,7 @@ def generate_hpe_feature_df(data_root, dataset_name):
 
 # TODO: reuse for unity dataset, if needed
 def generate_correlated_data(
-    feature_names: List[str], labels: List[int]
+    feature_names: List[str], labels: List[int], value: float = 1.0
 ) -> List[List[int]]:
     """
     Generate data directly correlated to the labels.
@@ -66,6 +66,7 @@ def generate_correlated_data(
     Args:
         feature_names (List[str]): The columns for which data is generated.
         labels (List[int]): The labels the data will be correlated with.
+        value (float): Value to assign the feature.
 
     Returns:
         List[List[Any]]: List of features, correlated to the labels.
@@ -73,7 +74,7 @@ def generate_correlated_data(
 
     def generate_features(label: int) -> List[int]:
         features = zeros(len(feature_names))
-        features[label] = 1
+        features[label] = value
         return features
 
     return list(map(generate_features, labels))
