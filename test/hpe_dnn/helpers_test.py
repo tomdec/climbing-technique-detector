@@ -23,10 +23,7 @@ expected_list = array(
 
 @pytest.mark.parametrize(
     "input,expected",
-    [
-        (label_names, expected_list),
-        # (label_values, expected_list)
-    ],
+    [(label_names, expected_list), (label_values, expected_list)],
 )
 def test_binarize_labels(input, expected):
     actual = binarize_labels(input).values
@@ -42,7 +39,9 @@ def test_binarize_labels_with_random_order():
     shuffled_labels = label_values[shuffled_idxs]
     shuffled_expected = expected_list[shuffled_idxs]
 
-    actual_list = binarize_labels(shuffled_labels)
+    actual_df = binarize_labels(shuffled_labels)
 
-    for actual, expected in zip(actual_list, shuffled_expected):
-        assert list(actual) == list(expected)
+    for idx in range(len(label_values)):
+        actual = actual_df.iloc[idx].values
+        expected = shuffled_expected[idx]
+        assert all(actual == expected)
