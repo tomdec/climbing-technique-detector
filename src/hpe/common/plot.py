@@ -289,7 +289,6 @@ def plot_precision_and_recall(pnr: DataFrame, tight: bool = True):
 def plot_AP_per_landmark(
     names: List[str], estimations: List[DataFrame], save_location: str = ""
 ):
-
     fig, axs = plt.subplots(2, 2, sharex="all", sharey="row")
     fig.set_figheight(15)
     axs: List[plt.Axes] = axs.reshape(-1)
