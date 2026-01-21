@@ -3,7 +3,7 @@ from sklearn.impute import SimpleImputer
 from numpy import nan, arange, array
 from matplotlib import pyplot as plt
 import tensorflow as tf
-from numpy import mean, float32, array, reshape
+from numpy import mean, float32, array, reshape, concatenate
 from pandas import Series, concat
 from typing import Tuple
 from functools import reduce
@@ -41,6 +41,25 @@ def normalize_features(
     train_std = train_df.std()
 
     return (features - train_mean) / train_std
+
+
+def split_input_output(data: tf.data.Dataset) -> Tuple[list, list]:
+    input = []
+    output = []
+    for test_batch in data.as_numpy_iterator():
+        input.append(test_batch[0])
+        output.append(test_batch[1])
+
+    input = concatenate(input, axis=0)
+    output = concatenate(output, axis=0)
+
+    return input, output
+
+
+def output_to_labels(output: list, label_names: list) -> Series:
+    output_2d = reshape(output, (-1, get_valid_label_count()))
+    output_df = DataFrame(output_2d, columns=label_names)
+    return unbinarize_labels(output_df)
 
 
 class WindowGenerator:
@@ -225,7 +244,7 @@ class WindowGenerator:
                 predictions = model(inputs)
                 pred_2d = reshape(predictions, (-1, get_valid_label_count()))
                 pred_df = DataFrame(pred_2d, columns=self.label_columns)
-                pred_label = unbinarize_labels(pred_df)[0]
+                pred_label = unbinarize_labels(pred_df)[n]
                 pred_y_position = mean(feature_values) - feature_spread * 0.1
                 plt.text(
                     label_x_position,

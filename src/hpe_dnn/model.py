@@ -6,7 +6,7 @@ from os import listdir, mkdir
 from keras._tf_keras.keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping
 from os import makedirs
 from keras._tf_keras.keras.models import load_model
-from typing import Optional, override
+from typing import override
 from wandb.sdk import init, finish
 from wandb.data_types import Image
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
@@ -110,6 +110,11 @@ class HpeDnnTrainArgs(TrainArgs):
 
 class HpeDnnMultiRunTrainArgs(MultiRunTrainArgs):
 
+    @override
+    @property
+    def train_args(self) -> HpeDnnTrainArgs:
+        return self._train_args
+
     def __init__(
         self,
         runs: int = 5,
@@ -148,8 +153,6 @@ class HpeDnn(ClassificationModel):
                 "balanced": args.balanced,
                 "augmented": args.augment,
                 "run": self._get_next_train_run(),
-                #'optimizer': optimizer,
-                #'lr0': lr0,
             }
             | args.additional_config
         )
@@ -227,12 +230,12 @@ class HpeDnn(ClassificationModel):
                     early_stopping_callback,
                 ],
             )
-
-            finish()
         except Exception as e:
             # remove result files
             shutil.rmtree(self._get_current_train_dir())
             raise e
+        finally:
+            finish()
 
     @override
     def _get_model_dir(self):

@@ -2,13 +2,14 @@ from ultralytics import YOLO
 from ultralytics.engine.results import Results
 from ultralytics.utils.metrics import DetMetrics
 from os.path import join
-from os import listdir, rename
+from os import rename
 from typing import Optional, override
 from wandb.sdk import init, finish
 from wandb.data_types import Image
 from wandb.integration.ultralytics import add_wandb_callback
 from glob import glob
 
+from src.common.helpers import get_current_train_run
 from src.labels import get_label_value_from_path, name_to_value, value_to_name
 from src.common.model import (
     ModelConstructorArgs,
@@ -188,8 +189,10 @@ class SOTA(ClassificationModel):
     @override
     def _get_best_model_path(self):
         model_dir = self._get_model_dir()
-        train_list = [dir for dir in listdir(model_dir) if "train" in dir]
-        return join(model_dir, train_list[-1], "weights", "best.pt")
+        train_run = get_current_train_run(model_dir)
+        # train_list = [dir for dir in listdir(model_dir) if "train" in dir]
+        # train_list.sort()
+        return join(model_dir, train_run, "weights", "best.pt")
 
     @override
     def _load_model(self, best_weights_path):
