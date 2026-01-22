@@ -35,6 +35,7 @@ class HpeDnnFoldCrossValidation(AbstractFoldCrossValidation):
     def train_run_args(self) -> HpeDnnMultiRunTrainArgs | None:
         return self._train_run_args
 
+    @override
     def __init__(
         self,
         model_args: HpeDnnConstructorArgs,

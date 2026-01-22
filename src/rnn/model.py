@@ -9,6 +9,7 @@ from keras.api.models import load_model, Sequential
 from keras.api.callbacks import Callback
 from wandb.data_types import Image
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
+from glob import glob
 
 from src.common.helpers import (
     get_current_train_run,
@@ -22,6 +23,7 @@ from src.common.model import (
     TrainArgs,
     MultiRunTrainArgs,
     TestArgs,
+    get_best_tf_weights,
 )
 from src.common.plot import plot_confusion_matrix
 from src.rnn.data import split_input_output, WindowGenerator, output_to_labels
@@ -292,11 +294,8 @@ class Rnn(ClassificationModel):
     @override
     def _get_best_model_path(self):
         model_dir = self._get_model_dir()
-        train_run = get_current_train_run(model_dir)
-        model_path = join(model_dir, train_run, "models")
-        model_list = listdir(model_path)
-
-        return join(model_path, model_list[-1])
+        weight_paths = glob(join(model_dir, "*", "models", "*.keras"))
+        return get_best_tf_weights(weight_paths)
 
     @override
     def _fresh_model(self):

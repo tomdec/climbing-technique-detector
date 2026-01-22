@@ -2,6 +2,7 @@ from json import dump, load
 from typing import Any
 from os.path import exists, join
 from cv2.typing import MatLike
+from re import search
 
 from src.common.helpers import (
     get_runs,
@@ -10,6 +11,22 @@ from src.common.helpers import (
     get_current_train_run,
     get_current_test_run,
 )
+
+
+def get_best_tf_weights(path_to_weights: list) -> str:
+    path_to_weights.sort()
+    best_path = path_to_weights[0]
+    best_performance = 0
+
+    for path in path_to_weights:
+        m = search(r"(.*)\/epoch_(\d{2})__val_accuracy_([\d\.]+)\.keras", path)
+        val_acc = float(m.group(3))
+
+        if best_performance <= val_acc:
+            best_path = path
+            best_performance = val_acc
+
+    return best_path
 
 
 class ModelInitializeArgs:

@@ -140,9 +140,9 @@ def extract_segment_landmarks(
     )
 
     response = ask_input()
-    if response == "r":
+    if response == "r":  # replay
         return extract_segment_landmarks(segment_path, context, playback_speed)
-    if response == "s":
+    if response == "s":  # slow replay
         return extract_segment_landmarks(segment_path, context, 0.5 * playback_speed)
     else:
         return context, response

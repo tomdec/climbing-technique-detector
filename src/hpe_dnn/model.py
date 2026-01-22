@@ -2,9 +2,8 @@ import shutil
 import tensorflow as tf
 from keras import Model
 from os.path import join
-from os import listdir, mkdir
+from os import listdir, mkdir, makedirs
 from keras._tf_keras.keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping
-from os import makedirs
 from keras._tf_keras.keras.models import load_model
 from typing import override
 from wandb.sdk import init, finish
@@ -12,6 +11,7 @@ from wandb.data_types import Image
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 from numpy import concatenate
 from sklearn.preprocessing import LabelBinarizer
+from glob import glob
 
 from src.labels import iterate_valid_labels
 from src.common.model import (
@@ -21,6 +21,7 @@ from src.common.model import (
     TestArgs,
     TrainArgs,
     MultiRunTrainArgs,
+    get_best_tf_weights,
 )
 from src.common.helpers import (
     get_current_train_run,
@@ -244,11 +245,8 @@ class HpeDnn(ClassificationModel):
     @override
     def _get_best_model_path(self):
         model_dir = self._get_model_dir()
-        train_run = get_current_train_run(model_dir)
-        model_path = join(model_dir, train_run, "models")
-        model_list = listdir(model_path)
-
-        return join(model_path, model_list[-1])
+        weight_paths = glob(join(model_dir, "*", "models", "*.keras"))
+        return get_best_tf_weights(weight_paths)
 
     @override
     def _fresh_model(self):

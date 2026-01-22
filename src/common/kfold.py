@@ -53,7 +53,6 @@ class AbstractFoldCrossValidation:
     ):
 
         self._kf = KFold(n_splits=self.__N_SPLITS, shuffle=True)
-        self._train_ratio = (self.__N_SPLITS - 2) / (self.__N_SPLITS - 1)
 
         self._model_args = (
             model_args

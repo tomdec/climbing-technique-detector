@@ -1,9 +1,16 @@
 from pandas import DataFrame
 from sklearn.impute import SimpleImputer
-from numpy import nan, arange, array
+from numpy import (
+    nan,
+    arange,
+    array,
+    mean,
+    float32,
+    reshape,
+    concatenate,
+)
 from matplotlib import pyplot as plt
 import tensorflow as tf
-from numpy import mean, float32, array, reshape, concatenate
 from pandas import Series, concat
 from typing import Tuple
 from functools import reduce
