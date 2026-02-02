@@ -4,9 +4,9 @@ from typing import override, List
 from os import makedirs, listdir, mkdir
 from os.path import join
 from wandb.sdk import init, finish
-from keras.api.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping
+from keras.api.callbacks import Callback, ModelCheckpoint, CSVLogger, EarlyStopping
 from keras.api.models import load_model, Sequential
-from keras.api.callbacks import Callback
+from keras.api.losses import CategoricalCrossentropy
 from wandb.data_types import Image
 from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
 from glob import glob
@@ -64,22 +64,16 @@ class RnnModelInitializeArgs(ModelInitializeArgs):
     def spacing(self) -> int:
         return self._spacing
 
-    @property
-    def weighted_loss(self) -> bool:
-        return self._weighted_loss
-
     @override
     def __init__(
         self,
         model_arch: RnnArch = RnnArch.ARCH1,
         input_width: int = 5,
         spacing: int = 1,
-        weighted_loss: bool = False,
     ):
         super().__init__(model_arch)
         self._input_width = input_width
         self._spacing = spacing
-        self._weighted_loss = weighted_loss
 
 
 class RnnConstructorArgs(ModelConstructorArgs):
@@ -111,12 +105,6 @@ class RnnConstructorArgs(ModelConstructorArgs):
 
 class RnnTrainArgs(TrainArgs):
 
-    @override
-    @property
-    def balanced(self) -> bool:
-        """Rnn models are never trained on balanced data."""
-        return False
-
     @property
     def window_generator(self) -> WindowGenerator:
         return self._window_generator
@@ -125,9 +113,10 @@ class RnnTrainArgs(TrainArgs):
         self,
         window_generator: WindowGenerator,
         epochs: int = 10,
+        balanced: bool = False,
         additional_config: dict = {},
     ):
-        super().__init__(epochs, False, additional_config)
+        super().__init__(epochs, balanced, additional_config)
         self._window_generator = window_generator
 
 
@@ -178,25 +167,31 @@ class Rnn(ClassificationModel):
         return self._model
 
     @property
-    def weighted_loss(self) -> bool:
-        return self.model_initialize_args.weighted_loss
+    def loss_function(self):
+        return self._loss_function
 
     @override
     def __init__(self, args: RnnConstructorArgs):
         super().__init__(args)
         self._model = None
         self._weights = None
+        self._loss_function = CategoricalCrossentropy()
 
     @override
     def execute_train_runs(self, args: RnnMultiRunTrainArgs):
-        self.__lazyload_weights(args.train_args.window_generator)
+        if args.train_args.balanced:
+            weights = args.train_args.window_generator.get_class_weights()
+            self._loss_function = _weighted_categorical_cross_entropy(weights)
+            print("Using weighted loss function to achieve balancing")
         return super().execute_train_runs(args)
 
     @override
     def train_model(self, args: RnnTrainArgs):
         if self.model is None:
             raise Exception("Cannot train before model is initialized")
-        self.__lazyload_weights(args.window_generator)
+
+        if args.balanced and type(self.loss_function) == CategoricalCrossentropy:
+            raise Exception("Unexpected loss function for balanced training.")
 
         train_ds = args.window_generator.train_ds
         val_ds = args.window_generator.val_ds
@@ -259,7 +254,8 @@ class Rnn(ClassificationModel):
 
     @override
     def test_model(self, args: RnnTestArgs):
-        self.__lazyload_weights(args.window_generator)
+        # reset to default loss function
+        self._loss_function = CategoricalCrossentropy()
         self._load_best_model()
 
         model_path = self._get_model_dir()
@@ -304,12 +300,6 @@ class Rnn(ClassificationModel):
         self._save_test_metrics(performance)
         return performance
 
-    def __lazyload_weights(self, wg: WindowGenerator):
-        if self._weights is not None or not self.weighted_loss:
-            return
-
-        self._weights = wg.get_class_weights()
-
     def __evaluate_with_wandb(
         self, args: TestArgs, data: tf.data.Dataset, test_run_path: str
     ) -> dict:
@@ -353,23 +343,15 @@ class Rnn(ClassificationModel):
     @override
     def _fresh_model(self):
         print(f"loading a fresh model '{self.model_arch}'")
-        if not self.weighted_loss:
-            self._model = get_model(self.model_arch)
-        else:
-            loss = _weighted_categorical_cross_entropy(self._weights)
-            self._model = get_model(self.model_arch, loss=loss)
+        self._model = get_model(self.model_arch, self.loss_function)
 
     @override
     def _load_model(self, best_model_path):
         print(f"loading the model '{self.name}' from '{best_model_path}'")
-        if not self.weighted_loss:
-            self._model = load_model(best_model_path)
-        else:
-            loss = _weighted_categorical_cross_entropy(self._weights)
-            self._model = load_model(
-                best_model_path,
-                custom_objects={"loss": loss},
-            )
+        self._model = load_model(
+            best_model_path,
+            custom_objects={"loss": self.loss_function},
+        )
 
     @override
     def _get_common_wandb_config(self) -> dict:
