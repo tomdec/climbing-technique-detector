@@ -47,6 +47,15 @@ identity_augmentation: AugmentationFunc = lambda _, coordinates, visibility: (
 )
 
 
+@pytest.mark.parametrize("test_data", [__get_mp_test_df(), __get_yolo_test_df()])
+def test_conservation_of_column_order(test_data: DataFrame):
+    aug_pipeline = AugmentationPipeline.for_dataframe(test_data)
+
+    augmented = test_data.apply(aug_pipeline, axis=1)
+
+    assert all(test_data.columns == augmented.columns)
+
+
 @pytest.mark.parametrize(
     "test_data, dim", [(__get_mp_test_df(), 3), (__get_yolo_test_df(), 2)]
 )

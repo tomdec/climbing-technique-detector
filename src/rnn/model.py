@@ -27,6 +27,7 @@ from src.common.model import (
 )
 from src.common.plot import plot_confusion_matrix
 from src.rnn.data import split_input_output, WindowGenerator, output_to_labels
+from src.rnn.augmentation import AugmentationPipeline
 from src.rnn.architecture import get_model, RnnArch
 
 from keras import Variable
@@ -103,7 +104,34 @@ class RnnConstructorArgs(ModelConstructorArgs):
         )
 
 
-class RnnTrainArgs(TrainArgs):
+class RnnIntTrainArgs(TrainArgs):
+
+    @property
+    def augmented(self) -> bool:
+        return self._augmented
+
+    def __init__(
+        self,
+        epochs: int = 10,
+        balanced: bool = False,
+        augmented: bool = False,
+        additional_config: dict = {},
+    ):
+        super().__init__(epochs, balanced, additional_config)
+        self._augmented = augmented
+
+
+class RnnTrainArgs(RnnIntTrainArgs):
+
+    @staticmethod
+    def from_intermediate(wg: WindowGenerator, args: RnnIntTrainArgs) -> "RnnTrainArgs":
+        return RnnTrainArgs(
+            window_generator=wg,
+            epochs=args.epochs,
+            balanced=args.balanced,
+            augmented=args.augmented,
+            additional_config=args.additional_config,
+        )
 
     @property
     def window_generator(self) -> WindowGenerator:
@@ -114,9 +142,10 @@ class RnnTrainArgs(TrainArgs):
         window_generator: WindowGenerator,
         epochs: int = 10,
         balanced: bool = False,
+        augmented: bool = False,
         additional_config: dict = {},
     ):
-        super().__init__(epochs, balanced, additional_config)
+        super().__init__(epochs, balanced, augmented, additional_config)
         self._window_generator = window_generator
 
 
@@ -137,7 +166,28 @@ class RnnTestArgs(TestArgs):
         self._window_generator = window_generator
 
 
+class RnnIntMultiRunTrainArgs(MultiRunTrainArgs):
+
+    @override
+    @property
+    def train_args(self) -> RnnIntTrainArgs:
+        return self._train_args
+
+    @override
+    def __init__(self, train_args: RnnIntTrainArgs, runs=5):
+        super().__init__(runs, train_args)
+
+
 class RnnMultiRunTrainArgs(MultiRunTrainArgs):
+
+    @staticmethod
+    def from_intermediate(
+        wg: WindowGenerator, args: RnnIntMultiRunTrainArgs
+    ) -> "RnnMultiRunTrainArgs":
+        return RnnMultiRunTrainArgs(
+            train_args=RnnTrainArgs.from_intermediate(wg, args.train_args),
+            runs=args.runs,
+        )
 
     @override
     @property
@@ -192,6 +242,10 @@ class Rnn(ClassificationModel):
 
         if args.balanced and type(self.loss_function) == CategoricalCrossentropy:
             raise Exception("Unexpected loss function for balanced training.")
+
+        if args.augmented and args.window_generator.augmentation is None:
+            args.window_generator.set_augmentation(AugmentationPipeline())
+            pass
 
         train_ds = args.window_generator.train_ds
         val_ds = args.window_generator.val_ds
@@ -365,7 +419,7 @@ class Rnn(ClassificationModel):
             self._get_common_wandb_config()
             | {
                 "balanced": args.balanced,
-                "augmented": False,
+                "augmented": args.augmented,
                 "run": self._get_next_train_run(),
             }
             | args.additional_config

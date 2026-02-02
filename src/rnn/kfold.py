@@ -7,12 +7,12 @@ from os.path import join, exists
 import matplotlib.pyplot as plt
 
 from src.common.helpers import read_dataframe
-from src.common.model import MultiRunTrainArgs
 from src.rnn.data import WindowGenerator
 from src.rnn.model import (
     Rnn,
     RnnConstructorArgs,
     RnnTrainArgs,
+    RnnIntMultiRunTrainArgs,
     RnnMultiRunTrainArgs,
     RnnTestArgs,
 )
@@ -84,7 +84,9 @@ class RnnFoldCrossValidation:
         )
         return read_dataframe(path_to_all)
 
-    def train_folds(self, train_run_args: MultiRunTrainArgs, verbose: bool = False):
+    def train_folds(
+        self, train_run_args: RnnIntMultiRunTrainArgs, verbose: bool = False
+    ):
         full_data = self.get_full_data_list()
 
         feature_placeholder = ones(shape=(full_data.shape[0]))
@@ -174,7 +176,7 @@ class RnnFoldCrossValidation:
 
     def __train_fold(
         self,
-        train_run_args: MultiRunTrainArgs,
+        train_run_args: RnnIntMultiRunTrainArgs,
         fold_num: int,
         data: DataFrame,
         train_groups: list,
@@ -198,15 +200,8 @@ class RnnFoldCrossValidation:
             context_config={"fold": fold_num}
         )
 
-        rnn_train_run_args = RnnMultiRunTrainArgs(
-            train_args=RnnTrainArgs(
-                window_generator=wg,
-                epochs=train_run_args.train_args.epochs,
-                additional_config=additional_config
-                | train_run_args.train_args.additional_config,
-            ),
-            runs=train_run_args.runs,
-        )
+        rnn_train_run_args = RnnMultiRunTrainArgs.from_intermediate(wg, train_run_args)
+        rnn_train_run_args.train_args.add_config(additional_config)
         model.execute_train_runs(rnn_train_run_args)
 
         model.test_model(

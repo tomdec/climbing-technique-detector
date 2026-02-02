@@ -123,6 +123,9 @@ class TrainArgs:
         self._balanced = balanced
         self._additional_config = additional_config
 
+    def add_config(self, config: dict):
+        self.additional_config = self.additional_config | config
+
 
 class TestArgs:
 

@@ -1,6 +1,7 @@
 from pandas import DataFrame
 from sklearn.impute import SimpleImputer
 from numpy import nan, arange, array, mean, float32, reshape, concatenate, ndarray, sum
+from numpy.random import default_rng
 from matplotlib import pyplot as plt
 import tensorflow as tf
 from pandas import Series, concat
@@ -10,36 +11,18 @@ from keras.api.preprocessing import timeseries_dataset_from_array
 
 from src.labels import get_valid_label_count
 from src.hpe_dnn.helpers import binarize_labels, unbinarize_labels
-
-
-def impute_features(features: DataFrame) -> DataFrame:
-    output = features.copy()
-    imp = SimpleImputer(
-        missing_values=nan, strategy="constant", fill_value=0, keep_empty_features=True
-    )
-    output = DataFrame(imp.fit_transform(output), columns=output.keys())
-    return output
+from src.rnn.helpers import (
+    get_features,
+    get_admin_columns,
+    split_df,
+    combine_df,
+)
+from src.rnn.augmentation import AugmentationPipeline
 
 
 def take_groups(df: DataFrame, groups: list) -> DataFrame:
     filtered = list(map(lambda group: df.query(f"group == {group}"), groups))
     return concat(filtered, axis=0, ignore_index=True)
-
-
-def get_features(df: DataFrame) -> DataFrame:
-    return df.drop(["video", "frame_num", "group"], axis=1)
-
-
-def normalize_features(
-    features: DataFrame, group_col: Series, train_group: list
-) -> DataFrame:
-    temp = concat([features.copy(), group_col], axis=1)
-    train_df = take_groups(temp, train_group)
-    train_df = train_df.drop("group", axis=1)
-    train_mean = train_df.mean()
-    train_std = train_df.std()
-
-    return (features - train_mean) / train_std
 
 
 def split_input_output(data: tf.data.Dataset) -> Tuple[list, list]:
@@ -64,28 +47,92 @@ def output_to_labels(output: list, label_names: list) -> Series:
 class WindowGenerator:
 
     @property
+    def raw_train_df(self) -> DataFrame:
+        """Return training data as DataFrame without preprocessing applied.
+
+        Returns:
+            DataFrame: Raw training data
+        """
+        return take_groups(self.raw_data, self.train_groups)
+
+    @property
+    def raw_val_df(self) -> DataFrame:
+        """Return validation data as DataFrame without preprocessing applied.
+
+        Returns:
+            DataFrame: Raw validation data
+        """
+        return take_groups(self.raw_data, self.val_groups)
+
+    @property
+    def raw_test_df(self) -> DataFrame:
+        """Return test data as DataFrame without preprocessing applied.
+
+        Returns:
+            DataFrame: Raw test data
+        """
+        return take_groups(self.raw_data, self.test_groups)
+
+    @property
     def train_df(self) -> DataFrame:
-        return take_groups(self.data, self.train_groups)
+        """Return training data as DataFrame with preprocessing applied.
+
+        Returns:
+            DataFrame: Training data
+        """
+        return self.get_processed_data(self.raw_train_df, isTraining=True)
 
     @property
     def val_df(self) -> DataFrame:
-        return take_groups(self.data, self.val_groups)
+        """Return validation data as DataFrame with preprocessing applied.
+
+        Returns:
+            DataFrame: Validation data
+        """
+        return self.get_processed_data(self.raw_val_df)
 
     @property
     def test_df(self) -> DataFrame:
-        return take_groups(self.data, self.test_groups)
+        """Return test data as DataFrame with preprocessing applied.
+
+        Returns:
+            DataFrame: Test data
+        """
+        return self.get_processed_data(self.raw_test_df)
 
     @property
     def train_ds(self) -> tf.data.Dataset:
-        return self.make_ds(self.data, self.train_groups)
+        """Return processed training data as Tensorflow Dataset, structured how the Tensorflow model
+        expects it during training.
+
+        Returns:
+            tf.data.Dataset: Training dataset.
+        """
+        return self.make_ds(self.train_df)
 
     @property
     def val_ds(self) -> tf.data.Dataset:
-        return self.make_ds(self.data, self.val_groups)
+        """Return processed validation data as Tensorflow Dataset, structured how the Tensorflow
+        model expects it during training.
+
+        Returns:
+            tf.data.Dataset: Validation dataset.
+        """
+        return self.make_ds(self.val_df)
 
     @property
     def test_ds(self) -> tf.data.Dataset:
-        return self.make_ds(self.data, self.test_groups)
+        """Return processed test data as Tensorflow Dataset, structured how the Tensorflow
+        model expects it during testing.
+
+        Returns:
+            tf.data.Dataset: Test dataset.
+        """
+        return self.make_ds(self.test_df)
+
+    @property
+    def augmentation(self) -> AugmentationPipeline | None:
+        return self._augmentation
 
     def __init__(
         self,
@@ -96,29 +143,31 @@ class WindowGenerator:
         input_width: int,
         spacing: int = 1,
     ):
-        df = data.copy()
-        video = df.pop("video")
-        frame_num = df.pop("frame_num")
-        group = df.pop("group")
+        self._augmentation = None
 
-        # Transform labels to model ouputs
-        self.labels_str: Series = df.pop("label")
-        self.input_columns = df.columns
-        labels = binarize_labels(self.labels_str)
+        df = data.copy()
+        features = get_features(df)
+        labels_str: Series = df.pop("label")
+        admin_cols = get_admin_columns(df)
+
+        labels = binarize_labels(labels_str)
+        self.raw_data = combine_df(features, labels, admin_cols)
+
+        # Store input and output column names
+        self.input_columns = features.columns
         self.label_columns = labels.columns
 
-        # Remove missing values and normalize features
-        df = impute_features(df)
-        df = normalize_features(df, group, train_groups)
+        train_df = take_groups(self.raw_data, train_groups)
+        train_features = get_features(train_df)
+        self.train_mean = train_features.mean(skipna=True)
+        self.train_std = train_features.std(skipna=True)
 
-        # Store full dataset and splits
-        self.data = concat([df, labels, video, frame_num, group], axis=1)
         self.train_groups = train_groups
         self.val_groups = val_groups
         self.test_groups = test_groups
 
         # Work out the label column indices.
-        self.column_indices = {name: i for i, name in enumerate(self.data.columns)}
+        self.column_indices = {name: i for i, name in enumerate(self.raw_data.columns)}
         self.input_column_indices = {
             name: i for i, name in enumerate(self.input_columns)
         }
@@ -140,8 +189,57 @@ class WindowGenerator:
         self.labels_slice = slice(self.label_start, None)
         self.label_indices = arange(self.total_window_size)[self.labels_slice]
 
-    def __count_label_frames(self, df: DataFrame) -> dict:
-        return {label: sum(df[label]) for label in self.label_columns}
+    def set_augmentation(self, augmentation: AugmentationPipeline):
+        self._augmentation = augmentation
+
+    def get_processed_data(
+        self, data: DataFrame, isTraining: bool = False
+    ) -> DataFrame:
+        if isTraining:
+            data = self.augment_features(data)
+        data = self.normalize_features(data)
+        data = self.impute_features(data)
+        return data
+
+    def augment_features(self, data: DataFrame) -> DataFrame:
+        if self._augmentation is None:
+            return data
+
+        def apply_augmentation_per_group(group: int) -> DataFrame:
+            rng = default_rng()
+            seed = int(rng.integers(1000))
+            print(f"Applying augmentation seed {seed} for group {group}")
+            self._augmentation.set_seed(seed)
+            group_df = take_groups(data, [group])
+            group_df = group_df.apply(self._augmentation, axis=1)
+            return group_df
+
+        groups = data["group"].unique()
+        group_df_arr = list(map(apply_augmentation_per_group, groups))
+        data = concat(group_df_arr, axis=0, ignore_index=True)
+
+        return data
+
+    def normalize_features(self, data: DataFrame) -> DataFrame:
+        features, labels, admin = split_df(data)
+
+        features = (features - self.train_mean) / self.train_std
+
+        return combine_df(features, labels, admin)
+
+    def impute_features(self, data: DataFrame) -> DataFrame:
+        features, labels, admin = split_df(data)
+
+        imp = SimpleImputer(
+            missing_values=nan,
+            strategy="constant",
+            fill_value=0,
+            keep_empty_features=True,
+        )
+        features = features.copy()
+        features = DataFrame(imp.fit_transform(features), columns=features.keys())
+
+        return combine_df(features, labels, admin)
 
     def inspect_fold_split(self):
         print(f"Input features ({len(self.input_columns)}): ", self.input_columns)
@@ -151,9 +249,9 @@ class WindowGenerator:
         print(f"Val:  groups={self.val_groups}")
         print(f"Test:  groups={self.test_groups}")
 
-        train_df = self.train_df
-        val_df = self.val_df
-        test_df = self.test_df
+        train_df = self.raw_train_df
+        val_df = self.raw_val_df
+        test_df = self.raw_test_df
         print("\nAll shapes are: (frames, features)")
         print(f"Training data: {train_df.shape}")
         print(f"Val data: {val_df.shape}")
@@ -195,14 +293,16 @@ class WindowGenerator:
         return inputs, output
 
     def get_example(self):
-        data = get_features(self.data)
+        data = self.get_processed_data(self.raw_data)
+        data = data.drop(columns=["video", "frame_num", "group"])
+        data = array(data, dtype=float32)
 
         # Stack three slices, the length of the total window.
         example_batch = tf.stack(
             [
-                array(data[: self.total_window_size]),
-                array(data[100 : 100 + self.total_window_size]),
-                array(data[200 : 200 + self.total_window_size]),
+                data[: self.total_window_size],
+                data[100 : 100 + self.total_window_size],
+                data[200 : 200 + self.total_window_size],
             ]
         )
 
@@ -268,8 +368,9 @@ class WindowGenerator:
 
     def make_window_batches(self, data: DataFrame, group: int) -> tf.data.Dataset:
         group_data = data.query(f"group == {group}")
-        group_features = get_features(group_data)
-        group_arr = array(group_features, dtype=float32)
+        group_data = group_data.drop(columns=["video", "frame_num", "group"])
+        group_arr = array(group_data, dtype=float32)
+
         return timeseries_dataset_from_array(
             data=group_arr,
             targets=None,
@@ -280,16 +381,12 @@ class WindowGenerator:
             batch_size=32,
         )
 
-    def make_ds(self, data: DataFrame, groups: list) -> tf.data.Dataset:
-
-        # TODO: try applying augmentations to data
-        # Same for each group
-        # different every run
+    def make_ds(self, data: DataFrame) -> tf.data.Dataset:
+        groups = data["group"].unique()
         windows = map(lambda group: self.make_window_batches(data, group), groups)
         windows = reduce(tf.data.Dataset.concatenate, windows)
         data_points = windows.map(self.split_window)
 
-        # TODO: batch from same groups!
         print(f"Generated {len(data_points)} batches")
         print("All shapes are: (batch, time, features)")
         print("Input data:", data_points.element_spec[0])
@@ -297,33 +394,13 @@ class WindowGenerator:
 
         return data_points
 
-    def make_dataset(self, data):
-        data = array(data, dtype=float32)
-        ds: tf.data.Dataset = tf.keras.utils.timeseries_dataset_from_array(
-            data=data,
-            targets=None,
-            sequence_length=self.total_window_size,
-            sequence_stride=1,
-            shuffle=False,
-            batch_size=1,
-        )
-
-        ds = ds.map(self.split_window)
-
-        return ds
-
     def get_class_weights(self, verbose: bool = False) -> ndarray:
-        train_df = self.train_df
-        class_counts = [sum(train_df[label]) for label in self.label_columns]
+        class_counts = self.__count_label_frames(self.raw_train_df)
         if verbose:
-            print(
-                [
-                    f"{name}: {count}"
-                    for (name, count) in zip(self.label_columns, class_counts)
-                ]
-            )
+            print("Class counts:\n", class_counts)
 
-        class_weights = sum(class_counts) / class_counts
+        count_list = list(class_counts.values())
+        class_weights = sum(count_list) / count_list
         if verbose:
             print(
                 [
@@ -333,6 +410,9 @@ class WindowGenerator:
             )
 
         return class_weights
+
+    def __count_label_frames(self, df: DataFrame) -> dict:
+        return {label: sum(df[label]) for label in self.label_columns}
 
     def __repr__(self):
         return "\n".join(
