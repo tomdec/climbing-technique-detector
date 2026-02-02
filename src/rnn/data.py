@@ -1,14 +1,6 @@
 from pandas import DataFrame
 from sklearn.impute import SimpleImputer
-from numpy import (
-    nan,
-    arange,
-    array,
-    mean,
-    float32,
-    reshape,
-    concatenate,
-)
+from numpy import nan, arange, array, mean, float32, reshape, concatenate, ndarray, sum
 from matplotlib import pyplot as plt
 import tensorflow as tf
 from pandas import Series, concat
@@ -97,13 +89,12 @@ class WindowGenerator:
 
     def __init__(
         self,
-        input_width: int,
-        label_width: int,
-        shift: int,
         data: DataFrame,
         train_groups: list,
         val_groups: list,
         test_groups: list,
+        input_width: int,
+        spacing: int = 1,
     ):
         df = data.copy()
         video = df.pop("video")
@@ -111,8 +102,9 @@ class WindowGenerator:
         group = df.pop("group")
 
         # Transform labels to model ouputs
-        labels_str = df.pop("label")
-        labels = binarize_labels(labels_str)
+        self.labels_str: Series = df.pop("label")
+        self.input_columns = df.columns
+        labels = binarize_labels(self.labels_str)
         self.label_columns = labels.columns
 
         # Remove missing values and normalize features
@@ -127,18 +119,21 @@ class WindowGenerator:
 
         # Work out the label column indices.
         self.column_indices = {name: i for i, name in enumerate(self.data.columns)}
+        self.input_column_indices = {
+            name: i for i, name in enumerate(self.input_columns)
+        }
         self.label_columns_indices = {
             name: i for i, name in enumerate(self.label_columns)
         }
 
         # Work out the window parameters.
         self.input_width = input_width
-        self.label_width = label_width
-        self.shift = shift
+        self.label_width = 1
+        self.spacing = spacing
 
-        self.total_window_size = input_width + shift
+        self.total_window_size = (input_width - 1) * spacing + 1
 
-        self.input_slice = slice(0, input_width)
+        self.input_slice = slice(0, input_width * spacing, spacing)
         self.input_indices = arange(self.total_window_size)[self.input_slice]
 
         self.label_start = self.total_window_size - self.label_width
@@ -149,6 +144,8 @@ class WindowGenerator:
         return {label: sum(df[label]) for label in self.label_columns}
 
     def inspect_fold_split(self):
+        print(f"Input features ({len(self.input_columns)}): ", self.input_columns)
+        print(f"Output columns ({len(self.label_columns)}): ", self.label_columns)
 
         print(f"Train: groups={self.train_groups}")
         print(f"Val:  groups={self.val_groups}")
@@ -179,7 +176,11 @@ class WindowGenerator:
 
     @tf.autograph.experimental.do_not_convert
     def split_window(self, batch: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-        inputs = batch[:, self.input_slice, :]
+        inputs: tf.Tensor = batch[:, self.input_slice, :]
+        inputs = tf.stack(
+            [inputs[:, :, self.column_indices[name]] for name in self.input_columns],
+            axis=-1,
+        )
         output = batch[:, self.labels_slice, :]
         output = tf.stack(
             [output[:, :, self.column_indices[name]] for name in self.label_columns],
@@ -189,7 +190,6 @@ class WindowGenerator:
         # Slicing doesn't preserve static shape information, so set the shapes
         # manually. This way the `tf.data.Datasets` are easier to inspect.
         inputs.set_shape([None, self.input_width, None])
-
         output.set_shape([None, self.label_width, None])
 
         return inputs, output
@@ -281,10 +281,15 @@ class WindowGenerator:
         )
 
     def make_ds(self, data: DataFrame, groups: list) -> tf.data.Dataset:
+
+        # TODO: try applying augmentations to data
+        # Same for each group
+        # different every run
         windows = map(lambda group: self.make_window_batches(data, group), groups)
         windows = reduce(tf.data.Dataset.concatenate, windows)
         data_points = windows.map(self.split_window)
 
+        # TODO: batch from same groups!
         print(f"Generated {len(data_points)} batches")
         print("All shapes are: (batch, time, features)")
         print("Input data:", data_points.element_spec[0])
@@ -306,6 +311,28 @@ class WindowGenerator:
         ds = ds.map(self.split_window)
 
         return ds
+
+    def get_class_weights(self, verbose: bool = False) -> ndarray:
+        train_df = self.train_df
+        class_counts = [sum(train_df[label]) for label in self.label_columns]
+        if verbose:
+            print(
+                [
+                    f"{name}: {count}"
+                    for (name, count) in zip(self.label_columns, class_counts)
+                ]
+            )
+
+        class_weights = sum(class_counts) / class_counts
+        if verbose:
+            print(
+                [
+                    f"{name}: {weight}"
+                    for (name, weight) in zip(self.label_columns, class_weights)
+                ]
+            )
+
+        return class_weights
 
     def __repr__(self):
         return "\n".join(

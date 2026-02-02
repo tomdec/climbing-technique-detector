@@ -45,6 +45,28 @@ class ExtendedStratifiedGroupKFold:
 
             yield train_index, val_index, test_index
 
+    def split_groups(
+        self, X: DataFrame, y: Series, groups: Series
+    ) -> Iterator[Tuple[ndarray, ndarray, ndarray]]:
+
+        for split in self.split(X, y, groups):
+            train_index, val_index, test_index = split
+            train_groups = unique(groups[train_index])
+            val_groups = unique(groups[val_index])
+            test_groups = unique(groups[test_index])
+
+            yield train_groups, val_groups, test_groups
+
+
+def iterate_group_splits(
+    full_data: DataFrame, splitter: ExtendedStratifiedGroupKFold
+) -> Iterator[Tuple[ndarray, ndarray, ndarray]]:
+    feature_placeholder = ones(shape=(full_data.shape[0]))
+    labels = full_data["label"]
+    groups = full_data["group"]
+
+    return splitter.split_groups(feature_placeholder, labels, groups)
+
 
 class RnnFoldCrossValidation:
 
@@ -201,7 +223,7 @@ class RnnFoldCrossValidation:
         )
         return Rnn(adapted_args)
 
-    def __split_files_exist(self, model_dir):
+    def __split_files_exist(self, model_dir) -> bool:
         return (
             exists(join(model_dir, "split", "train.npy"))
             and exists(join(model_dir, "split", "val.npy"))
@@ -235,7 +257,14 @@ class RnnFoldCrossValidation:
         if verbose:
             print(f"Building fold {fold_num} ...")
 
-        wg = WindowGenerator(5, 1, 1, data, train_groups, val_groups, test_groups)
+        wg = WindowGenerator(
+            data,
+            train_groups,
+            val_groups,
+            test_groups,
+            input_width=self.model_constructor_args.model_initialize_args.input_width,
+            spacing=self.model_constructor_args.model_initialize_args.spacing,
+        )
         if verbose:
             print(wg)
             wg.inspect_fold_split()

@@ -1,7 +1,7 @@
 from pandas import DataFrame, concat
 from os.path import join, isdir, exists, basename
 from os import listdir, makedirs, mkdir
-from numpy import zeros
+from numpy import ones
 from glob import glob
 from typing import Any, List, Callable
 from re import search
@@ -73,7 +73,7 @@ def generate_correlated_data(
     """
 
     def generate_features(label: int) -> List[int]:
-        features = zeros(len(feature_names))
+        features = ones(len(feature_names)) * 0.25
         features[label] = value
         return features
 

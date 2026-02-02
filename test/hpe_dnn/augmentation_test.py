@@ -79,3 +79,41 @@ def test_tranformations(test_data: DataFrame):
                 assert (input[header] == output[header]) or (output[header] == 0)
 
     test_data.apply(assert_transformation, axis=1)
+
+
+@pytest.mark.parametrize(
+    "test_data,expected",
+    [
+        (
+            __get_mp_test_df(0.5),
+            [
+                0.9343270670572916,
+                0.93892431640625,
+                0.93892431640625,
+                0.93892431640625,
+                0.93892431640625,
+                0.93892431640625,
+                0.93892431640625,
+            ],
+        ),
+        (
+            __get_yolo_test_df(0.5),
+            [
+                0.9343270670572916,
+                0.93892431640625,
+                0.93892431640625,
+                0.93892431640625,
+                0.93892431640625,
+                0.93892431640625,
+                0.93892431640625,
+            ],
+        ),
+    ],
+)
+def test_seeded_tranformations(test_data: DataFrame, expected):
+    aug_pipeline = AugmentationPipeline.for_dataframe(test_data)
+    aug_pipeline.set_seed(123)
+
+    actual = test_data.apply(aug_pipeline, axis=1)
+
+    assert all(actual[actual.columns[1]].values == expected)

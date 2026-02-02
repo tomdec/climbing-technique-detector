@@ -17,7 +17,7 @@ from src.common.model import (
 )
 
 
-def __swap_to_full_dataset(model_args: ModelConstructorArgs) -> ModelConstructorArgs:
+def _swap_to_full_dataset(model_args: ModelConstructorArgs) -> ModelConstructorArgs:
     if model_args.dataset_name.endswith("_full_kf"):
         return model_args
 
@@ -25,7 +25,7 @@ def __swap_to_full_dataset(model_args: ModelConstructorArgs) -> ModelConstructor
     return model_args.copy_with(dataset_name=new_name)
 
 
-def __swap_to_kf_dataset(model_args: ModelConstructorArgs) -> ModelConstructorArgs:
+def _swap_to_kf_dataset(model_args: ModelConstructorArgs) -> ModelConstructorArgs:
     if not model_args.dataset_name.endswith("_full_kf"):
         return model_args
 
@@ -221,7 +221,7 @@ class AbstractFoldCrossValidation:
         self.print_box_plot()
 
     def test_folds_on_full(self):
-        self._model_args = __swap_to_full_dataset(self._model_args)
+        self._model_args = _swap_to_full_dataset(self._model_args)
         try:
             full_data = self.get_full_data_list()
 
@@ -244,4 +244,4 @@ class AbstractFoldCrossValidation:
 
             self.print_box_plot()
         finally:
-            self._model_args = __swap_to_kf_dataset(self._model_args)
+            self._model_args = _swap_to_kf_dataset(self._model_args)

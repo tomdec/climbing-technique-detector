@@ -68,6 +68,8 @@ class AugmentationPipeline:
         self, dimensionality: int, augmentation_override: AugmentationFunc | None = None
     ):
         self._dimensionality = dimensionality
+        self._seed: int | None = None
+
         if self._dimensionality == 2:
             self._keypoint_format = "xy"
             self._keypoint_scaler = _2d_scaler
@@ -100,6 +102,9 @@ class AugmentationPipeline:
 
         return self.__to_df_row(series, xyz, vis, height, width)
 
+    def set_seed(self, seed):
+        self._seed = seed
+
     def __to_augmenting_array(
         self, input: Series, height: int, width: int
     ) -> Tuple[CoordinateFeatures, VisibilityFeatures]:
@@ -131,6 +136,7 @@ class AugmentationPipeline:
             keypoint_params=KeypointParams(
                 format(self.keypoint_format), remove_invisible=False
             ),
+            seed=self._seed,
         )
 
         transformed = transform_pipeline(image=image, keypoints=coordinates)

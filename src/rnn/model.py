@@ -29,6 +29,24 @@ from src.common.plot import plot_confusion_matrix
 from src.rnn.data import split_input_output, WindowGenerator, output_to_labels
 from src.rnn.architecture import get_model, RnnArch
 
+from keras import Variable
+from keras.api.ops import sum, clip, log
+from keras.api.config import epsilon
+
+
+def _weighted_categorical_cross_entropy(weights):
+    # source: https://gist.github.com/wassname/ce364fddfc8a025bfab4348cf5de852d
+    weights = Variable(weights)
+
+    def loss(y_true, y_pred):
+        y_pred /= sum(y_pred, axis=-1, keepdims=True)
+        y_pred = clip(y_pred, epsilon(), 1 - epsilon())
+        loss = y_true * log(y_pred) * weights
+        loss = -sum(loss, -1)
+        return loss
+
+    return loss
+
 
 class RnnModelInitializeArgs(ModelInitializeArgs):
 
@@ -38,9 +56,30 @@ class RnnModelInitializeArgs(ModelInitializeArgs):
         """Enum that is mapped to a factory function"""
         return self._model_arch
 
+    @property
+    def input_width(self) -> int:
+        return self._input_width
+
+    @property
+    def spacing(self) -> int:
+        return self._spacing
+
+    @property
+    def weighted_loss(self) -> bool:
+        return self._weighted_loss
+
     @override
-    def __init__(self, model_arch: RnnArch = RnnArch.ARCH1):
+    def __init__(
+        self,
+        model_arch: RnnArch = RnnArch.ARCH1,
+        input_width: int = 5,
+        spacing: int = 1,
+        weighted_loss: bool = False,
+    ):
         super().__init__(model_arch)
+        self._input_width = input_width
+        self._spacing = spacing
+        self._weighted_loss = weighted_loss
 
 
 class RnnConstructorArgs(ModelConstructorArgs):
@@ -138,19 +177,26 @@ class Rnn(ClassificationModel):
     def model(self) -> Sequential | None:
         return self._model
 
+    @property
+    def weighted_loss(self) -> bool:
+        return self.model_initialize_args.weighted_loss
+
     @override
     def __init__(self, args: RnnConstructorArgs):
         super().__init__(args)
         self._model = None
+        self._weights = None
 
     @override
     def execute_train_runs(self, args: RnnMultiRunTrainArgs):
+        self.__lazyload_weights(args.train_args.window_generator)
         return super().execute_train_runs(args)
 
     @override
     def train_model(self, args: RnnTrainArgs):
         if self.model is None:
             raise Exception("Cannot train before model is initialized")
+        self.__lazyload_weights(args.window_generator)
 
         train_ds = args.window_generator.train_ds
         val_ds = args.window_generator.val_ds
@@ -213,6 +259,7 @@ class Rnn(ClassificationModel):
 
     @override
     def test_model(self, args: RnnTestArgs):
+        self.__lazyload_weights(args.window_generator)
         self._load_best_model()
 
         model_path = self._get_model_dir()
@@ -257,6 +304,12 @@ class Rnn(ClassificationModel):
         self._save_test_metrics(performance)
         return performance
 
+    def __lazyload_weights(self, wg: WindowGenerator):
+        if self._weights is not None or not self.weighted_loss:
+            return
+
+        self._weights = wg.get_class_weights()
+
     def __evaluate_with_wandb(
         self, args: TestArgs, data: tf.data.Dataset, test_run_path: str
     ) -> dict:
@@ -300,12 +353,30 @@ class Rnn(ClassificationModel):
     @override
     def _fresh_model(self):
         print(f"loading a fresh model '{self.model_arch}'")
-        self._model = get_model(self.model_arch)
+        if not self.weighted_loss:
+            self._model = get_model(self.model_arch)
+        else:
+            loss = _weighted_categorical_cross_entropy(self._weights)
+            self._model = get_model(self.model_arch, loss=loss)
 
     @override
     def _load_model(self, best_model_path):
         print(f"loading the model '{self.name}' from '{best_model_path}'")
-        self._model = load_model(best_model_path)
+        if not self.weighted_loss:
+            self._model = load_model(best_model_path)
+        else:
+            loss = _weighted_categorical_cross_entropy(self._weights)
+            self._model = load_model(
+                best_model_path,
+                custom_objects={"loss": loss},
+            )
+
+    @override
+    def _get_common_wandb_config(self) -> dict:
+        return super()._get_common_wandb_config() | {
+            "input_width": self.model_initialize_args.input_width,
+            "spacing": self.model_initialize_args.spacing,
+        }
 
     def __get_train_wandb_config(self, args: RnnTrainArgs) -> dict:
         return (
