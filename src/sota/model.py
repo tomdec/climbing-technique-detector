@@ -10,7 +10,7 @@ from wandb.integration.ultralytics import add_wandb_callback
 from glob import glob
 
 from src.common.helpers import get_current_train_run
-from src.labels import get_label_value_from_path, name_to_value, value_to_name
+from src.labels import get_label_value_from_path, value_to_name
 from src.common.model import (
     ModelConstructorArgs,
     ModelInitializeArgs,

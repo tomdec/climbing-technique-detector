@@ -30,7 +30,8 @@ To properly set up the project run the following command from the root of this p
 pip install -r requirements.txt
 ```
 
-Install dependencies with the `pip install` command, and then add these to the requirements file by executing: 
+Install dependencies with the `pip install` command, and then add these to the requirements file by 
+executing: 
 ```
 pip freeze > requirements.txt
 ```
@@ -45,7 +46,8 @@ sudo apt install ffmpeg
 
 ## Weights and biases
 To integrate with a weights and biases server to log training, validation and evaluation of model, 
-add your api key as the `WANDB_API_KEY` environment variable, or use another method described [here](https://docs.wandb.ai/guides/integrations/add-wandb-to-any-library/#install-the-wandb-library-and-log-in).
+add your api key as the `WANDB_API_KEY` environment variable, or use another method described 
+[here](https://docs.wandb.ai/guides/integrations/add-wandb-to-any-library/#install-the-wandb-library-and-log-in).
 
 To enable logging from ultralytics, run this command in the cli:
 ```bash
