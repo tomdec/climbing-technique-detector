@@ -1,10 +1,7 @@
 import pytest
 from pandas import DataFrame, Series
-from math import isnan
-from cv2 import imread
-from cv2.typing import MatLike
-from typing import List, Tuple
 from numpy import concatenate
+from os.path import exists
 
 from src.labels import iterate_valid_labels
 from src.sampling.dataframe import generate_correlated_data, append_to_row
@@ -12,6 +9,8 @@ from src.hpe.mp.landmarks import get_feature_labels
 from src.hpe_dnn.helpers import binarize_labels
 
 from src.rnn.augmentation import AugmentationPipeline
+
+TEST_VIDEO_PATH = "test/data/video/test_video.mp4"
 
 
 def __get_test_df(value: float = 1.0) -> DataFrame:
@@ -21,8 +20,7 @@ def __get_test_df(value: float = 1.0) -> DataFrame:
     label_names.sort()
 
     def append_test_video_path():
-        test_video_path = "test/data/video/test_video.mp4"
-        return lambda row: append_to_row(row, test_video_path)
+        return lambda row: append_to_row(row, TEST_VIDEO_PATH)
 
     def append_group():
         group = 0
@@ -52,6 +50,11 @@ def test_testdata():
 
 @pytest.mark.parametrize("test_data", [__get_test_df()])
 def test_conservation_of_column_order(test_data: DataFrame):
+    if not exists(TEST_VIDEO_PATH):
+        pytest.skip(
+            "Test video not found. Make sure it exists when running tests locally."
+        )
+
     aug_pipeline = AugmentationPipeline()
 
     augmented = test_data.apply(aug_pipeline, axis=1)
@@ -77,6 +80,11 @@ def test_conservation_of_column_order(test_data: DataFrame):
     ],
 )
 def test_seeded_tranformations(test_data: DataFrame, expected):
+    if not exists(TEST_VIDEO_PATH):
+        pytest.skip(
+            "Test video not found. Make sure it exists when running tests locally."
+        )
+
     aug_pipeline = AugmentationPipeline()
     aug_pipeline.set_seed(123)
 
@@ -90,6 +98,11 @@ def test_seeded_tranformations(test_data: DataFrame, expected):
     [__get_test_df(0.5)],
 )
 def test_multiple_seeded_tranformations(test_data: DataFrame):
+    if not exists(TEST_VIDEO_PATH):
+        pytest.skip(
+            "Test video not found. Make sure it exists when running tests locally."
+        )
+
     aug_pipeline = AugmentationPipeline()
     aug_pipeline.set_seed(123)
 
