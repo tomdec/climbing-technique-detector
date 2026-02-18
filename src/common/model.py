@@ -2,9 +2,51 @@ from json import dump, load
 from typing import Any
 from os.path import exists, join
 from cv2.typing import MatLike
+from re import search
 
-from src.common.helpers import get_runs, raise_not_implemented_error, get_next_train_run, \
-    get_current_train_run, get_current_test_run
+from src.common.helpers import (
+    get_runs,
+    raise_not_implemented_error,
+    get_next_train_run,
+    get_current_train_run,
+    get_current_test_run,
+)
+
+
+def get_best_tf_weights(path_to_weights: list) -> str:
+    path_to_weights.sort()
+    best_path = path_to_weights[0]
+    best_performance = 0
+
+    for path in path_to_weights:
+        m = search(
+            r"(.*)\/epoch_(\d{2})__(val_accuracy|val_loss)_([\d\.]+)\.keras", path
+        )
+        metric_name = str(m.group(3))
+        metric_value = float(m.group(4))
+
+        if metric_name == "val_accuracy":
+            if best_performance <= metric_value:
+                best_path = path
+                best_performance = metric_value
+        else:
+            if best_performance == 0 or metric_value <= best_performance:
+                best_path = path
+                best_performance = metric_value
+
+    return best_path
+
+
+class ModelInitializeArgs:
+
+    @property
+    def model_arch(self) -> Any:
+        """Key to determine the structure of the model when initializing."""
+        return self._model_arch
+
+    def __init__(self, model_arch: Any):
+        self._model_arch = model_arch
+
 
 class ModelConstructorArgs:
 
@@ -14,24 +56,23 @@ class ModelConstructorArgs:
         return self._name
 
     @property
-    def model_arch(self) -> Any:
-        """Key to determine the structure of the model when initializing."""
-        return self._model_arch
-    
+    def model_initialize_args(self) -> ModelInitializeArgs:
+        return self._model_initialize_args
+
     @property
     def data_root_path(self) -> str:
         """
         Path to the `data` folder relative to the directory where to code is executed.
-        Default: "data", path relative to the jupyter notebook and when running code from the 
+        Default: "data", path relative to the jupyter notebook and when running code from the
         root of the project.
         """
         return self._data_root_path
-    
+
     @property
     def dataset_name(self) -> str:
         """
         Name of the dataset to use.
-        Default: "techniques", most general and complete dataset. 
+        Default: "techniques", most general and complete dataset.
         """
         return self._dataset_name
 
@@ -39,39 +80,30 @@ class ModelConstructorArgs:
     def base_name(self) -> str:
         return self._base_name
 
-    def __init__(self, name: str, 
-            model_arch: Any,
-            data_root_path: str = "data",
-            dataset_name: str = "techniques"):
-        
-        if (name == ""):
+    def __init__(
+        self,
+        name: str,
+        model_initialize_args: ModelInitializeArgs,
+        data_root_path: str = "data",
+        dataset_name: str = "techniques",
+    ):
+
+        if name == "":
             raise Exception(f"name cannot be an empty string")
-        
+
         self._name = name
-        self._model_arch = model_arch
+        self._model_initialize_args = model_initialize_args
         self._data_root_path = data_root_path
         self._dataset_name = dataset_name
-        
+
         idx = name.find("-fold")
         self._base_name = name if (idx == -1) else name[:idx]
 
-    def copy_with(self, 
-            name: str | None = None, 
-            dataset_name: str | None = None) -> 'ModelConstructorArgs':
-        
-        return ModelConstructorArgs(
-            name = self.name if name is None else name,
-            model_arch = self.model_arch,
-            data_root_path = self.data_root_path,
-            dataset_name = self.dataset_name if dataset_name is None else dataset_name)
+    def copy_with(
+        self, name: str | None = None, dataset_name: str | None = None
+    ) -> "ModelConstructorArgs":
+        raise_not_implemented_error(self.__class__.__name__, self.copy_with.__name__)
 
-    def swap_to_full_dataset(self):
-        if not self.dataset_name.endswith("_full_kf"):
-            self._dataset_name = self.dataset_name.replace("_kf", "_full_kf")
-
-    def swap_to_kf_dataset(self):
-        if self.dataset_name.endswith("_full_kf"):
-            self._dataset_name = self.dataset_name.replace("_full_kf", "_kf")
 
 class TrainArgs:
 
@@ -85,11 +117,11 @@ class TrainArgs:
         """Indicates if the training data is balanced between labels"""
         return self._balanced
 
-    @property    
+    @property
     def additional_config(self) -> dict:
         """Optional configuration to add to the config dictionary for weights and biases"""
         return self._additional_config
-    
+
     @additional_config.setter
     def additional_config(self, value: dict):
         self._additional_config = value
@@ -99,37 +131,28 @@ class TrainArgs:
         self._balanced = balanced
         self._additional_config = additional_config
 
+    def add_config(self, config: dict):
+        self.additional_config = self.additional_config | config
+
+
 class TestArgs:
 
     @property
     def write_to_wandb(self) -> bool:
         """Write test results to Weigths and Biases"""
         return self._write_to_wandb
-    
-    @property    
+
+    @property
     def additional_config(self) -> dict:
         """Optional configuration to add to the config dictionary for weights and biases"""
         return self._additional_config
-    
 
-    def __init__(self, write_to_wandb = False, 
-            additional_config={}):
+    def __init__(self, write_to_wandb=False, additional_config={}):
         self._write_to_wandb = write_to_wandb
         self._additional_config = additional_config
 
-class ModelInitializeArgs:
-    
-    def __init__(self):
-        pass
 
 class MultiRunTrainArgs:
-
-    #TODO: decouple training and model initialing. 
-    # Testing also required model initializing
-    @property
-    def model_initialize_args(self) -> ModelInitializeArgs:
-        """Arguments for initializing the AI model."""
-        return self._model_initialize_args
 
     @property
     def runs(self) -> int:
@@ -141,45 +164,51 @@ class MultiRunTrainArgs:
         """Arguments to use during training."""
         return self._train_args
 
-    def __init__(self, model_initialize_args: ModelInitializeArgs, 
-            runs: int = 5, 
-            train_args: TrainArgs = TrainArgs()):
-        self._model_initialize_args = model_initialize_args
+    def __init__(
+        self,
+        runs: int = 5,
+        train_args: TrainArgs = TrainArgs(),
+    ):
         self._runs = runs
         self._train_args = train_args
 
+
 class ClassificationModel:
-    
+
     name: str
+
+    @property
+    def model_initialize_args(self) -> ModelInitializeArgs:
+        return self._model_initialize_args
 
     @property
     def model_arch(self) -> Any:
         """Architecture of the AI model"""
-        return self._model_arch
+        return self.model_initialize_args.model_arch
 
     data_root_path: str
     dataset_name: str
     base_name: str
-    
+
     def __init__(self, args: ModelConstructorArgs):
         self.name = args.name
-        self._model_arch = args.model_arch
+        self._model_initialize_args = args.model_initialize_args
         self.data_root_path = args.data_root_path
         self.dataset_name = args.dataset_name
         self.base_name = args.base_name
 
-    def initialize_model(self, args: ModelInitializeArgs):
-        if (self.__has_trained()):
+    def initialize_model(self):
+        if self.__has_trained():
             self._load_best_model()
         else:
-            self._fresh_model(args)
+            self._fresh_model()
 
     def execute_train_runs(self, args: MultiRunTrainArgs):
         for run in range(args.runs):
             print(f"starting run #{run}")
-            self.initialize_model(args.model_initialize_args)
+            self.initialize_model()
             self.train_model(args.train_args)
-    
+
     def train_model(self, args: TrainArgs):
         raise_not_implemented_error(self.__class__.__name__, self.train_model.__name__)
 
@@ -188,20 +217,26 @@ class ClassificationModel:
 
     def get_test_metrics(self) -> dict:
         file_path = join(self._get_current_test_run_path(), "metrics.json")
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             return load(file)
-        
+
     def get_test_accuracy_metric(self) -> float:
-        raise_not_implemented_error(self.__class__.__name__, self.get_test_accuracy_metric.__name__)
+        raise_not_implemented_error(
+            self.__class__.__name__, self.get_test_accuracy_metric.__name__
+        )
 
     # def evaluate(self, image: MatLike) -> str:
     #     raise_not_implemented_error(self.__class__.__name__, self.evaluate.__name__)
 
     def _get_model_dir(self):
-        raise_not_implemented_error(self.__class__.__name__, self._get_model_dir.__name__)
+        raise_not_implemented_error(
+            self.__class__.__name__, self._get_model_dir.__name__
+        )
 
     def _get_best_model_path(self):
-        raise_not_implemented_error(self.__class__.__name__, self._get_best_model_path.__name__)
+        raise_not_implemented_error(
+            self.__class__.__name__, self._get_best_model_path.__name__
+        )
 
     def _load_model(self, model_path: str):
         raise_not_implemented_error(self.__class__.__name__, self._load_model.__name__)
@@ -210,7 +245,7 @@ class ClassificationModel:
         model_path = self._get_best_model_path()
         self._load_model(model_path)
 
-    def _fresh_model(self, args: ModelInitializeArgs):
+    def _fresh_model(self):
         raise_not_implemented_error(self.__class__.__name__, self._fresh_model.__name__)
 
     def _get_next_train_run(self):
@@ -235,21 +270,21 @@ class ClassificationModel:
 
     def _get_common_wandb_config(self) -> dict:
         return {
-            'model_arch': self.model_arch,
-            'dataset_name': self.dataset_name,
-            'base_name': self.base_name,
-            'on_full': "_full" in self.dataset_name
+            "model_arch": self.model_arch,
+            "dataset_name": self.dataset_name,
+            "base_name": self.base_name,
+            "on_full": "_full" in self.dataset_name,
         }
-    
+
     def _save_test_metrics(self, metrics: dict):
         file_path = join(self._get_current_test_run_path(), "metrics.json")
-        with open(file_path, 'w') as file:
+        with open(file_path, "w") as file:
             dump(metrics, file)
 
     def __has_trained(self) -> bool:
         model_dir = self._get_model_dir()
         if not exists(model_dir):
             return False
-        
+
         train_runs = get_runs(model_dir, "train")
         return len(train_runs) > 0

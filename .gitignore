@@ -1,7 +1,9 @@
 data/**
 !data/labels/**
-**.pt
+yolo*.pt
+data/**.pt
 test/sota/data/**
+test/data/video/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
