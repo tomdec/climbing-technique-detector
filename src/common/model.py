@@ -19,12 +19,20 @@ def get_best_tf_weights(path_to_weights: list) -> str:
     best_performance = 0
 
     for path in path_to_weights:
-        m = search(r"(.*)\/epoch_(\d{2})__val_accuracy_([\d\.]+)\.keras", path)
-        val_acc = float(m.group(3))
+        m = search(
+            r"(.*)\/epoch_(\d{2})__(val_accuracy|val_loss)_([\d\.]+)\.keras", path
+        )
+        metric_name = str(m.group(3))
+        metric_value = float(m.group(4))
 
-        if best_performance <= val_acc:
-            best_path = path
-            best_performance = val_acc
+        if metric_name == "val_accuracy":
+            if best_performance <= metric_value:
+                best_path = path
+                best_performance = metric_value
+        else:
+            if best_performance == 0 or metric_value <= best_performance:
+                best_path = path
+                best_performance = metric_value
 
     return best_path
 

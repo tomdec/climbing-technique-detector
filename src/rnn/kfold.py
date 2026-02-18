@@ -174,6 +174,42 @@ class RnnFoldCrossValidation:
             # add values from model_initialize_args
         }
 
+    def train_fold(
+        self,
+        fold_num: int,
+        train_run_args: RnnIntMultiRunTrainArgs,
+        verbose: bool = False,
+    ):
+        full_data = self.get_full_data_list()
+
+        feature_placeholder = ones(shape=(full_data.shape[0]))
+        labels = full_data["label"]
+        groups = full_data["group"]
+
+        split_iterator = self._splitter.split(feature_placeholder, labels, groups)
+
+        split = list(split_iterator)
+        train_index, val_index, test_index = split[fold_num - 1]
+        train_groups = unique(groups[train_index])
+        val_groups = unique(groups[val_index])
+        test_groups = unique(groups[test_index])
+
+        if verbose:
+            print(f"Fold {fold_num}:")
+            print(f"  Train: groups={train_groups}")
+            print(f"  Val:  groups={val_groups}")
+            print(f"  Test:  groups={test_groups}")
+
+        self.__train_fold(
+            train_run_args,
+            fold_num,
+            full_data,
+            train_groups,
+            val_groups,
+            test_groups,
+            verbose,
+        )
+
     def __train_fold(
         self,
         train_run_args: RnnIntMultiRunTrainArgs,

@@ -268,34 +268,21 @@ class Rnn(ClassificationModel):
         makedirs(log_dir)
         make_file(results_file)
         try:
-            checkpoint_path = join(
-                checkpoint_dir,
-                "epoch_{epoch:02d}__val_accuracy_{val_categorical_accuracy:.4f}.keras",
-            )
-            cp_callback = ModelCheckpoint(
-                checkpoint_path,
-                save_best_only=True,
-                save_weights_only=False,
-                verbose=1,
-                monitor="val_categorical_accuracy",
-            )
-
+            cp_callback = self.__get_checkpoint_callback(checkpoint_dir, args)
             csv_callback = CSVLogger(filename=results_file)
-
-            early_stopping_callback = EarlyStopping(
-                monitor="val_categorical_accuracy", patience=3
-            )
+            early_stopping_callback = self.__get_early_stopping_callback(args)
 
             self.model.fit(
                 train_ds,
                 epochs=args.epochs,
                 validation_data=val_ds,
+                shuffle=False,
                 callbacks=[
                     cp_callback,
                     csv_callback,
                     early_stopping_callback,
                     WandbMetricsLogger(),
-                    WandbModelCheckpoint(join(log_dir, "wandb.keras")),
+                    # WandbModelCheckpoint(join(log_dir, "wandb.keras")),
                 ],
             )
 
@@ -353,6 +340,38 @@ class Rnn(ClassificationModel):
         performance = self.model.evaluate(data, return_dict=True, callbacks=callbacks)
         self._save_test_metrics(performance)
         return performance
+
+    def __get_checkpoint_callback(
+        self, checkpoint_dir: str, train_args: RnnTrainArgs
+    ) -> ModelCheckpoint:
+
+        file_name = (
+            "epoch_{epoch:02d}__val_accuracy_{val_categorical_accuracy:.4f}.keras"
+            if not train_args.balanced
+            else "epoch_{epoch:02d}__val_loss_{val_loss:.4f}.keras"
+        )
+        metric_to_monitor = (
+            "val_categorical_accuracy" if not train_args.balanced else "val_loss"
+        )
+        mode = "max" if not train_args.balanced else "min"
+
+        checkpoint_path = join(checkpoint_dir, file_name)
+        cp_callback = ModelCheckpoint(
+            checkpoint_path,
+            save_best_only=True,
+            save_weights_only=False,
+            verbose=1,
+            monitor=metric_to_monitor,
+            mode=mode,
+        )
+        return cp_callback
+
+    def __get_early_stopping_callback(self, train_args: RnnTrainArgs) -> EarlyStopping:
+        metric_to_monitor = (
+            "val_categorical_accuracy" if not train_args.balanced else "val_loss"
+        )
+        mode = "max" if not train_args.balanced else "min"
+        return EarlyStopping(monitor=metric_to_monitor, patience=3, mode=mode)
 
     def __evaluate_with_wandb(
         self, args: TestArgs, data: tf.data.Dataset, test_run_path: str
