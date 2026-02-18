@@ -2,7 +2,7 @@ import shutil
 import tensorflow as tf
 from keras import Model
 from os.path import join
-from os import listdir, mkdir, makedirs
+from os import mkdir, makedirs
 from keras._tf_keras.keras.callbacks import ModelCheckpoint, CSVLogger, EarlyStopping
 from keras._tf_keras.keras.models import load_model
 from typing import override
@@ -24,11 +24,11 @@ from src.common.model import (
     get_best_tf_weights,
 )
 from src.common.helpers import (
-    get_current_train_run,
     get_next_test_run,
     read_dataframe,
     make_file,
 )
+from src.common.wandb import PROJECT_NAME
 from src.hpe_dnn.architecture import DnnArch, get_model_factory
 from src.hpe_dnn.helpers import df_to_dataset
 from src.common.plot import plot_confusion_matrix
@@ -188,7 +188,7 @@ class HpeDnn(ClassificationModel):
 
         config = self.__get_train_wandb_config(args)
         init(
-            project="detect-climbing-technique",
+            project=PROJECT_NAME,
             job_type="train",
             group="hpe_dnn",
             name=self.name,
@@ -309,7 +309,7 @@ class HpeDnn(ClassificationModel):
         if args.write_to_wandb:
             config = self.__get_test_wandb_config(args)
             wandb_run = init(
-                project="detect-climbing-technique",
+                project=PROJECT_NAME,
                 job_type="test",
                 group="hpe_dnn",
                 name=self.name,

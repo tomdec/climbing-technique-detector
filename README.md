@@ -49,6 +49,9 @@ To integrate with a weights and biases server to log training, validation and ev
 add your api key as the `WANDB_API_KEY` environment variable, or use another method described 
 [here](https://docs.wandb.ai/guides/integrations/add-wandb-to-any-library/#install-the-wandb-library-and-log-in).
 
+Rename of `PROJECT_NAME` variable in [this file](src/common/wandb.py) to the project name you set up
+on the weights and biases website and where you want the results and artifacts to be stored.
+
 To enable logging from ultralytics, run this command in the cli:
 ```bash
 yolo settings wandb=True

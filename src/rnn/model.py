@@ -1,18 +1,17 @@
 import shutil
 import tensorflow as tf
 from typing import override, List
-from os import makedirs, listdir, mkdir
+from os import makedirs, mkdir
 from os.path import join
 from wandb.sdk import init, finish
 from keras.api.callbacks import Callback, ModelCheckpoint, CSVLogger, EarlyStopping
 from keras.api.models import load_model, Sequential
 from keras.api.losses import CategoricalCrossentropy
 from wandb.data_types import Image
-from wandb.integration.keras import WandbMetricsLogger, WandbModelCheckpoint
+from wandb.integration.keras import WandbMetricsLogger
 from glob import glob
 
 from src.common.helpers import (
-    get_current_train_run,
     get_next_test_run,
     make_file,
 )
@@ -26,6 +25,7 @@ from src.common.model import (
     get_best_tf_weights,
 )
 from src.common.plot import plot_confusion_matrix
+from src.common.wandb import PROJECT_NAME
 from src.rnn.data import split_input_output, WindowGenerator, output_to_labels
 from src.rnn.augmentation import AugmentationPipeline
 from src.rnn.architecture import get_model, RnnArch
@@ -256,7 +256,7 @@ class Rnn(ClassificationModel):
 
         wandb_config = self.__get_train_wandb_config(args)
         init(
-            project="detect-climbing-technique",
+            project=PROJECT_NAME,
             job_type="train",
             group="rnn",
             name=self.name,
@@ -379,7 +379,7 @@ class Rnn(ClassificationModel):
 
         config = self.__get_test_wandb_config(args)
         wandb_run = init(
-            project="detect-climbing-technique",
+            project=PROJECT_NAME,
             job_type="test",
             group="rnn",
             name=self.name,

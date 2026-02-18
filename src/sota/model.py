@@ -20,6 +20,7 @@ from src.common.model import (
     ClassificationModel,
 )
 from src.common.plot import plot_confusion_matrix
+from src.common.wandb import PROJECT_NAME
 from src.sota.balancing import WeightedTrainer
 
 
@@ -152,7 +153,7 @@ class SOTA(ClassificationModel):
 
         config = self.__get_train_wandb_config(args)
         init(
-            project="detect-climbing-technique",
+            project=PROJECT_NAME,
             job_type="train",
             group="sota",
             name=self.name,
@@ -216,7 +217,7 @@ class SOTA(ClassificationModel):
         if args.write_to_wandb:
             config = self.__get_test_wandb_config(args)
             wandb_run = init(
-                project="detect-climbing-technique",
+                project=PROJECT_NAME,
                 job_type="test",
                 group="sota",
                 name=self.name,
