@@ -3,7 +3,7 @@ from os.path import join, isdir, exists, basename
 from os import listdir, makedirs, mkdir
 from numpy import ones
 from glob import glob
-from typing import Any, List, Callable
+from typing import Any, List
 from re import search
 
 from src.labels import get_label_value_from_path, value_to_name
