@@ -103,114 +103,71 @@ Python files in the root folder are meant to be run as scripts from the command 
 python <file-name>.py
 ```
 
-### notebook.ipynb
-Jupyter notebook mean as experimentation tool to build/debug/test source code.
-Also contains code for training the models with all the used configurations.
+### .ipynb notebooks
+Several Jupyter notebook files are included, these are meant as experimentation tools to try out 
+code or run some specific one time operations with the different models.
+
+#### playground.ipynb
+Main experimentational notebook to build/debug/test source code.
+
+#### hpe_poc.ipynb
+Contains code for benchmarking the MediaPipe and YOLO hpe tools, and comparing and visualizing the
+results. 
+
+#### sota_vs_dnn.ipynb
+Contains code for the model selection process (training and testing) for the SOTA image 
+classification and DNN models.
+Also compares and visualizes their results.
+Additionally, a real world usecase is simulated to compare performance of the models that were found
+best from both model selection processes.
+
+#### dnn_vs_lstm.ipynb
+Contains code for the model selection process (training and testing) for the RNN (LSTM) models.
+Also compares and visualizes their results against those from the DNN models.
+
+### CLI tools
+The root folder also contains several cli tools for generating specific dataset.
+Run these scripts with the `--help` flag to get tool specific information.
 
 ## /data
 Contains all data files required in this project.
 Label files will be included in source control to have back-ups of them, video files and images 
 won't since they are too large and not mine to make publicly available.
 
+### /aug
+Examples of augmentation transformations are stored here, only for illustration purposes.
+
 ### /df
-Contains the DataFrame datasets used for the HPE DNN models. The DataFrames are saved as `.pkl` 
-files.
-
-The file system structure of this folder is determined by the source code of this project.
-
-Expected structure: 
-```bash
-data/df
-├── {dataset_name}
-│   ├── test.pkl
-│   ├── train.pkl
-│   └── val.pkl
-└── {dataset_name}_kf
-    └── all.pkl
-```
+Will store various generated dataset as DataFrame objects.
+The DataFrames are saved as `.pkl` files.
 
 ### /hpe
-Contains data for the HPE benchmark. These are open source images of climbers with the HPE landmarks 
-labelled. 
-Also contains the result data of the compared HPE tools, MediaPipe and Yolo.
+Contains data for the HPE benchmark. 
+`/img` contains the open source images of climbers with the HPE landmarks labelled, these can be 
+downloaded from [roboflow](https://app.roboflow.com/vaf/bouldering-poses/browse). 
+The file structure under `/data/hpe/img` is determined by the downloaded files from Roboflow, 
+however, as no training is done in this project with these images, they can all be moved to the 
+`test` folder to have as much data as possible.
 
-The file structure under `/data/hpe/img` is determined by the HPE labelling tool, [roboflow](https://app.roboflow.com).
+Benchmarking results are also placed in this folder, results for the MediaPipe tool are placed in 
+`data/hpe/mediapipe` and for YOLO in `data/hpe/yolo`.
+Comparison results of both tools are placed in `data/hpe`.
 
-The file structure under `/data/hpe/mediapipe` and `/data/hpe/yolo` is determined by the source code of this project.
-
-Expected structure:
-```bash
-data/hpe
-├── img
-│   ├── README.dataset.txt
-│   ├── README.roboflow.txt
-│   ├── data.yaml
-│   ├── test
-│   │   ├── images
-│   │   │   ├── image_name_1.jpg
-│   │   │   └── ...
-│   │   └── labels
-│   │       ├── image_name_1.txt
-│   │       └── ...
-│   ├── train
-│   │   ├── images
-│   │   │   └── ...
-│   │   └── labels
-│   │       └── ...
-│   └── valid
-│       ├── images
-│       │   └── ...
-│       └── labels
-│           └── ...
-├── mediapipe
-│   ├── avg-distances.png
-│   ├── distances.pkl
-│   └── distances_bgr.pkl
-└── yolo
-    ├── avg-distances.png
-    ├── distances.pkl
-    └── distances_bgr.pkl
-```
+The file structure under `/data/hpe/mediapipe` and `/data/hpe/yolo` is determined by the source code 
+of this project.
 
 ### /img
-Contains the image datasets. This structure is determined by the source code of this project.
-
-Expected structure: 
-```bash
-data/img
-├── {dataset_name}
-│   ├── test
-│   │   ├── label1
-│   │   │   ├── image_name_1.png
-│   │   │   └── ...
-│   │   ├── ...
-│   │   └── label{n}
-│   │       ├── image_name_x.png
-│   │       └── ...
-│   ├── train
-│   │   ├── label1
-│   │   │   └── ...
-│   │   └── ...
-│   └── val
-│       ├── label1
-│       │   └── ...
-│       └── ...
-└── {dataset_name}_kf
-    └── all
-        ├── label1
-        │   ├── image_name_1.png
-        │   └── ...
-        ├── ...
-        └── label{n}
-            ├── image_name_x.png
-            └── ...
-```
+Contains the image datasets, generated from the annotated videos and used for training the SOTA 
+models.
+This structure is determined by the source code of this project.
 
 ### /labels
-Labels for the video files in `/data/videos`. They should have the exact same names as the video files, but have the `.csv` extension.
+Labels for the video files in `/data/videos`. 
+They should have the exact same names as the video files, but have the `.csv` extension.
 
 #### /labels.yml
-Configuration file to specify the labels we will try to recognize.
+Configuration file to specify the labels the project will try to recognize and which are annotated
+in the videos.
 
 Expected structure: 
 ```yaml
@@ -220,60 +177,28 @@ values:
   - LABEL_1
   ...
 ```
-The `name` value of the labels is also used as the dataset name when these are generated.
+The `name` value of the labels is also used as the default dataset name when these are generated.
 
-`values` is a list of the names of the labels. These names are used as the folder names in the `/samples` and `/img` datasets. The indexes of these labels are used in the `.csv` label files under `/data/labels` and the `/df` datasets.
+`values` is a list of the names of the labels. 
+These names are used as the folder names in the `/samples` and `/img` datasets. 
+The indexes of these labels are used in the `.csv` label files under `/data/labels` and the `/df` 
+datasets.
 
-The only fixed value of these labels is the first label `INVALID`, at index `0`. This index will always be recognized as the `INVALID` label, used to mark video segments that should not be used for training or testing, for example, parts of the video that are heavily editted or cuts happen. 
+The only fixed value of these labels is the first label `INVALID`, at index `0`. 
+This index will always be recognized as the `INVALID` label, used to mark video segments that should 
+not be used for training or testing, for example, parts of the video that are heavily editted or do 
+not contain data the models need to learn from.
 
 ### /runs
 Contains the results from training, validation and test runs for the different models.
 
-This structure is determined by the source code of this project, the actual saved files for each run depend on the used tools for that model.
+This structure is determined by the source code of this project, the actual saved files for each run 
+depend on the used tools for that model.
 
 The `split` folder are only present for models trained under the k-fold algorithm.
 
-Expected structure:
-```bash
-data/runs
-├── {model_name}
-│   ├── train
-│   │   └── ...
-│   ├── ...
-│   ├── train{n_train}
-│   │   └── ...
-│   ├── test
-│   │   └── ...
-│   ├── ...
-│   └── test{n_test}
-│       └── ...
-└── {model_name}-kf-fold{n_fold}
-    ├── split
-    │   ├── test.npy
-    │   ├── train.npy
-    │   └── val.npy
-    ├── train
-    │   └── ...
-    ├── ...
-    ├── test
-    │   └── ...
-    └── ...
-```
-
 ### /samples
 Contains the video snippets grouped by their label. These samples are [generated](#3-extract-labelled-samples-from-videos) from `/videos` and `/labels`.
-
-Expected structure:
-```bash
-data/samples
-├── label1
-│   ├── sample_name_1.mp4
-│   └── ...
-├── ...
-└── label{n}
-    ├── sample_name_x.mp4
-    └── ...
-```
 
 ### /video
 Folder that contains the full, original, videos that are used as dataset for this project. 
@@ -282,7 +207,7 @@ Folder that contains the full, original, videos that are used as dataset for thi
 Contains the source code required in the project.
 
 ## /test
-Contains tests for the source code, run by 
+Contains tests for the source code, run with
 ```
 pytest
 ```
@@ -290,29 +215,15 @@ pytest
 # Usage
 
 ## 1. HPE tool benchmark
-To compare the MediaPipe and Yolo tools for the HPE predictions the code in the [hpe poc notebook](/hpe_poc.ipynb) can be used, or the source code under `src/hpe`.
+To compare the MediaPipe and Yolo tools for the HPE predictions the code in the 
+[hpe poc notebook](/hpe_poc.ipynb) can be used, or the source code under `src/hpe`.
 
-First, labelled images will be needed, we did the labelling with [roboflow](https://app.roboflow.com). 
-Once labelled, the data can be imported and placed in `/data/hpe/img`.
+First, labelled images will be needed, we did the labelling with 
+[roboflow](https://app.roboflow.com) and they can be downloaded 
+[here](https://app.roboflow.com/vaf/bouldering-poses/browse). 
 
-Plot the distances between the labelled landmarks and the predicted landmarks, run:
-```python
-from src.hpe.yolo.performance import estimate_distances
-from src.hpe.yolo.plot import plot_yolo_average_distances
-
-distances = estimate_distances()
-plot_yolo_average_distances(distances=distances)
-```
-
-To estimate the performance and log it to the output, run:
-```python
-from src.hpe.yolo.performance import estimate_performance
-
-estimate_performance(name="Yolov11x-pose")
-```
-
-Similar code is used for MediaPipe, just import from `src.hpe.mp` instead.
-Alterations can also be made to test the performance when evaluation the images from BGR color encoding, see the [hpe poc notebook](/hpe_poc.ipynb) for this code.
+When using the project to analyze and classify (segments of) videos, this part can likely be 
+skipped.
 
 ## 1. download videos
 By running
@@ -320,213 +231,262 @@ By running
 python build-database.py
 ```
 the videos used as data source will be downloaded and saved in the `/data/videos` folder.
-These are just the public videos we collected from the internet, your own videos can also be added by pasting them inside this directory as well. 
+First add links to the public videos you want to use for your project to the `__list` variable in 
+[the python script](build-database.py).
+
+These are just the public videos collected from the internet, your own videos can also be added 
+by manually pasting them inside the output directory as well. 
 
 ## 2. label videos
 By running
 ```bash
-python play-video.py <n>
+python play-video.py <video-path>
 ```
-A video will be played while the current frame number is also shown in the player window for easier labelling of the videos.
+A video will be played while the current frame number is also shown in the player window for easier 
+labelling of the videos.
 
-The argument `n` passed to the script is an integer and indicates the index of the video to be played.
+The argument `video-path` passed to the script is the path to the video to play, this should be a 
+video present in the `data/videos` directory.
 
-This script expects a number of videos directly in the `/data/videos` directory.
-
-Using the arrow keys you can walk through the video to find the relevant segment faster and more accurately.
+Using the arrow keys you can walk through the video to find the relevant segment faster and more 
+accurately.
 While the video is playing, the arrows will jump 1 second in their respective direction.
 While paused the video will jump only a single frame when pressing an arrow key.
 Press `q` the quit the player, closing it with the mouse will just reopen it on the next frame.
 
-Manually create a `.csv` file in the `/data/labels` directory with the same file name as the video your labelling.
-These csv files should contain 3 columns:
-Start Frame (inclusive) | End Frame (exclusive) | label value
-:---|:---:|---:
-271|419|1
+Manually create a `.csv` file in the `/data/labels` directory with the same file name as the video 
+your labelling.
+These csv files should contain 4 columns:
+Start Frame (inclusive) | End Frame (exclusive) | label value | cvs start
+:---|:---:|:---:|---:
+271|419|1|1
+419|502|2|0
+502|545|1|1
+648|752|0|1
 
-This would label the segment from frame 271 up to 419 as label 1.
+This would label the segment from frame 271 up to 419 as LABEL2 and as the start of a Continuous 
+Valid Segment (CVS).
 
-All gaps between the end frame and the start frame from the next line are segments labelled as label 0 (INVALID), indicating that part of the video cannot be used to train or test the models.
+These label numbers start at 0 after the first INVALID label, they are indexes of only the valid 
+labels returned by [iterate_valid_labels](src/labels.py).
+All gaps between the end frame and the start frame from the next line are segments labelled as 
+INVALID, indicating that part of the video cannot be used to train or test the models.
+
+Transitions in labels can be over a continuous part of the video (first and second row), in this 
+case end frame of the first and start frame of the next segment are the same and the second line
+is not the start of a CVS.
+
+Transitions in labels can with a cut to a different 'scene' (first and third row), in this 
+case end frame of the first and start frame of the next segment are still the same, with the cut 
+happening on this frame, but now the second line/segment is the start of a new CVS.
+
+Two labelled segments can be separated by an invalid segment (third and fourth row).
+Here the second row is always the start of a new CVS.
+
+These CVS's are important to simulate the real world use cases of a real-time video classification 
+tool, and to generate the datasets to train the RNN models.
 
 ## 3. Extract labelled samples from videos
-By running 
+With all videos new present and labelled, the valid segments can be extracted and stored separately 
+as their own video fragments.
+Do this by running 
 ```bash
 python generate-sample-dataset.py
 ```
 Each labelled part of the videos will be copied and pasted to the `/data/samples` directory.
 
-This script expects videos directly in the `/data/videos` directory and files of the same name (but with the `.csv` extension) in the `/data/labels` directory.
-It also expects a label configuration file at `/data/labels/labels.yml` with the names of the labels 
+This script expects videos directly in the `/data/videos` directory and files of the same name (but 
+with the `.csv` extension) in the `/data/labels` directory.
+It also expects a label configuration file at `/data/labels/labels.yml` with the names of the 
+labels. 
 
-Within the `/data/samples` directory, a folder will be made for each label according to their name in the [labels.yml file](/data/labels/labels.yml), except the label with value `0`.
+Within the `/data/samples` directory, a folder will be made for each label according to their name 
+in the [labels.yml file](/data/labels/labels.yml), except the INVALID label.
 
 Each sample will be named according to the pattern:
 ```python
 filename = f"{video_file_name}__{start_frame}.mp4"
 ```
 
-## 4. Build image dataset
-By running: 
+## 4. HPE extraction from videos
+In order to train the DNN and LSTM models the HPE features are first required.
+These are extracted from the entire videos first, by running:
+```bash
+python extract-video-landmarks.py
+```
+
+Each video in `data/videos` is iterated over and frame-by-frame the hep landmarks are detected by 
+the MediaPipe model.
+These landmarks are stored per video in DataFrame objects with the naming pattern: 
+```python
+f"data/df/videos/{video_name}.pkl"
+```
+
+These dataset are prepended with a `frame_num` column so the frame of these landmarks can always be 
+found, and a `label` column to have easier access to the annotation on that frame.
+
+Note: this might be improved/optimized by only extracting landmarks from the CVS's.
+
+## 5. HPE segment extract and evaluation
+Now the HPE landmarks of each individual labelled segment (video footage in `data/samples`) can be 
+extracted and evaluated.
+This is done separately for each label by running:
+```bash
+python extract-segment-landmarks.py <label-name>
+```
+
+This iterates over all segments for that label under `data/samples/<label-name>` and plays them, 
+annotated with the corresponding HPE landmarks from `data/df/videos`.
+
+Here the user has a chance to label these landmarks as accepted for the entire segment or not.
+This information is stored in `data/df/segments/<label-name>/accepted.npy` as a numpy array.
+
+The landmark features datasets are stored, per segment, with the naming strategy: 
+```python
+f"data/df/segments/{label-name}/{video_name}__{start_frame}.pkl"
+```
+So they correspond with the names of the segment video files in `data/samples/`.
+
+## 6. Build image dataset
+From these labelled segments in `data/samples` the image datasets can now be generated, by running: 
 ```bash
 python generate-image-dataset.py
 ```
-an image dataset will be generated from the labelled video samples.
 
-This script expects video segments within the `/data/samples` directory, grouped in folder named after their true label.
-So a video segment labelled as `Y1` should be found at: 
+This script expects video segments within the `/data/samples` directory, grouped in folders named 
+after their true label.
+So a video segment labelled as `LABEL1` should be found at: 
 ```
-/data/samples/Y1/<file-name>.mp4
+/data/samples/LABEL1/<file-name>.mp4
 ```
 
-This dataset will be needed when training models that use single images (or data from single images) as input.
+This dataset will be needed when training the SOTA image classification models that use single 
+images as input or DNN models that used data extracted from these images as input.
 
-This script will walk through each video in `/data/samples` for each label and extract a set of images to build this image dataset.
-How these images are sampled is explained in the doc string of the [this function](src/sampling/images.py#34).
-All the sampled images will be divided in in either the training (train), validation (val) or testing (test) dataset, this will be done according to a 70/15/15 split.
+This script will walk through each video in `/data/samples` for each label and extract a set of 
+images to build this image dataset.
+How these images are sampled is explained in the doc string of the `__generate_image_dataset` 
+function in [this file](src/sampling/images.py).
+All the sampled images will be divided in in either the training (train), validation (val) or 
+testing (test) dataset, this will be done according to a 70/15/15 split.
 
-At this stage, a dataset name will be added in the file system structure, this name is taken from the `name` field in the [label config file](/data/labels/labels.yml). 
-So the path for an image in the training set, labelled with `Y1`, will be found at:
+At this stage, a dataset name will be added in the file system structure, this name is taken from 
+the `name` field in the [label config file](/data/labels/labels.yml).
+So the path for an image in the training set, labelled with `LABEL1`, will be found at:
 ```python
-f"/data/img/{dataset_name}/train/Y1/{sample_name}__{frame_num}.png"
+f"/data/img/{dataset_name}/train/LABEL1/{sample_name}__{frame_num}.png"
 ```
 
-## 5. Build DataFrame dataset
-By running: 
+Once the image dataset have been generated, the image classification models should be able to be 
+trained.
+
+This script also accepts an `--accepted` flag, if this is the case, the image datasets will only be
+built from accepted segments (`data/df/segments/<label-name>/accepted.npy`).
+Accepted datasets are named:
+```python
+f"/data/img/{dataset_name}_full/train/LABEL1/{sample_name}__{frame_num}.png"
+```
+
+Note: In hindsight, these accepted image datasets have little use for training SOTA models, but they 
+are required for generating HPE datasets from only accepted segments.
+Removing this requirement and moving/copying the accepted option to the `generate-hpe-dnn-dataset`
+script would be an improvement.
+
+## 7. Build HPE DataFrame dataset
+Once the image datasets are generated, the datasets with corresponding HPE landmark features can be 
+created, by running: 
 ```bash
-python generate-hpe-dnn-dataset.py
+python generate-hpe-dnn-dataset.py <dataset-name>
 ```
-HPE features will be calculated and stored in a `.pkl` file for working with a Dense Neural Network (DNN) model.
+The HPE features will be extracted from the HPE segment datasets in `data/df/segments` by looking at 
+the images in the dataset `dataset-name` and copying over the corresponding row, effectively 
+building an equivalent dataset as that of the images, but with HPE landmarks as input features.
 
-This script expects an image dataset under `/data/img/{dataset_name}/`, first grouped by their split (`train`, `val` or `test`) and then grouped by their label name.
+This script expects an image dataset under `/data/img/{dataset-name}/`, first grouped by their split 
+(`train`, `val` or `test`) and then grouped by their label name, and HPE segment data under 
+`data/df/segments/`.
 
-Each image found there will be processed by an HPE model and a specific set of features will be extracted, these features can be found [here](src/hpe/landmarks.py#36) for the pose landmarks and [here](src/hpe/landmarks.py#58) for the hand landmarks.
-
-For each data split a DataFrame is then constructed, with each image converted to a row of features. This will give us the following 3 files: 
+For each data split of the image dataset, an equivalent a DataFrame is constructed, with each image 
+converted to a row of features. This will give us the following 3 files: 
+```python
+f"/data/df/{dataset-name}/train.pkl"
+f"/data/df/{dataset-name}/val.pkl"
+f"/data/df/{dataset-name}/test.pkl"
 ```
-/data/df/{dataset_name}/train.pkl
-/data/df/{dataset_name}/val.pkl
-/data/df/{dataset_name}/test.pkl
+
+These dataset are used to train the Dense Neural Network (DNN) models.
+
+## 8. Generate RNN HPE dataset recursor
+To use the HPE landmark features to train RNN models a slightly different structure is needed.
+This is generated by running:
+```bash
+python generate-rnn-dataset.py
 ```
 
-## 6. Train models
+This script iterates over all videos in `data/videos` and uses the label files in `data/labels` to 
+find all Continuous Valid Segments (CVSs).
+From all the CVSs it extracts the HPE landmarks from the files in `data/df/videos` and combines them
+in one DataFrame object and stores it as `data/df/rnn/cvs_features.pkl`.
+
+This dataset is prepended with three columns, `video` and `frame_num` so the frame of the HPE 
+features can be found, and `group` which are integers that indicate which CVS the row belongs to.
+
+## 9. Generate K-Fold datasets
+All models and code examples below use K-fold cross validation to train models, generating these 
+folds is done programatically during training.
+So the image and hpe datasets (for dnn models), that were generated with splits, need to be combined
+so the K-fold algorithms can generate these splits.
+
+For the image datasets this is done manually by combining the images of different splits:
+```python
+f"/data/img/{dataset-name}/{split}/{label}/{image-name}.pkl"
+```
+in a single folder named: 
+```python
+f"/data/img/{dataset-name}_kf/all/{label}/{image-name}.pkl"
+```
+
+For HPE datasets for the DNN models this requires combining .pkl files, so this is done with the CLI
+command:
+ ```bash
+python generate-hpe-dnn-dataset.py <dataset-name> --combine
+```
+Which will generate a new file:
+```python
+f"/data/df/{dataset-name}_kf/all.pkl"
+```
+
+The dataset to train RNN models is already combined in one file, so combining of splits is not 
+needed for this dataset.
+
+## 10. Train models
 Individual models can be trained using this source code.
 Depending on the type of model, different assumptions will be made from the `/data` folder.
 
-### 6.1. SOTA image classification model
-SOTA models will use the data in the `/data/img` folder. This code will expect the following file structure there:
-```python
-f"/data/img/{dataset_name}/{split}/{label_name}/{file_name}.png"
-```
-As SOTA models, [yolov11](https://docs.ultralytics.com/tasks/classify/) models are used, and they can be used with the [SOTA class](src/sota/model.py#51).
-For example to train this model execute: 
-```python
-from src.common.model import ModelInitializeArgs
-from src.sota.model import SOTA, SOTAConstructorArgs, SOTATrainArgs
+### 10.1. SOTA image classification model
+SOTA models will use the data in the `/data/img` folder, as it is generated by the 
+`generate-image-dataset` script.
+As SOTA models, [yolov11](https://docs.ultralytics.com/tasks/classify/) is used, and they can be 
+used with the [SOTA class](src/sota/model.py).
 
-sota = SOTA(args=SOTAConstructorArgs(name="name"))
-sota.initialize_model(args=ModelInitializeArgs())
-sota.train_model(args=SOTATrainArgs(epochs=10))
-``` 
+For examples on how to train these models look at the `SOTA - Model Selection` part of 
+[this notebook](sota_vs_dnn.ipynb)
 
-### 6.2. HPE DNN model
-The DNN models will use HPE features as input data, so they will use the `/data/df` folder. There the code expects data to be organized as
-```python
-f"/data/df/{dataset_name}/{split}.pkl"
-```
-Multiple architectures for the DNN are defined [here](src/hpe_dnn/architecture.py) and denoted by the enum `DnnArch`.
-Do not change these architectures when you have already used them, but add new ones if you want to compare them against the others.
+### 10.2. HPE DNN model
+The DNN models will use HPE features as input data, so they will use the `/data/df/<dataset-name>` 
+folder. 
+Multiple architectures for the DNN are defined [here](src/hpe_dnn/architecture.py) and denoted by 
+the enum `DnnArch`.
+Do not change these architectures when you have already used them, but add new ones if you want to 
+try new network structures and compare them against the others.
 
-To train these DNN models execute: 
-```python
-from src.hpe_dnn.architecture import DnnArch
-from src.hpe_dnn.model import HpeDnn, HpeDnnConstructorArgs, HpeDnnModelInitializeArgs, HpeDnnTrainArgs  
+To train these DNN models use code samples from the `HPE DNN - Model Selection` part of 
+[this notebook](sota_vs_dnn.ipynb).
 
-hpednn = HpeDnn(args=HpeDnnConstructorArgs(
-    name="name", 
-    model_arch=DnnArch.ARCH1))
-hpednn.initialize_model(args=HpeDnnModelInitializeArgs())
-hpednn.train_model(args=HpeDnnTrainArgs(epochs=10))
-```
+### 10.3 RNN model
+Training RNN models will use the DataFrame object `data/df/rnn/cvs_features.pkl` as dataset.
+Code samples to train these models can be found [here](dnn_vs_lstm.ipynb).
 
-## 7. Combine data splits for K-Fold Validation
-These model architectures can also be compared according to the K-Fold Cross Validation algorithm.
-But this requires there to be a single dataset with all data, not one that has already been split in a train, val and test set.
+Similar to the DNN models, there are several architectures defined in 
+[this file](src/rnn/architecture.py) and denoted by the enum `RnnArch`.
 
-### 7.1. SOTA image classification model
-For the `/data/img` dataset, this is easiest done manually by copy and paste'ing the images from the dataset that has the split.
-The expected folder structure here would be: 
-```python
-f"/data/img/{dataset_name}_kf/all/{label_name}/{image_name}.png
-```
-
-### 7.2. HPE DNN model
-For the data in `/data/df` this is a bit more complex as we need to combine data from multiple `.pkl` files.
-This can be done by running the code: 
-```bash
-python generate-hpe-dnn-dataset.py -c
-```
-This will expect these three dataset splits to already exist
-```
-/data/df/{dataset_name}/train.pkl
-/data/df/{dataset_name}/val.pkl
-/data/df/{dataset_name}/test.pkl
-```
-and combine them to
-```
-/data/df/techniques_kf/all.pkl
-```
-
-## 8. K-Fold validation of models
-Multiple models can be trained in a group according to the K-Fold Cross Validation Algorithm using this source code.
-Depending on the type of model, different assumptions will be made from the `/data` folder.
-All data will be split in 10 different folds.
-
-### 8.1. SOTA image classification model
-The SOTA models can be trained with K-Fold Cross Validation to acquired multiple test metrics.
-This code will assume the existence of the combined dataset:
-```python
-f"/data/img/{dataset_name}_kf/all/{label_name}/{image_name}.png
-```
-
-To run the K-Fold Cross Validation, run: 
-```python
-from src.common.model import ModelConstructorArgs
-from src.sota.model import SOTAModelInitializeArgs, SOTAMultiRunTrainArgs, SOTATrainArgs
-from src.sota.kfold import SOTAFoldCrossValidation
-
-cross_validation = SOTAFoldCrossValidation(
-    model_args = ModelConstructorArgs(name="name-kf"),
-    train_run_args = SOTAMultiRunTrainArgs(
-        runs=5,
-        model_initialize_args=SOTAModelInitializeArgs(model="yolo11m-cls"),
-        train_args=SOTATrainArgs(epochs=10)
-    )
-)
-
-cross_validation.train_folds()
-```
-
-### 8.2. HPE DNN model
-The DNN models can also be trained with K-Fold Cross Validation.
-This code will assume the existence of the dataset:
-```python
-f"/data/df/{dataset_name}_kf/all.pkl"
-```
-
-To run the K-Fold algorithm, execute:
-```python
-from src.hpe_dnn.architecture import DnnArch
-from src.hpe_dnn.model import HpeDnnModelInitializeArgs, HpeDnnMultiRunTrainArgs, HpeDnnTrainArgs
-from src.common.model import ModelConstructorArgs
-from src.hpe_dnn.kfold import HpeDnnFoldCrossValidation
-
-cross_validation = HpeDnnFoldCrossValidation(
-    model_args=ModelConstructorArgs(name="name-kf"),
-    train_run_args=HpeDnnMultiRunTrainArgs(
-        runs=5,
-        model_initialize_args=HpeDnnModelInitializeArgs(model=DnnArch.ARCH1),
-        train_args=HpeDnnTrainArgs(epochs=10)
-    ))
-
-cross_validation.train_folds()
-```

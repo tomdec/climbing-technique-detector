@@ -122,7 +122,7 @@ def ask_input():
 
 def extract_segment_landmarks(
     segment_path: str, context: SegmentContext | None = None, playback_speed: float = 1
-):
+) -> Tuple[SegmentContext, str]:
 
     if context is None:
         context = SegmentContext(segment_path)

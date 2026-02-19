@@ -1,4 +1,3 @@
-import cv2
 from argparse import ArgumentParser
 from os.path import exists
 
@@ -13,6 +12,7 @@ if __name__ == "__main__":
     if not exists(video_name):
         raise Exception(f"Video file {video_name} not found, cannot play.")
 
+    import cv2
     from src.video.play.with_text import play_with_label
 
     try:
