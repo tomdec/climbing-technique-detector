@@ -6,8 +6,10 @@ __data_root = "data"
 
 if __name__ == "__main__":
 
-    parser = ArgumentParser(prog="extract-video-landmarks",
-        description="Extracts landmarks from videos")
+    parser = ArgumentParser(
+        prog="extract-video-landmarks",
+        description="Extracts landmarks from all videos entirely.",
+    )
     args = parser.parse_args()
 
     from src.sampling.landmarks import extract_hpe_dataset

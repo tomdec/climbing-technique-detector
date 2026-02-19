@@ -10,7 +10,7 @@ from wandb.integration.ultralytics import add_wandb_callback
 from glob import glob
 
 from src.common.helpers import get_current_train_run
-from src.labels import get_label_value_from_path, name_to_value, value_to_name
+from src.labels import get_label_value_from_path, value_to_name
 from src.common.model import (
     ModelConstructorArgs,
     ModelInitializeArgs,
@@ -18,8 +18,10 @@ from src.common.model import (
     TrainArgs,
     MultiRunTrainArgs,
     ClassificationModel,
+    DEFAULT_DATASET,
 )
 from src.common.plot import plot_confusion_matrix
+from src.common.wandb import PROJECT_NAME
 from src.sota.balancing import WeightedTrainer
 
 
@@ -47,7 +49,7 @@ class SOTAConstructorArgs(ModelConstructorArgs):
         name: str,
         model_initialize_args: SOTAModelInitializeArgs = SOTAModelInitializeArgs(),
         data_root_path: str = "data",
-        dataset_name: str = "techniques",
+        dataset_name: str = DEFAULT_DATASET,
     ):
         super().__init__(name, model_initialize_args, data_root_path, dataset_name)
 
@@ -152,7 +154,7 @@ class SOTA(ClassificationModel):
 
         config = self.__get_train_wandb_config(args)
         init(
-            project="detect-climbing-technique",
+            project=PROJECT_NAME,
             job_type="train",
             group="sota",
             name=self.name,
@@ -216,7 +218,7 @@ class SOTA(ClassificationModel):
         if args.write_to_wandb:
             config = self.__get_test_wandb_config(args)
             wandb_run = init(
-                project="detect-climbing-technique",
+                project=PROJECT_NAME,
                 job_type="test",
                 group="sota",
                 name=self.name,

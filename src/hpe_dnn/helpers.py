@@ -21,7 +21,7 @@ def demo_batch(dataset: tf.data.Dataset):
     feature_names = list(dataset.element_spec[0].keys())
     print("Every feature:", feature_names)
     print(f"A batch of {feature_names[0]}:", features[feature_names[0]])
-    print("A batch of techniques:", label_batch)
+    print("A batch of labels:", label_batch)
 
 
 def __encoder() -> LabelBinarizer:

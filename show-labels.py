@@ -1,8 +1,21 @@
-import cv2
-from src.video.play.with_text import play_with_label
+from argparse import ArgumentParser
+from os.path import exists
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    parser = ArgumentParser(
+        prog="show-labels",
+        description="Play video annotated with current label",
+    )
+    parser.add_argument("path", help="Path to video to play.")
+    args = parser.parse_args()
+    video_name = args.path
+    if not exists(video_name):
+        raise Exception(f"Video file {video_name} not found, cannot play.")
+
+    import cv2
+    from src.video.play.with_text import play_with_label
+
     try:
-        play_with_label("./data/videos/How to Flag - A Climbing Technique for Achieving Balance.mp4")
+        play_with_label(video_name)
     finally:
         cv2.destroyAllWindows()

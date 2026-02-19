@@ -10,7 +10,6 @@ def test_HpeDnn_get_best_model_path():
             name="test_model",
             model_initialize_args=HpeDnnModelInitializeArgs(model_arch=DnnArch.ARCH2),
             data_root_path="test/data",
-            dataset_name="techniques",
         )
     )
     expected = "test/data/runs/hpe_dnn/test_model/train5/models/epoch_01__val_accuracy_0.9414.keras"

@@ -8,16 +8,16 @@ def pytest_configure(config):
     Mock the __labels variable, so that the test are independent from the actual /labels.yml file.
     """
     test_labels = {
-        "name": "test-techniques",
+        "name": "test-labels",
         "values": [
             "INVALID",
-            "NONE",
-            "FOOT_SWAP",
-            "OUTSIDE_FLAG",
-            "BACK_FLAG",
-            "INSIDE_FLAG",
-            "DROP_KNEE",
-            "CROSS_MIDLINE",
+            "LABEL1",
+            "LABEL2",
+            "LABEL3",
+            "LABEL4",
+            "LABEL5",
+            "LABEL6",
+            "LABEL7",
         ],
     }
     labels.__labels = test_labels

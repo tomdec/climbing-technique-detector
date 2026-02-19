@@ -1,9 +1,9 @@
 from json import dump, load
 from typing import Any
 from os.path import exists, join
-from cv2.typing import MatLike
 from re import search
 
+from src.labels import get_dataset_name
 from src.common.helpers import (
     get_runs,
     raise_not_implemented_error,
@@ -11,6 +11,8 @@ from src.common.helpers import (
     get_current_train_run,
     get_current_test_run,
 )
+
+DEFAULT_DATASET = get_dataset_name()
 
 
 def get_best_tf_weights(path_to_weights: list) -> str:
@@ -72,7 +74,7 @@ class ModelConstructorArgs:
     def dataset_name(self) -> str:
         """
         Name of the dataset to use.
-        Default: "techniques", most general and complete dataset.
+        Defaults to the value of the `name` field in the `data/labels/labels.yml` file.
         """
         return self._dataset_name
 
@@ -85,7 +87,7 @@ class ModelConstructorArgs:
         name: str,
         model_initialize_args: ModelInitializeArgs,
         data_root_path: str = "data",
-        dataset_name: str = "techniques",
+        dataset_name: str = DEFAULT_DATASET,
     ):
 
         if name == "":

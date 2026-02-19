@@ -6,17 +6,22 @@ from random import shuffle
 from src.labels import iterate_valid_labels, name_to_value
 from src.hpe_dnn.helpers import binarize_labels
 
-label_names = Series(list(iterate_valid_labels()), name="label")
+
+label_names = Series(
+    list(iterate_valid_labels()),
+    name="label",
+)
 label_values = label_names.map(name_to_value)
+# TODO: When setting project specific labels, reorder this to match alphabetical order of labels.
 expected_list = array(
     [
-        [0, 0, 0, 0, 0, 1, 0],
-        [0, 0, 0, 1, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0, 1],
         [1, 0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 1, 0, 0],
-        [0, 0, 1, 0, 0, 0, 0],
         [0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0],
+        [0, 0, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0, 1],
     ]
 )
 

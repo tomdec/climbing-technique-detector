@@ -1,10 +1,6 @@
-name: "techniques"
+name: "labels"
 values:
   - INVALID
-  - NONE
-  - FOOT_SWAP
-  - OUTSIDE_FLAG
-  - BACK_FLAG
-  - INSIDE_FLAG
-  - DROP_KNEE
-  - CROSS_MIDLINE
+  - LABEL1
+  - LABEL2
+  - ETC

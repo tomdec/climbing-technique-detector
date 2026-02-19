@@ -3,10 +3,10 @@ from os.path import join, isdir, exists, basename
 from os import listdir, makedirs, mkdir
 from numpy import ones
 from glob import glob
-from typing import Any, List, Callable
+from typing import Any, List
 from re import search
 
-from src.labels import get_label_value_from_path, value_to_name
+from src.labels import get_label_value_from_path, value_to_name, get_dataset_name
 from src.common.helpers import read_dataframe
 from src.hpe.mp.landmarks import get_feature_labels
 
@@ -99,7 +99,8 @@ def generate_unity_df(
 ):
     column_names = ["label", *feature_names, "image_path"]
 
-    img_path = join(data_root_path, "img", "techniques")
+    img_ds_name = get_dataset_name()
+    img_path = join(data_root_path, "img", img_ds_name)
     df_path = join(data_root_path, "df", dataset_name)
     if not exists(df_path):
         makedirs(df_path)
