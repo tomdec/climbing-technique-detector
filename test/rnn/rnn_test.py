@@ -24,7 +24,6 @@ def test_Rnn_get_best_model_path(model_name, expected):
             name=model_name,
             model_initialize_args=RnnModelInitializeArgs(model_arch=RnnArch.ARCH1),
             data_root_path="test/data",
-            dataset_name="techniques",
         )
     )
 

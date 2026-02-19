@@ -23,6 +23,7 @@ from src.common.model import (
     MultiRunTrainArgs,
     TestArgs,
     get_best_tf_weights,
+    DEFAULT_DATASET,
 )
 from src.common.plot import plot_confusion_matrix
 from src.common.wandb import PROJECT_NAME
@@ -90,7 +91,7 @@ class RnnConstructorArgs(ModelConstructorArgs):
         name: str,
         model_initialize_args: RnnModelInitializeArgs = RnnModelInitializeArgs(),
         data_root_path="data",
-        dataset_name="techniques",
+        dataset_name=DEFAULT_DATASET,
     ):
         super().__init__(name, model_initialize_args, data_root_path, dataset_name)
 

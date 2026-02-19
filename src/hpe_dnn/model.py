@@ -22,6 +22,7 @@ from src.common.model import (
     TrainArgs,
     MultiRunTrainArgs,
     get_best_tf_weights,
+    DEFAULT_DATASET,
 )
 from src.common.helpers import (
     get_next_test_run,
@@ -75,7 +76,7 @@ class HpeDnnConstructorArgs(ModelConstructorArgs):
         name: str,
         model_initialize_args: HpeDnnModelInitializeArgs = HpeDnnModelInitializeArgs(),
         data_root_path: str = "data",
-        dataset_name: str = "techniques",
+        dataset_name: str = DEFAULT_DATASET,
     ):
         ModelConstructorArgs.__init__(
             self, name, model_initialize_args, data_root_path, dataset_name

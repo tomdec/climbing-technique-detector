@@ -18,6 +18,7 @@ from src.common.model import (
     TrainArgs,
     MultiRunTrainArgs,
     ClassificationModel,
+    DEFAULT_DATASET,
 )
 from src.common.plot import plot_confusion_matrix
 from src.common.wandb import PROJECT_NAME
@@ -48,7 +49,7 @@ class SOTAConstructorArgs(ModelConstructorArgs):
         name: str,
         model_initialize_args: SOTAModelInitializeArgs = SOTAModelInitializeArgs(),
         data_root_path: str = "data",
-        dataset_name: str = "techniques",
+        dataset_name: str = DEFAULT_DATASET,
     ):
         super().__init__(name, model_initialize_args, data_root_path, dataset_name)
 

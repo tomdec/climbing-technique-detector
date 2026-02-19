@@ -9,7 +9,6 @@ def test_SOTA_get_best_model_path():
             name="test_model",
             model_initialize_args=SOTAModelInitializeArgs(model_arch="yolo11n-cls"),
             data_root_path="test/data",
-            dataset_name="techniques",
         )
     )
     expected = "test/data/runs/sota/test_model/train5/weights/best.pt"

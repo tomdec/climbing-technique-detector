@@ -60,10 +60,14 @@ yolo settings wandb=True
 ### Troubleshooting
 
 #### `AttributeError: 'PosixPath' object has no attribute 'split'`
-The first time after installing the wandb package you might run into some issues when training a yolov11 model, specifically.
-The [issue](https://github.com/wandb/wandb/issues/10177#issuecomment-3102982507) has been reported with the developers on GitHub.
+The first time after installing the wandb package you might run into some issues when training a 
+yolov11 model, specifically.
+The [issue](https://github.com/wandb/wandb/issues/10177#issuecomment-3102982507) has been reported 
+with the developers on GitHub.
 
-If there is still no fix for this in a more recent version of `wandb`, change this line 147 in [wandb/integration/ultralytics/callback.py](.venv/lib/python3.12/site-packages/wandb/integration/ultralytics/callback.py#L147) from:
+If there is still no fix for this in a more recent version of `wandb`, change this line 147 in 
+[wandb/integration/ultralytics/callback.py](.venv/lib/python3.12/site-packages/wandb/integration/ultralytics/callback.py#L147) 
+from:
 ```python
 model.overrides["model"].split('.')[0]
 ```
@@ -75,15 +79,21 @@ f"{model.overrides["model"]}".split('.')[0]
 #### Mismatch with GPU drivers and cuda libraries
 Getting an error log like:
 ```
-E0000 00:00:1764603865.710806   60625 cuda_dnn.cc:522] Loaded runtime CuDNN library: 9.1.0 but source was compiled with: 9.3.0.  CuDNN library needs to have matching major version and equal or higher minor version. If using a binary install, upgrade your CuDNN library.  If building from sources, make sure the library loaded at runtime is compatible with the version specified during compile configuration.
+E0000 00:00:1764603865.710806   60625 cuda_dnn.cc:522] Loaded runtime CuDNN library: 9.1.0 but 
+source was compiled with: 9.3.0. CuDNN library needs to have matching major version and equal or 
+higher minor version. If using a binary install, upgrade your CuDNN library. If building from 
+sources, make sure the library loaded at runtime is compatible with the version specified during 
+compile configuration.
 ```
 
-Pytorch has very strict requirements about the used cudu libraries, so it will complain when trying to upgrade the cuda libraries, which is necessary after upgrading your GPU drivers.
+Pytorch has very strict requirements about the used cudu libraries, so it will complain when trying 
+to upgrade the cuda libraries, which is necessary after upgrading your GPU drivers.
 I have found that (at least for some cases) reinstalling tensorflow with: 
 ```
 pip install tensorflow[and-cuda]
 ```
-This upgrades the cuda libraries without the restrictions of pytorch, without breaking pytorch functionality, at least as for as is needed in this project.
+This upgrades the cuda libraries without the restrictions of pytorch, without breaking pytorch 
+functionality, at least as for as is needed in this project.
 
 # Structure
 
@@ -99,11 +109,12 @@ Also contains code for training the models with all the used configurations.
 
 ## /data
 Contains all data files required in this project.
-Label files will be included in source control to have back-ups of them, video files and images won't since they are too large and not mine
-to make publicly available.
+Label files will be included in source control to have back-ups of them, video files and images 
+won't since they are too large and not mine to make publicly available.
 
 ### /df
-Contains the DataFrame datasets used for the HPE DNN models. The DataFrames are saved as `.pkl` files.
+Contains the DataFrame datasets used for the HPE DNN models. The DataFrames are saved as `.pkl` 
+files.
 
 The file system structure of this folder is determined by the source code of this project.
 
@@ -119,7 +130,9 @@ data/df
 ```
 
 ### /hpe
-Contains data for the HPE benchmark. These are open source images of climbers with the HPE landmarks labelled. Also contains the result data of the compared HPE tools, MediaPipe and Yolo.
+Contains data for the HPE benchmark. These are open source images of climbers with the HPE landmarks 
+labelled. 
+Also contains the result data of the compared HPE tools, MediaPipe and Yolo.
 
 The file structure under `/data/hpe/img` is determined by the HPE labelling tool, [roboflow](https://app.roboflow.com).
 
