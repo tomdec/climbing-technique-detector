@@ -20,11 +20,11 @@ if __name__ == "__main__":
         choices=list(iterate_valid_labels()),
         help="Label to extract hpe segments for.",
     )
-    parser.add_argument(
-        "--inspect",
-        action="store_true",
-        help="Inspect the extracted landmarks and accepted segments.",
-    )
+    # parser.add_argument(
+    #     "--inspect",
+    #     action="store_true",
+    #     help="Inspect the extracted landmarks and accepted segments.",
+    # )
     args = parser.parse_args()
 
     from src.sampling.landmarks import extract_segment_landmarks

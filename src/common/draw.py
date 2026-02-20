@@ -5,16 +5,20 @@ from typing import Tuple
 from src.labels import value_to_name
 
 BLACK: Scalar = (0, 0, 0)
-RED: Scalar = (100,1,1)
-GREEN: Scalar = (1,100,1)
-BLUE: Scalar = (1,1,100)
+RED: Scalar = (100, 1, 1)
+GREEN: Scalar = (1, 100, 1)
+BLUE: Scalar = (1, 1, 200)
+
 
 def write_label(frame: MatLike, label: int | str) -> MatLike:
     if type(label) is int:
         label = value_to_name(label)
     return write_text(frame, label)
 
-def write_label_and_prediction(frame: MatLike, label: int | str, prediction: str) -> MatLike:
+
+def write_label_and_prediction(
+    frame: MatLike, label: int | str, prediction: str
+) -> MatLike:
     if type(label) is int:
         label = value_to_name(label)
 
@@ -25,11 +29,17 @@ def write_label_and_prediction(frame: MatLike, label: int | str, prediction: str
 
     return write_text(frame, prediction, prediction_color, prediction_position)
 
+
 def cvt_to_cv2_color(color: Scalar) -> Scalar:
     return (color[2], color[1], color[0])
 
-def write_text(frame: MatLike, text: str, background_color: Scalar = BLUE, 
-        position: Tuple[int, int] = (20, 20)) -> MatLike:
+
+def write_text(
+    frame: MatLike,
+    text: str,
+    background_color: Scalar = BLUE,
+    position: Tuple[int, int] = (20, 20),
+) -> MatLike:
     result = frame.copy()
 
     pos = position

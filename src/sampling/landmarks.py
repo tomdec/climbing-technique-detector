@@ -9,7 +9,7 @@ from re import search
 from os.path import join, exists
 from os import makedirs
 
-from src.common.helpers import read_dataframe
+from src.common.helpers import read_dataframe, save_dataframe
 from src.hpe.mp.draw import draw_my_landmarks, draw_features
 from src.hpe.mp.evaluate import predict_landmarks
 from src.hpe.mp.landmarks import get_feature_labels
@@ -20,7 +20,7 @@ from src.labels import (
     LabelsCSV,
     get_labels_from_video,
 )
-from src.video.play.common import play_video
+from src.video.play.common import play_video, iterate_video
 
 
 def get_landmark_df_path(video_path: str) -> str:
@@ -55,7 +55,7 @@ def hpe_extractor_mutator(img: MatLike, context: HpeExtractionContext) -> MatLik
     return draw_my_landmarks(img, landmarks)
 
 
-def extract_hpe_dataset(video_path: str) -> DataFrame:
+def extract_hpe_dataset(video_path: str, inspect: bool = False) -> DataFrame:
     df_output = get_landmark_df_path(video_path)
     label_path = get_labels_from_video(video_path)
 
@@ -63,13 +63,18 @@ def extract_hpe_dataset(video_path: str) -> DataFrame:
 
     with build_holistic_model(static_image_model=False) as model:
         context = HpeExtractionContext(model=model, labels=labels)
-        play_video(
-            video_path=video_path, context=context, mutators=[hpe_extractor_mutator]
-        )
+        if inspect:
+            play_video(
+                video_path=video_path, context=context, mutators=[hpe_extractor_mutator]
+            )
+        else:
+            iterate_video(
+                video_path=video_path, context=context, mutators=[hpe_extractor_mutator]
+            )
 
     columns = ["frame_num", "label", *get_feature_labels()]
     df = DataFrame(data=context.results, columns=columns)
-    df.to_pickle(df_output)
+    save_dataframe(df_output, df)
 
     return df
 
@@ -97,9 +102,10 @@ class SegmentContext:
     def store_segment(self):
         segment: DataFrame = self.df.iloc[self.start_frame : self.frame]
         segment = segment.reset_index(drop=True)
-        path = join("data", "df", "segments", self.label)
-        makedirs(path, exist_ok=True)
-        segment.to_pickle(join(path, f"{self.name}__{self.start_frame}.pkl"))
+        path = join(
+            "data", "df", "segments", self.label, f"{self.name}__{self.start_frame}.pkl"
+        )
+        save_dataframe(path, segment)
 
 
 def ask_input():
