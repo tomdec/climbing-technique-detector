@@ -1,14 +1,4 @@
 from argparse import ArgumentParser
-from pandas import concat
-from glob import glob
-
-from src.labels import (
-    find_valid_segments,
-    get_labels_from_video,
-)
-from src.sampling.landmarks import get_landmark_df_path
-from src.common.helpers import read_dataframe, save_dataframe
-
 
 if __name__ == "__main__":
     parser = ArgumentParser(
@@ -16,6 +6,16 @@ if __name__ == "__main__":
         description="Generate full dataset hpe features grouped by continuous valid segments.",
     )
     args = parser.parse_args()
+
+    from pandas import concat
+    from glob import glob
+
+    from src.labels import (
+        find_valid_segments,
+        get_labels_from_video,
+    )
+    from src.sampling.landmarks import get_landmark_df_path
+    from src.common.helpers import read_dataframe, save_dataframe
 
     group_id = 0
     all_features = None
