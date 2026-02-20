@@ -1,6 +1,8 @@
-name: "labels"
+name: "hinkstapsprong"
 values:
   - INVALID
-  - LABEL1
-  - LABEL2
-  - ETC
+  - RUNNING
+  - STEP
+  - HOP
+  - JUMP
+  - LANDING
