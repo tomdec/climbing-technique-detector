@@ -20,12 +20,15 @@ if __name__ == "__main__":
         choices=list(iterate_valid_labels()),
         help="Label to extract hpe segments for.",
     )
-    # parser.add_argument(
-    #     "--inspect",
-    #     action="store_true",
-    #     help="Inspect the extracted landmarks and accepted segments.",
-    # )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="""
+            Inspect the extracted landmarks and interactively decide to accepted segments or not.
+        """,
+    )
     args = parser.parse_args()
+    interactive = args.interactive
 
     from src.sampling.landmarks import extract_segment_landmarks
 
@@ -52,7 +55,9 @@ if __name__ == "__main__":
             continue
 
         print(f"Evaluating: {segment_path}")
-        context, response = extract_segment_landmarks(segment_path)
+        context, response = extract_segment_landmarks(
+            segment_path, interactive=interactive
+        )
 
         if response == "q":
             break

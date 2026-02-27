@@ -37,6 +37,7 @@ def test_get_filename(input, expected):
         ("test/data/runs/hpe_dnn/test_model", "train5"),
         ("test/data/runs/sota/test_model", "train5"),
         ("test/data/runs/hpe_dnn/test_model2", "train10"),
+        ("test/data/runs/sota/test_model2", "train"),
     ],
 )
 def test_get_current_train_run(input, expected):
@@ -50,6 +51,7 @@ def test_get_current_train_run(input, expected):
     [
         ("test/data/runs/hpe_dnn/test_model", "test1"),
         ("test/data/runs/sota/test_model", "test2"),
+        ("test/data/runs/sota/test_model2", "test"),
     ],
 )
 def test_get_current_test_run(input, expected):

@@ -21,4 +21,6 @@ if __name__ == "__main__":
 
     video_paths = glob(join(__data_root, "videos", "**", "*.*"), recursive=True)
     for video_path in video_paths:
+        if not inspect:
+            print(f"Extracting from: {video_path}")
         extract_hpe_dataset(video_path=video_path, inspect=inspect)

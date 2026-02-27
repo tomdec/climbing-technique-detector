@@ -192,8 +192,8 @@ class SOTA(ClassificationModel):
     def _get_best_model_path(self):
         model_dir = self._get_model_dir()
         train_run = get_current_train_run(model_dir)
-        # train_list = [dir for dir in listdir(model_dir) if "train" in dir]
-        # train_list.sort()
+        if train_run == "train1":
+            train_run = "train"
         return join(model_dir, train_run, "weights", "best.pt")
 
     @override
