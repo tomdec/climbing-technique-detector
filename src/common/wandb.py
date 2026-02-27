@@ -2,6 +2,7 @@ from typing import List, Callable
 from wandb.apis import PublicApi
 from wandb.apis.public.runs import Run
 
+# TODO: update project name
 PROJECT_NAME = "video-analysis-project"
 
 

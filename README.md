@@ -334,7 +334,7 @@ Now the HPE landmarks of each individual labelled segment (video footage in `dat
 extracted and evaluated.
 This is done separately for each label by running:
 ```bash
-python extract-segment-landmarks.py <label-name>
+python extract-segment-landmarks.py <label-name> --interactive
 ```
 
 This iterates over all segments for that label under `data/samples/<label-name>` and plays them, 
@@ -348,6 +348,9 @@ The landmark features datasets are stored, per segment, with the naming strategy
 f"data/df/segments/{label-name}/{video_name}__{start_frame}.pkl"
 ```
 So they correspond with the names of the segment video files in `data/samples/`.
+
+Run without the `--interactive` flag to not show the videos annotated with the landmarks, and 
+instead auto-accept the landmarks for all segments.
 
 ## 7. Build image dataset
 From these labelled segments in `data/samples` the image datasets can now be generated, by running: 

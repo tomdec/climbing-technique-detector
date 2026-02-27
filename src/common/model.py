@@ -13,6 +13,7 @@ from src.common.helpers import (
 )
 
 DEFAULT_DATASET = get_dataset_name()
+DEFAULT_FULL_DATASET = DEFAULT_DATASET + "_full"
 
 
 def get_best_tf_weights(path_to_weights: list) -> str:
