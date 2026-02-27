@@ -11,6 +11,7 @@ from src.rnn.data import WindowGenerator
 from src.rnn.model import (
     Rnn,
     RnnConstructorArgs,
+    RnnModelInitializeArgs,
     RnnTrainArgs,
     RnnIntMultiRunTrainArgs,
     RnnMultiRunTrainArgs,
@@ -69,6 +70,18 @@ def iterate_group_splits(
 
 
 class RnnFoldCrossValidation:
+
+    @staticmethod
+    def evaluation_instance(name: str):
+        """Create instance of the RNN fold cross validation model only used for evaluation.
+
+        Args:
+            name (str): Name of the model.
+
+        Returns:
+            HpeDnnFoldCrossValidation: K-fold model instance
+        """
+        return RnnFoldCrossValidation(model_args=RnnConstructorArgs(name=name))
 
     @property
     def model_constructor_args(self) -> RnnConstructorArgs:
