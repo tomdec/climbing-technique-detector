@@ -44,7 +44,7 @@ def output_to_labels(output: list, label_names: list) -> Series:
     return unbinarize_labels(output_df)
 
 
-class WindowGenerator:
+class EvaluationWindowGenerator:
 
     @property
     def raw_train_df(self) -> DataFrame:
@@ -72,6 +72,71 @@ class WindowGenerator:
             DataFrame: Raw test data
         """
         return take_groups(self.raw_data, self.test_groups)
+
+    def __init__(
+        self, data: DataFrame, train_groups: list, val_groups: list, test_groups: list
+    ):
+        df = data.copy()
+        features = get_features(df)
+        labels_str: Series = df.pop("label")
+        admin_cols = get_admin_columns(df)
+
+        labels = binarize_labels(labels_str)
+        self.raw_data = combine_df(features, labels, admin_cols)
+
+        # Store input and output column names
+        self.input_columns = features.columns
+        self.label_columns = labels.columns
+
+        self.train_groups = train_groups
+        self.val_groups = val_groups
+        self.test_groups = test_groups
+
+    def inspect_fold_split(self):
+        print(f"Input features ({len(self.input_columns)}): ", self.input_columns)
+        print(f"Output columns ({len(self.label_columns)}): ", self.label_columns)
+
+        print(f"Train: groups={self.train_groups}")
+        print(f"Val:  groups={self.val_groups}")
+        print(f"Test:  groups={self.test_groups}")
+
+        train_df = self.raw_train_df
+        val_df = self.raw_val_df
+        test_df = self.raw_test_df
+        print("\nAll shapes are: (frames, features)")
+        print(f"Training data: {train_df.shape}")
+        print(f"Val data: {val_df.shape}")
+        print(f"Test data: {test_df.shape}")
+
+        train_count = self._count_label_frames(train_df)
+        val_count = self._count_label_frames(val_df)
+        test_count = self._count_label_frames(test_df)
+
+        print("\nData splits (train/val/test):")
+        for key in train_count.keys():
+            total = train_count[key] + val_count[key] + test_count[key]
+            print(
+                f"{key}: {train_count[key] / total:.1%} / "
+                + f"{val_count[key] / total:.1%} / "
+                + f"{test_count[key] / total:.1%}"
+            )
+
+        print("\nTotals (train/val/test):")
+        for key in train_count.keys():
+            print(f"{key}: {train_count[key]} / {val_count[key]} / {test_count[key]}")
+
+    def get_label_counts(self) -> Tuple[dict, dict, dict]:
+        train_count = self._count_label_frames(self.raw_train_df)
+        val_count = self._count_label_frames(self.raw_val_df)
+        test_count = self._count_label_frames(self.raw_test_df)
+
+        return (train_count, val_count, test_count)
+
+    def _count_label_frames(self, df: DataFrame) -> dict:
+        return {label: sum(df[label]) for label in self.label_columns}
+
+
+class WindowGenerator(EvaluationWindowGenerator):
 
     @property
     def train_df(self) -> DataFrame:
@@ -143,28 +208,14 @@ class WindowGenerator:
         input_width: int,
         spacing: int = 1,
     ):
+        super().__init__(data, train_groups, val_groups, test_groups)
+
         self._augmentation = None
-
-        df = data.copy()
-        features = get_features(df)
-        labels_str: Series = df.pop("label")
-        admin_cols = get_admin_columns(df)
-
-        labels = binarize_labels(labels_str)
-        self.raw_data = combine_df(features, labels, admin_cols)
-
-        # Store input and output column names
-        self.input_columns = features.columns
-        self.label_columns = labels.columns
 
         train_df = take_groups(self.raw_data, train_groups)
         train_features = get_features(train_df)
         self.train_mean = train_features.mean(skipna=True)
         self.train_std = train_features.std(skipna=True)
-
-        self.train_groups = train_groups
-        self.val_groups = val_groups
-        self.test_groups = test_groups
 
         # Work out the label column indices.
         self.column_indices = {name: i for i, name in enumerate(self.raw_data.columns)}
@@ -240,37 +291,6 @@ class WindowGenerator:
         features = DataFrame(imp.fit_transform(features), columns=features.keys())
 
         return combine_df(features, labels, admin)
-
-    def inspect_fold_split(self):
-        print(f"Input features ({len(self.input_columns)}): ", self.input_columns)
-        print(f"Output columns ({len(self.label_columns)}): ", self.label_columns)
-
-        print(f"Train: groups={self.train_groups}")
-        print(f"Val:  groups={self.val_groups}")
-        print(f"Test:  groups={self.test_groups}")
-
-        train_df = self.raw_train_df
-        val_df = self.raw_val_df
-        test_df = self.raw_test_df
-        print("\nAll shapes are: (frames, features)")
-        print(f"Training data: {train_df.shape}")
-        print(f"Val data: {val_df.shape}")
-        print(f"Test data: {test_df.shape}")
-
-        train_count = self.__count_label_frames(train_df)
-        val_count = self.__count_label_frames(val_df)
-        test_count = self.__count_label_frames(test_df)
-
-        print("\nData splits (train/val/test):")
-        for key in train_count.keys():
-            total = train_count[key] + val_count[key] + test_count[key]
-            print(
-                f"{key}: {train_count[key] / total:.1%} / {val_count[key] / total:.1%} / {test_count[key] / total:.1%}"
-            )
-
-        print("\nTotals (train/val/test):")
-        for key in train_count.keys():
-            print(f"{key}: {train_count[key]} / {val_count[key]} / {test_count[key]}")
 
     @tf.autograph.experimental.do_not_convert
     def split_window(self, batch: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
@@ -395,7 +415,7 @@ class WindowGenerator:
         return data_points
 
     def get_class_weights(self, verbose: bool = False) -> ndarray:
-        class_counts = self.__count_label_frames(self.raw_train_df)
+        class_counts = self._count_label_frames(self.raw_train_df)
         if verbose:
             print("Class counts:\n", class_counts)
 
@@ -410,9 +430,6 @@ class WindowGenerator:
             )
 
         return class_weights
-
-    def __count_label_frames(self, df: DataFrame) -> dict:
-        return {label: sum(df[label]) for label in self.label_columns}
 
     def __repr__(self):
         return "\n".join(
