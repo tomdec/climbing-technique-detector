@@ -101,15 +101,16 @@ def get_results_per_cvs(model_type: str) -> DataFrame:
         for start, stop in valid_segments:
             segment = results.query(f"{start} <= frame and frame < {stop}")
             count = len(segment.index)
-            original_acc.append(sum(segment["original"] == segment["labels"]) / count)
-            if "processed" in segment.columns:
-                processed_acc.append(
-                    sum(segment["processed"] == segment["labels"]) / count
-                )
 
-    if len(processed_acc) > 0:
+            if "original" in segment.columns:
+                original_acc.append(
+                    sum(segment["original"] == segment["labels"]) / count
+                )
+            processed_acc.append(sum(segment["processed"] == segment["labels"]) / count)
+
+    if len(original_acc) > 0:
         return DataFrame(
             data=zip(original_acc, processed_acc), columns=["original", "processed"]
         )
     else:
-        return DataFrame(data=original_acc, columns=["original"])
+        return DataFrame(data=processed_acc, columns=["processed"])
