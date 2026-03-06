@@ -83,48 +83,44 @@ def collect_evaluation_performance(
     with build_holistic_model(static_image_model=False) as hpe_tool:
         vid_capture = VideoCapture(video_path)
         try:
-            # for valid_segment in valids:
-            valid_segment = valids[0]
+            for start_frame, stop_frame in valids:
 
-            start_frame = valid_segment[0]
-            stop_frame = valid_segment[1]
+                frame_num = start_frame
+                vid_capture.set(CAP_PROP_POS_FRAMES, frame_num)
 
-            frame_num = start_frame
-            vid_capture.set(CAP_PROP_POS_FRAMES, frame_num)
+                landmarks = None
 
-            landmarks = None
+                while vid_capture.isOpened() and frame_num < stop_frame:
+                    _, image = vid_capture.read()
+                    image = cvtColor(image, COLOR_BGR2RGB)
 
-            while vid_capture.isOpened() and frame_num < stop_frame:
-                _, image = vid_capture.read()
-                image = cvtColor(image, COLOR_BGR2RGB)
+                    frame.append(frame_num)
 
-                frame.append(frame_num)
+                    label = get_label_by_frame_num(labels, frame_num)
+                    labels_arr.append(label)
 
-                label = get_label_by_frame_num(labels, frame_num)
-                labels_arr.append(label)
+                    t0_cpu = process_time()
+                    t0_seq = perf_counter()
+                    landmarks = _get_input_features(
+                        landmarks, image, hpe_tool, wg, input_width
+                    )
+                    t1_cpu = process_time()
+                    t1_seq = perf_counter()
+                    pred = _get_prediction(landmarks, model, binarizer)
+                    t2_cpu = process_time()
+                    t2_seq = perf_counter()
 
-                t0_cpu = process_time()
-                t0_seq = perf_counter()
-                landmarks = _get_input_features(
-                    landmarks, image, hpe_tool, wg, input_width
-                )
-                t1_cpu = process_time()
-                t1_seq = perf_counter()
-                pred = _get_prediction(landmarks, model, binarizer)
-                t2_cpu = process_time()
-                t2_seq = perf_counter()
+                    processed.append(pred)
 
-                processed.append(pred)
+                    hpe_speed_cpu.append(t1_cpu - t0_cpu)
+                    inference_speed_cpu.append(t2_cpu - t1_cpu)
+                    total_speed_cpu.append(t2_cpu - t0_cpu)
 
-                hpe_speed_cpu.append(t1_cpu - t0_cpu)
-                inference_speed_cpu.append(t2_cpu - t1_cpu)
-                total_speed_cpu.append(t2_cpu - t0_cpu)
+                    hpe_speed_seq.append(t1_seq - t0_seq)
+                    inference_speed_seq.append(t2_seq - t1_seq)
+                    total_speed_seq.append(t2_seq - t0_seq)
 
-                hpe_speed_seq.append(t1_seq - t0_seq)
-                inference_speed_seq.append(t2_seq - t1_seq)
-                total_speed_seq.append(t2_seq - t0_seq)
-
-                frame_num += 1
+                    frame_num += 1
         finally:
             vid_capture.release()
 
