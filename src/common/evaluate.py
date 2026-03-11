@@ -3,7 +3,9 @@ from pandas import DataFrame
 from glob import glob
 from pandas import concat
 from os.path import join, exists
+from pathlib import Path
 
+from src.labels import get_labels_from_video, find_valid_segments
 from src.common.helpers import read_dataframe
 
 
@@ -78,3 +80,37 @@ def print_all_results(evaluation_root: str):
         print(
             f"Ratio between HPE extraction and RNN inference: {ratio_hpe:.1%}/{ratio_inference:.1%}"
         )
+
+
+def get_evaluation_results_path(video_path: str, model_type: str) -> str:
+    filename = Path(video_path).stem
+    return f"data/df/evaluation_results/{model_type}/{filename}.pkl"
+
+
+def get_results_per_cvs(model_type: str) -> DataFrame:
+    video_paths = glob("data/videos/*")
+    original_acc = []
+    processed_acc = []
+
+    for video_path in video_paths:
+        results_path = get_evaluation_results_path(video_path, model_type)
+        label_path = get_labels_from_video(video_path)
+        results = read_dataframe(results_path)
+        valid_segments = find_valid_segments(label_path)
+
+        for start, stop in valid_segments:
+            segment = results.query(f"{start} <= frame and frame < {stop}")
+            count = len(segment.index)
+
+            if "original" in segment.columns:
+                original_acc.append(
+                    sum(segment["original"] == segment["labels"]) / count
+                )
+            processed_acc.append(sum(segment["processed"] == segment["labels"]) / count)
+
+    if len(original_acc) > 0:
+        return DataFrame(
+            data=zip(original_acc, processed_acc), columns=["original", "processed"]
+        )
+    else:
+        return DataFrame(data=processed_acc, columns=["processed"])
