@@ -7,12 +7,16 @@ from cv2 import (
     CAP_PROP_FRAME_COUNT,
     CAP_PROP_FPS,
     imwrite,
+    resize,
+    INTER_LINEAR,
 )
 from matplotlib.pyplot import subplots, subplots_adjust, Axes
 from numpy import mean, load
 
 from src.labels import make_label_dirs, get_dataset_name, iterate_valid_labels
 from src.common.helpers import get_filename, get_split_limits, ensure_path_exists
+
+FRAME_SIZE = 256
 
 
 def build_image_dirs(dataset_dir):
@@ -168,6 +172,9 @@ def generate_frame_dataset(data_root: str):
                 success, frame = video.read()
                 if not success:
                     break
+                frame = resize(
+                    frame, (FRAME_SIZE, FRAME_SIZE), interpolation=INTER_LINEAR
+                )
                 frame_path = join(frame_path_root, video_name, f"{frame_idx}.png")
                 ensure_path_exists(frame_path)
                 imwrite(frame_path, frame)
