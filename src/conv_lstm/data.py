@@ -1,23 +1,31 @@
-from pandas import DataFrame, Series, concat
-from sklearn.impute import SimpleImputer
-from numpy import nan, arange, array, mean, float32, reshape, ndarray, sum
-from numpy.random import default_rng
-from matplotlib import pyplot as plt
+from cv2 import imread
+from pandas import DataFrame
+from numpy import arange, reshape, concatenate, ndarray, sum
 import tensorflow as tf
-from typing import Tuple
-from functools import reduce
-from keras.api.preprocessing import timeseries_dataset_from_array
+from pandas import Series, concat
+from typing import Iterator, Tuple, Callable
+from cv2 import imread, cvtColor, COLOR_BGR2RGB
+from cv2.typing import MatLike
+from os.path import join
 
-from src.labels import get_valid_label_count
+from src.common.helpers import get_filename
 from src.common.data import take_groups
+from src.labels import get_valid_label_count
 from src.hpe_dnn.helpers import binarize_labels, unbinarize_labels
 from src.rnn.helpers import (
-    get_features,
     get_admin_columns,
-    split_df,
-    combine_df,
 )
 from src.rnn.augmentation import AugmentationPipeline
+from src.sampling.images import FRAME_SIZE
+
+
+def get_frame(row: Series) -> MatLike:
+    frame_root = "data/frames"
+    video_name = get_filename(row["video"])
+    frame_idx = row["frame_num"]
+    image = imread(join(frame_root, video_name, f"{frame_idx}.png"))
+    image = cvtColor(image, COLOR_BGR2RGB)
+    return image
 
 
 class EvaluationWindowGenerator:
@@ -53,15 +61,15 @@ class EvaluationWindowGenerator:
         self, data: DataFrame, train_groups: list, val_groups: list, test_groups: list
     ):
         df = data.copy()
-        features = get_features(df)
         labels_str: Series = df.pop("label")
         admin_cols = get_admin_columns(df)
 
         labels = binarize_labels(labels_str)
-        self.raw_data = combine_df(features, labels, admin_cols)
+        self.raw_data = concat([labels, admin_cols], axis=1)
+        self.raw_data.insert(0, "frames", None)
 
         # Store input and output column names
-        self.input_columns = features.columns
+        self.input_columns = ["frames"]
         self.label_columns = labels.columns
 
         self.train_groups = train_groups
@@ -188,11 +196,6 @@ class WindowGenerator(EvaluationWindowGenerator):
 
         self._augmentation = None
 
-        train_df = take_groups(self.raw_data, train_groups)
-        train_features = get_features(train_df)
-        self.train_mean = train_features.mean(skipna=True)
-        self.train_std = train_features.std(skipna=True)
-
         # Work out the label column indices.
         self.column_indices = {name: i for i, name in enumerate(self.raw_data.columns)}
         self.input_column_indices = {
@@ -216,179 +219,57 @@ class WindowGenerator(EvaluationWindowGenerator):
         self.labels_slice = slice(self.label_start, None)
         self.label_indices = arange(self.total_window_size)[self.labels_slice]
 
-    def set_augmentation(self, augmentation: AugmentationPipeline):
-        self._augmentation = augmentation
-
     def get_processed_data(
         self, data: DataFrame, isTraining: bool = False
     ) -> DataFrame:
-        if isTraining:
-            data = self.augment_features(data)
-        data = self.normalize_features(data)
-        data = self.impute_features(data)
         return data
-
-    def augment_features(self, data: DataFrame) -> DataFrame:
-        if self._augmentation is None:
-            return data
-
-        def apply_augmentation_per_group(group: int) -> DataFrame:
-            rng = default_rng()
-            seed = int(rng.integers(1000))
-            print(f"Applying augmentation seed {seed} for group {group}")
-            self._augmentation.set_seed(seed)
-            group_df = take_groups(data, [group])
-            group_df = group_df.apply(self._augmentation, axis=1)
-            return group_df
-
-        groups = data["group"].unique()
-        group_df_arr = list(map(apply_augmentation_per_group, groups))
-        data = concat(group_df_arr, axis=0, ignore_index=True)
-
-        return data
-
-    def normalize_features(self, data: DataFrame) -> DataFrame:
-        features, labels, admin = split_df(data)
-
-        features = (features - self.train_mean) / self.train_std
-
-        return combine_df(features, labels, admin)
-
-    def impute_features(self, data: DataFrame) -> DataFrame:
-        features, labels, admin = split_df(data)
-
-        imp = SimpleImputer(
-            missing_values=nan,
-            strategy="constant",
-            fill_value=0,
-            keep_empty_features=True,
-        )
-        features = features.copy()
-        features = DataFrame(imp.fit_transform(features), columns=features.keys())
-
-        return combine_df(features, labels, admin)
 
     @tf.autograph.experimental.do_not_convert
-    def split_window(self, batch: tf.Tensor) -> Tuple[tf.Tensor, tf.Tensor]:
-        inputs: tf.Tensor = batch[:, self.input_slice, :]
-        inputs = tf.stack(
-            [inputs[:, :, self.column_indices[name]] for name in self.input_columns],
-            axis=-1,
-        )
-        output = batch[:, self.labels_slice, :]
-        output = tf.stack(
-            [output[:, :, self.column_indices[name]] for name in self.label_columns],
-            axis=-1,
-        )
+    def split_window(self, window: DataFrame) -> Tuple[tf.Tensor, tf.Tensor]:
+        df_frames = window.apply(get_frame, axis=1)
+        inputs = tf.stack(df_frames.values)
 
-        # Slicing doesn't preserve static shape information, so set the shapes
-        # manually. This way the `tf.data.Datasets` are easier to inspect.
-        inputs.set_shape([None, self.input_width, None])
-        output.set_shape([None, self.label_width, None])
+        output = window[self.labels_slice]
+        output = tf.stack(
+            [output[name] for name in self.label_columns],
+            axis=-1,
+        )
+        output.set_shape([None, get_valid_label_count()])
 
         return inputs, output
 
-    def get_example(self):
-        data = self.get_processed_data(self.raw_data)
-        data = data.drop(columns=["video", "frame_num", "group"])
-        data = array(data, dtype=float32)
-
-        # Stack three slices, the length of the total window.
-        example_batch = tf.stack(
-            [
-                data[: self.total_window_size],
-                data[100 : 100 + self.total_window_size],
-                data[200 : 200 + self.total_window_size],
-            ]
-        )
-
-        example_inputs, example_ouputs = self.split_window(example_batch)
-
-        print("All shapes are: (batch, time, features)")
-        print(f"Window shape: {example_batch.shape}")
-        print(f"Inputs shape: {example_inputs.shape}")
-        print(f"Labels shape: {example_ouputs.shape}")
-
-        return example_inputs, example_ouputs
-
-    def plot(self, model=None, plot_col="NOSE_x", max_subplots=3):
-        inputs, labels = self.get_example()
-        plt.figure(figsize=(12, 8))
-        plot_col_index = self.column_indices[plot_col]
-        max_n = min(max_subplots, len(inputs))
-        for n in range(max_n):
-            plt.subplot(max_n, 1, n + 1)
-            plt.ylabel(f"{plot_col} [norm]")
-            feature_values = inputs[n, :, plot_col_index]
-            feature_spread = max(feature_values) - min(feature_values)
-            # x_axis = inputs[n, :, frame_num_index]
-            x_axis = self.input_indices
-
-            plt.xlim((x_axis[0], x_axis[-1] + 1))
-            plt.plot(x_axis, feature_values, label="Inputs", marker=".", zorder=-10)
-
-            label_col_index = plot_col_index
-            if label_col_index is None:
-                continue
-
-            logits = DataFrame(data=array(labels[n, :, :]), columns=self.label_columns)
-            label_name = unbinarize_labels(logits)[0]
-            label_x_position = x_axis[-1] + 0.1
-            label_y_position = mean(feature_values) + feature_spread * 0.2
-            plt.text(
-                label_x_position,
-                label_y_position,
-                f"Label: {label_name}",
-                c="#2ca02c",
-                label="Label",
-            )
-
-            if model is not None:
-                predictions = model(inputs)
-                pred_2d = reshape(predictions, (-1, get_valid_label_count()))
-                pred_df = DataFrame(pred_2d, columns=self.label_columns)
-                pred_label = unbinarize_labels(pred_df)[n]
-                pred_y_position = mean(feature_values) - feature_spread * 0.1
-                plt.text(
-                    label_x_position,
-                    pred_y_position,
-                    f"Pred: {pred_label}",
-                    c="#ff7f0e",
-                    label="Prediction",
-                )
-
-            if n == 0:
-                plt.legend()
-
-        plt.xlabel("Frame number")
-
-    def make_window_batches(self, data: DataFrame, group: int) -> tf.data.Dataset:
+    def make_window_batches(self, data: DataFrame, group: int) -> Iterator[DataFrame]:
         group_data = data.query(f"group == {group}")
-        group_data = group_data.drop(columns=["video", "frame_num", "group"])
-        group_arr = array(group_data, dtype=float32)
+        group_len = len(group_data)
+        start_points = arange(0, group_len - self.input_width + 1)
+        slices = [slice(start, start + self.input_width) for start in start_points]
+        for slc in slices:
+            yield group_data[slc]
 
-        return timeseries_dataset_from_array(
-            data=group_arr,
-            targets=None,
-            sequence_length=self.total_window_size,
-            sequence_stride=1,
-            sampling_rate=1,
-            shuffle=False,
-            batch_size=32,
+    def get_generator(self, data: DataFrame) -> Callable[[], Iterator]:
+
+        def generator() -> Iterator:
+            groups = data["group"].unique()
+            for group in groups:
+                windows_iter = self.make_window_batches(data, group)
+                for window in windows_iter:
+                    yield self.split_window(window)
+
+        return generator
+
+    def get_signature(self) -> Tuple[tf.TensorSpec, tf.TensorSpec]:
+        return (
+            tf.TensorSpec(shape=(self.input_width, FRAME_SIZE, FRAME_SIZE, 3)),
+            tf.TensorSpec(shape=(self.label_width, get_valid_label_count())),
         )
 
     def make_ds(self, data: DataFrame) -> tf.data.Dataset:
-        groups = data["group"].unique()
-        windows = map(lambda group: self.make_window_batches(data, group), groups)
-        windows = reduce(tf.data.Dataset.concatenate, windows)
-        data_points = windows.map(self.split_window)
 
-        print(f"Generated {len(data_points)} batches")
-        print("All shapes are: (batch, time, features)")
-        print("Input data:", data_points.element_spec[0])
-        print("Output data:", data_points.element_spec[1])
-
-        return data_points
+        ds = tf.data.Dataset.from_generator(
+            generator=self.get_generator(data), output_signature=self.get_signature()
+        )
+        ds = ds.batch(32)
+        return ds
 
     def get_class_weights(self, verbose: bool = False) -> ndarray:
         class_counts = self._count_label_frames(self.raw_train_df)

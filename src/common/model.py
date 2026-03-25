@@ -2,6 +2,9 @@ from json import dump, load
 from typing import Any
 from os.path import exists, join
 from re import search
+from keras import Variable
+from keras.api.ops import sum, clip, log
+from keras.api.config import epsilon
 
 from src.labels import get_dataset_name
 from src.common.helpers import (
@@ -38,6 +41,20 @@ def get_best_tf_weights(path_to_weights: list) -> str:
                 best_performance = metric_value
 
     return best_path
+
+
+def weighted_categorical_cross_entropy(weights):
+    # source: https://gist.github.com/wassname/ce364fddfc8a025bfab4348cf5de852d
+    weights = Variable(weights)
+
+    def loss(y_true, y_pred):
+        y_pred /= sum(y_pred, axis=-1, keepdims=True)
+        y_pred = clip(y_pred, epsilon(), 1 - epsilon())
+        loss = y_true * log(y_pred) * weights
+        loss = -sum(loss, -1)
+        return loss
+
+    return loss
 
 
 class ModelInitializeArgs:

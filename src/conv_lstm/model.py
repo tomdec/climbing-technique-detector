@@ -28,18 +28,17 @@ from src.common.model import (
 )
 from src.common.plot import plot_confusion_matrix
 from src.common.wandb import PROJECT_NAME
-from src.common.model import weighted_categorical_cross_entropy
 from src.common.data import split_input_output
-from src.rnn.data import WindowGenerator, output_to_labels
-from src.rnn.augmentation import AugmentationPipeline
-from src.rnn.architecture import get_model, RnnArch
+from src.common.model import weighted_categorical_cross_entropy
+from src.conv_lstm.architecture import ConvLstmArch, get_model
+from src.conv_lstm.data import WindowGenerator
 
 
-class RnnModelInitializeArgs(ModelInitializeArgs):
+class ConvLstmModelInitializeArgs(ModelInitializeArgs):
 
     @override
     @property
-    def model_arch(self) -> RnnArch:
+    def model_arch(self) -> ConvLstmArch:
         """Enum that is mapped to a factory function"""
         return self._model_arch
 
@@ -54,7 +53,7 @@ class RnnModelInitializeArgs(ModelInitializeArgs):
     @override
     def __init__(
         self,
-        model_arch: RnnArch = RnnArch.ARCH1,
+        model_arch: ConvLstmArch = ConvLstmArch.ARCH1,
         input_width: int = 5,
         spacing: int = 1,
     ):
@@ -63,26 +62,26 @@ class RnnModelInitializeArgs(ModelInitializeArgs):
         self._spacing = spacing
 
 
-class RnnConstructorArgs(ModelConstructorArgs):
+class ConvLstmConstructorArgs(ModelConstructorArgs):
 
     @override
     @property
-    def model_initialize_args(self) -> RnnModelInitializeArgs:
+    def model_initialize_args(self) -> ConvLstmModelInitializeArgs:
         return self._model_initialize_args
 
     @override
     def __init__(
         self,
         name: str,
-        model_initialize_args: RnnModelInitializeArgs = RnnModelInitializeArgs(),
+        model_initialize_args: ConvLstmModelInitializeArgs = ConvLstmModelInitializeArgs(),
         data_root_path="data",
         dataset_name=DEFAULT_DATASET,
     ):
         super().__init__(name, model_initialize_args, data_root_path, dataset_name)
 
     @override
-    def copy_with(self, name=None, dataset_name=None) -> "RnnConstructorArgs":
-        return RnnConstructorArgs(
+    def copy_with(self, name=None, dataset_name=None) -> "ConvLstmConstructorArgs":
+        return ConvLstmConstructorArgs(
             name=self.name if name is None else name,
             model_initialize_args=self.model_initialize_args,
             data_root_path=self.data_root_path,
@@ -90,32 +89,27 @@ class RnnConstructorArgs(ModelConstructorArgs):
         )
 
 
-class RnnIntTrainArgs(TrainArgs):
-
-    @property
-    def augmented(self) -> bool:
-        return self._augmented
+class ConvLstmIntTrainArgs(TrainArgs):
 
     def __init__(
         self,
         epochs: int = 10,
         balanced: bool = False,
-        augmented: bool = False,
         additional_config: dict = {},
     ):
         super().__init__(epochs, balanced, additional_config)
-        self._augmented = augmented
 
 
-class RnnTrainArgs(RnnIntTrainArgs):
+class ConvLstmTrainArgs(ConvLstmIntTrainArgs):
 
     @staticmethod
-    def from_intermediate(wg: WindowGenerator, args: RnnIntTrainArgs) -> "RnnTrainArgs":
-        return RnnTrainArgs(
+    def from_intermediate(
+        wg: WindowGenerator, args: ConvLstmIntTrainArgs
+    ) -> "ConvLstmTrainArgs":
+        return ConvLstmTrainArgs(
             window_generator=wg,
             epochs=args.epochs,
             balanced=args.balanced,
-            augmented=args.augmented,
             additional_config=args.additional_config,
         )
 
@@ -128,14 +122,13 @@ class RnnTrainArgs(RnnIntTrainArgs):
         window_generator: WindowGenerator,
         epochs: int = 10,
         balanced: bool = False,
-        augmented: bool = False,
         additional_config: dict = {},
     ):
-        super().__init__(epochs, balanced, augmented, additional_config)
+        super().__init__(epochs, balanced, additional_config)
         self._window_generator = window_generator
 
 
-class RnnTestArgs(TestArgs):
+class ConvLstmTestArgs(TestArgs):
 
     @property
     def window_generator(self) -> WindowGenerator:
@@ -152,49 +145,51 @@ class RnnTestArgs(TestArgs):
         self._window_generator = window_generator
 
 
-class RnnIntMultiRunTrainArgs(MultiRunTrainArgs):
+class ConvLstmIntMultiRunTrainArgs(MultiRunTrainArgs):
 
     @override
     @property
-    def train_args(self) -> RnnIntTrainArgs:
+    def train_args(self) -> ConvLstmIntTrainArgs:
         return self._train_args
 
     @override
-    def __init__(self, train_args: RnnIntTrainArgs, runs=5):
+    def __init__(self, train_args: ConvLstmIntTrainArgs, runs=5):
         super().__init__(runs, train_args)
 
 
-class RnnMultiRunTrainArgs(MultiRunTrainArgs):
+class ConvLstmMultiRunTrainArgs(MultiRunTrainArgs):
 
     @staticmethod
     def from_intermediate(
-        wg: WindowGenerator, args: RnnIntMultiRunTrainArgs
-    ) -> "RnnMultiRunTrainArgs":
-        return RnnMultiRunTrainArgs(
-            train_args=RnnTrainArgs.from_intermediate(wg, args.train_args),
+        wg: WindowGenerator, args: ConvLstmIntMultiRunTrainArgs
+    ) -> "ConvLstmMultiRunTrainArgs":
+        return ConvLstmMultiRunTrainArgs(
+            train_args=ConvLstmTrainArgs.from_intermediate(wg, args.train_args),
             runs=args.runs,
         )
 
     @override
     @property
-    def train_args(self) -> RnnTrainArgs:
+    def train_args(self) -> ConvLstmTrainArgs:
         return self._train_args
 
     @override
-    def __init__(self, train_args: RnnTrainArgs, runs=5):
+    def __init__(self, train_args: ConvLstmTrainArgs, runs=5):
         super().__init__(runs, train_args)
 
 
-class Rnn(ClassificationModel):
+class ConvLstm(ClassificationModel):
+
+    MODEL_TYPE = "conv_lstm"
 
     @override
     @property
-    def model_initialize_args(self) -> RnnModelInitializeArgs:
+    def model_initialize_args(self) -> ConvLstmModelInitializeArgs:
         return self._model_initialize_args
 
     @override
     @property
-    def model_arch(self) -> RnnArch:
+    def model_arch(self) -> ConvLstmArch:
         """Enum that is mapped to a factory function"""
         return self.model_initialize_args.model_arch
 
@@ -207,14 +202,14 @@ class Rnn(ClassificationModel):
         return self._loss_function
 
     @override
-    def __init__(self, args: RnnConstructorArgs):
+    def __init__(self, args: ConvLstmConstructorArgs):
         super().__init__(args)
         self._model = None
         self._weights = None
         self._loss_function = CategoricalCrossentropy()
 
     @override
-    def execute_train_runs(self, args: RnnMultiRunTrainArgs):
+    def execute_train_runs(self, args: ConvLstmMultiRunTrainArgs):
         if args.train_args.balanced:
             weights = args.train_args.window_generator.get_class_weights()
             self._loss_function = weighted_categorical_cross_entropy(weights)
@@ -222,16 +217,12 @@ class Rnn(ClassificationModel):
         return super().execute_train_runs(args)
 
     @override
-    def train_model(self, args: RnnTrainArgs):
+    def train_model(self, args: ConvLstmTrainArgs):
         if self.model is None:
             raise Exception("Cannot train before model is initialized")
 
         if args.balanced and type(self.loss_function) == CategoricalCrossentropy:
             raise Exception("Unexpected loss function for balanced training.")
-
-        if args.augmented and args.window_generator.augmentation is None:
-            args.window_generator.set_augmentation(AugmentationPipeline())
-            pass
 
         train_ds = args.window_generator.train_ds
         val_ds = args.window_generator.val_ds
@@ -244,7 +235,7 @@ class Rnn(ClassificationModel):
         init(
             project=PROJECT_NAME,
             job_type="train",
-            group="rnn",
+            group=self.MODEL_TYPE,
             name=self.name,
             config=wandb_config,
             dir=self.data_root_path,
@@ -280,7 +271,7 @@ class Rnn(ClassificationModel):
             finish()
 
     @override
-    def test_model(self, args: RnnTestArgs):
+    def test_model(self, args: ConvLstmTestArgs):
         # reset to default loss function
         self._loss_function = CategoricalCrossentropy()
         self._load_best_model()
@@ -328,7 +319,7 @@ class Rnn(ClassificationModel):
         return performance
 
     def __get_checkpoint_callback(
-        self, checkpoint_dir: str, train_args: RnnTrainArgs
+        self, checkpoint_dir: str, train_args: ConvLstmTrainArgs
     ) -> ModelCheckpoint:
 
         file_name = (
@@ -352,7 +343,9 @@ class Rnn(ClassificationModel):
         )
         return cp_callback
 
-    def __get_early_stopping_callback(self, train_args: RnnTrainArgs) -> EarlyStopping:
+    def __get_early_stopping_callback(
+        self, train_args: ConvLstmTrainArgs
+    ) -> EarlyStopping:
         metric_to_monitor = (
             "val_categorical_accuracy" if not train_args.balanced else "val_loss"
         )
@@ -367,7 +360,7 @@ class Rnn(ClassificationModel):
         wandb_run = init(
             project=PROJECT_NAME,
             job_type="test",
-            group="rnn",
+            group=self.MODEL_TYPE,
             name=self.name,
             config=config,
             dir=self.data_root_path,
@@ -391,7 +384,7 @@ class Rnn(ClassificationModel):
 
     @override
     def _get_model_dir(self):
-        return join(self.data_root_path, "runs", "rnn", self.name)
+        return join(self.data_root_path, "runs", self.MODEL_TYPE, self.name)
 
     @override
     def _get_best_model_path(self):
@@ -419,12 +412,12 @@ class Rnn(ClassificationModel):
             "spacing": self.model_initialize_args.spacing,
         }
 
-    def __get_train_wandb_config(self, args: RnnTrainArgs) -> dict:
+    def __get_train_wandb_config(self, args: ConvLstmTrainArgs) -> dict:
         return (
             self._get_common_wandb_config()
             | {
                 "balanced": args.balanced,
-                "augmented": args.augmented,
+                "augmented": False,
                 "run": self._get_next_train_run(),
             }
             | args.additional_config

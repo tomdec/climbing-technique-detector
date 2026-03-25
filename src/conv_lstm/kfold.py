@@ -7,34 +7,38 @@ import matplotlib.pyplot as plt
 
 from src.common.helpers import read_dataframe
 from src.common.kfold import ExtendedStratifiedGroupKFold
-from src.rnn.data import WindowGenerator
-from src.rnn.model import (
-    Rnn,
-    RnnConstructorArgs,
-    RnnIntMultiRunTrainArgs,
-    RnnMultiRunTrainArgs,
-    RnnTestArgs,
+from src.conv_lstm.data import WindowGenerator
+from src.conv_lstm.model import (
+    ConvLstm,
+    ConvLstmConstructorArgs,
+    ConvLstmIntMultiRunTrainArgs,
+    ConvLstmMultiRunTrainArgs,
+    ConvLstmTestArgs,
 )
 
 
-class RnnFoldCrossValidation:
+class ConvLstmFoldCrossValidation:
 
     @property
-    def model_constructor_args(self) -> RnnConstructorArgs:
+    def model_constructor_args(self) -> ConvLstmConstructorArgs:
         return self._model_args
 
-    def __init__(self, model_args: RnnConstructorArgs):
+    def __init__(self, model_args: ConvLstmConstructorArgs, batch_size: int = 32):
         self._model_args = model_args
         self._splitter = ExtendedStratifiedGroupKFold()
+        self._batch_size = batch_size
 
     def get_full_data_list(self) -> DataFrame:
         path_to_all = join(
-            self.model_constructor_args.data_root_path, "df", "rnn", "cvs_features.pkl"
+            self.model_constructor_args.data_root_path,
+            "df",
+            "rnn",
+            "cvs_features.pkl",
         )
         return read_dataframe(path_to_all)
 
     def train_folds(
-        self, train_run_args: RnnIntMultiRunTrainArgs, verbose: bool = False
+        self, train_run_args: ConvLstmConstructorArgs, verbose: bool = False
     ):
         full_data = self.get_full_data_list()
 
@@ -79,7 +83,7 @@ class RnnFoldCrossValidation:
         plt.show()
 
     def get_test_accuracy_metrics(self) -> List[float]:
-        def get_metric(model: Rnn) -> float:
+        def get_metric(model: ConvLstm) -> float:
             return model.get_test_accuracy_metric()
 
         models = list(map(self.__init_fold_model, range(1, 11)))
@@ -109,7 +113,7 @@ class RnnFoldCrossValidation:
                 context_config={"fold": fold_num}
             )
             model.test_model(
-                args=RnnTestArgs(
+                args=ConvLstmTestArgs(
                     window_generator=wg,
                     write_to_wandb=True,
                     additional_config=additional_config,
@@ -126,7 +130,7 @@ class RnnFoldCrossValidation:
     def train_fold(
         self,
         fold_num: int,
-        train_run_args: RnnIntMultiRunTrainArgs,
+        train_run_args: ConvLstmIntMultiRunTrainArgs,
         verbose: bool = False,
     ):
         full_data = self.get_full_data_list()
@@ -161,7 +165,7 @@ class RnnFoldCrossValidation:
 
     def __train_fold(
         self,
-        train_run_args: RnnIntMultiRunTrainArgs,
+        train_run_args: ConvLstmIntMultiRunTrainArgs,
         fold_num: int,
         data: DataFrame,
         train_groups: list,
@@ -185,23 +189,25 @@ class RnnFoldCrossValidation:
             context_config={"fold": fold_num}
         )
 
-        rnn_train_run_args = RnnMultiRunTrainArgs.from_intermediate(wg, train_run_args)
+        rnn_train_run_args = ConvLstmMultiRunTrainArgs.from_intermediate(
+            wg, train_run_args
+        )
         rnn_train_run_args.train_args.add_config(additional_config)
         model.execute_train_runs(rnn_train_run_args)
 
         model.test_model(
-            args=RnnTestArgs(
+            args=ConvLstmTestArgs(
                 window_generator=wg,
                 write_to_wandb=True,
                 additional_config=additional_config,
             )
         )
 
-    def __init_fold_model(self, fold_num: int) -> Rnn:
+    def __init_fold_model(self, fold_num: int) -> ConvLstm:
         adapted_args = self._model_args.copy_with(
             name=f"{self._model_args.name}-fold{fold_num}"
         )
-        return Rnn(adapted_args)
+        return ConvLstm(adapted_args)
 
     def __split_files_exist(self, model_dir) -> bool:
         return (
@@ -244,6 +250,7 @@ class RnnFoldCrossValidation:
             test_groups,
             input_width=self.model_constructor_args.model_initialize_args.input_width,
             spacing=self.model_constructor_args.model_initialize_args.spacing,
+            batch_size=self._batch_size,
         )
         if verbose:
             print(wg)
