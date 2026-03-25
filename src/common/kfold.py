@@ -1,11 +1,13 @@
 from ctypes import ArgumentError
 from os import makedirs
 from sklearn.model_selection import KFold
-from typing import Tuple, Type, Dict, List, Any
-from numpy import ndarray, array, save, load
+from typing import Tuple, Type, Dict, List, Any, Iterator
+from numpy import ndarray, array, save, load, unique, ones
 from random import sample
 from os.path import join, exists
 from copy import deepcopy
+from sklearn.model_selection import StratifiedGroupKFold
+from pandas import DataFrame, Series
 
 from src.common.helpers import raise_not_implemented_error
 from src.common.model import (
@@ -13,7 +15,6 @@ from src.common.model import (
     ModelConstructorArgs,
     MultiRunTrainArgs,
     TestArgs,
-    TrainArgs,
 )
 
 
@@ -31,6 +32,56 @@ def _swap_to_kf_dataset(model_args: ModelConstructorArgs) -> ModelConstructorArg
 
     new_name = model_args.dataset_name.replace("_full_kf", "_kf")
     return model_args.copy_with(dataset_name=new_name)
+
+
+class ExtendedStratifiedGroupKFold:
+
+    def __init__(self):
+        self._n_splits = 10
+        self._shuffle = False
+
+        self._splitter = StratifiedGroupKFold(
+            n_splits=self._n_splits, shuffle=self._shuffle
+        )
+
+        self._splits: List[Tuple[ndarray, ndarray, ndarray]] | None = None
+
+    def split(
+        self, X: DataFrame, y: Series, groups: Series
+    ) -> Iterator[Tuple[ndarray, ndarray, ndarray]]:
+
+        for n in range(self._n_splits):
+            train_temp, test_index = list(self._splitter.split(X, y, groups))[n]
+            train_index, val_index = list(
+                self._splitter.split(train_temp, y[train_temp], groups[train_temp])
+            )[n]
+
+            train_index = train_temp[train_index]
+            val_index = train_temp[val_index]
+
+            yield train_index, val_index, test_index
+
+    def split_groups(
+        self, X: DataFrame, y: Series, groups: Series
+    ) -> Iterator[Tuple[ndarray, ndarray, ndarray]]:
+
+        for split in self.split(X, y, groups):
+            train_index, val_index, test_index = split
+            train_groups = unique(groups[train_index])
+            val_groups = unique(groups[val_index])
+            test_groups = unique(groups[test_index])
+
+            yield train_groups, val_groups, test_groups
+
+
+def iterate_group_splits(
+    full_data: DataFrame, splitter: ExtendedStratifiedGroupKFold
+) -> Iterator[Tuple[ndarray, ndarray, ndarray]]:
+    feature_placeholder = ones(shape=(full_data.shape[0]))
+    labels = full_data["label"]
+    groups = full_data["group"]
+
+    return splitter.split_groups(feature_placeholder, labels, groups)
 
 
 class AbstractFoldCrossValidation:
