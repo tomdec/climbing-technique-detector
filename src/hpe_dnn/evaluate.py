@@ -9,8 +9,15 @@ from numpy import array, ndarray
 from time import process_time, perf_counter
 from pathlib import Path
 from typing import List
+from os.path import join, exists
 
-from src.common.evaluate import get_majority_vote
+from src.common.evaluate import (
+    get_majority_vote,
+    print_common_results,
+    print_original_results,
+    print_hpe_inference_comparison,
+    combine_model_type_results,
+)
 from src.common.helpers import save_dataframe
 from src.labels import (
     iterate_valid_labels,
@@ -179,3 +186,17 @@ def collect_evaluation_performance(video_path: str, model: HpeDnn) -> DataFrame:
     filename = Path(video_path).stem
     save_dataframe(f"data/df/evaluation_results/dnn/{filename}.pkl", results)
     return results
+
+
+def print_results(evaluation_root: str):
+    model_type_root = join(evaluation_root, "dnn")
+    if not exists(model_type_root):
+        return
+
+    results = combine_model_type_results(model_type_root)
+    print("Report of HPE DNN results:")
+    print_original_results(results)
+    print_common_results(results)
+    print_hpe_inference_comparison(results, "DNN")
+
+    print()

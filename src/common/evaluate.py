@@ -21,11 +21,8 @@ def get_majority_vote(prediction: str, window: List[str], window_size: int = 5) 
     return max(set(window), key=window.count)
 
 
-def print_results(results: DataFrame):
+def print_common_results(results: DataFrame):
     total = len(results.index)
-    if "original" in results.columns:
-        original_acc = sum(results["original"] == results["labels"]) / total
-        print(f"Original accuracy: {original_acc}")
 
     processed_acc = sum(results["processed"] == results["labels"]) / total
     print(f"Processed accuracy: {processed_acc}")
@@ -35,6 +32,25 @@ def print_results(results: DataFrame):
 
     avg_total_speed_seq = sum(results["total_speed_seq"]) / total
     print(f"Average sequential time: {avg_total_speed_seq} s")
+
+
+def print_original_results(results: DataFrame):
+    total = len(results.index)
+    original_acc = sum(results["original"] == results["labels"]) / total
+    print(f"Original accuracy: {original_acc}")
+
+
+def print_hpe_inference_comparison(results: DataFrame, type_name: str):
+    avg_hpe = sum(results["hpe_speed_seq"]) / len(results.index)
+    avg_inference = sum(results["inference_speed_seq"]) / len(results.index)
+    print(f"Average HPE sequential time: {avg_hpe} s")
+    print(f"Average inference sequential time: {avg_inference} s")
+    ratio_hpe = avg_hpe / (avg_hpe + avg_inference)
+    ratio_inference = 1 - ratio_hpe
+    print(
+        f"Ratio between HPE extraction and {type_name} inference:",
+        f"{ratio_hpe:.1%}/{ratio_inference:.1%}",
+    )
 
 
 def combine_model_type_results(model_type_root: str) -> DataFrame:
@@ -48,18 +64,22 @@ def combine_model_type_results(model_type_root: str) -> DataFrame:
 
 
 def print_all_results(evaluation_root: str):
+    """
+    Deprecated. Use print_results function from each specific model type you need.
+    TODO: replace all references
+    """
     model_type_root = join(evaluation_root, "sota")
     if exists(model_type_root):
         df = combine_model_type_results(model_type_root)
         print("Report of SOTA results:")
-        print_results(df)
+        print_common_results(df)
 
     model_type_root = join(evaluation_root, "dnn")
     if exists(model_type_root):
         df = combine_model_type_results(model_type_root)
         print()
         print("Report of HPE DNN results:")
-        print_results(df)
+        print_common_results(df)
         avg_hpe = sum(df["hpe_speed_seq"]) / len(df.index)
         avg_inference = sum(df["inference_speed_seq"]) / len(df.index)
         print(f"Average HPE sequential time: {avg_hpe} s")
@@ -75,7 +95,7 @@ def print_all_results(evaluation_root: str):
         df = combine_model_type_results(model_type_root)
         print()
         print("Report of RNN results:")
-        print_results(df)
+        print_common_results(df)
         avg_hpe = sum(df["hpe_speed_seq"]) / len(df.index)
         avg_inference = sum(df["inference_speed_seq"]) / len(df.index)
         print(f"Average HPE sequential time: {avg_hpe} s")
