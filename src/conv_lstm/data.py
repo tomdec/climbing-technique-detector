@@ -191,6 +191,7 @@ class WindowGenerator(EvaluationWindowGenerator):
         test_groups: list,
         input_width: int,
         spacing: int = 1,
+        batch_size: int = 32,
     ):
         super().__init__(data, train_groups, val_groups, test_groups)
 
@@ -218,6 +219,8 @@ class WindowGenerator(EvaluationWindowGenerator):
         self.label_start = self.total_window_size - self.label_width
         self.labels_slice = slice(self.label_start, None)
         self.label_indices = arange(self.total_window_size)[self.labels_slice]
+
+        self.batch_size = batch_size
 
     def get_processed_data(
         self, data: DataFrame, isTraining: bool = False
@@ -268,7 +271,7 @@ class WindowGenerator(EvaluationWindowGenerator):
         ds = tf.data.Dataset.from_generator(
             generator=self.get_generator(data), output_signature=self.get_signature()
         )
-        ds = ds.batch(32)
+        ds = ds.batch(self.batch_size)
         return ds
 
     def get_class_weights(self, verbose: bool = False) -> ndarray:

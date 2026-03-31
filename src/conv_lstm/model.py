@@ -1,4 +1,5 @@
 import shutil
+from numpy import concatenate
 import tensorflow as tf
 from typing import override, List
 from os import makedirs, mkdir
@@ -252,6 +253,7 @@ class ConvLstm(ClassificationModel):
             self.model.fit(
                 train_ds,
                 epochs=args.epochs,
+                steps_per_epoch=100,
                 validation_data=val_ds,
                 shuffle=False,
                 callbacks=[
@@ -283,20 +285,27 @@ class ConvLstm(ClassificationModel):
 
         test_ds = args.window_generator.test_ds
 
-        input, labels = split_input_output(test_ds)
-        labels = output_to_labels(labels, args.window_generator.label_columns)
-        predictions = self.model(input)
-        predictions = output_to_labels(predictions, args.window_generator.label_columns)
+        all_labels = []
+        all_predictions = []
+        for input, labels in test_ds.as_numpy_iterator():
+            labels = output_to_labels(labels, args.window_generator.label_columns)
+            all_labels.append(labels.values)
+
+            output = self.model(input)
+            predictions = output_to_labels(output, args.window_generator.label_columns)
+            all_predictions.append(predictions.values)
+        all_labels = concatenate(all_labels, axis=0)
+        all_predictions = concatenate(all_predictions, axis=0)
 
         plot_confusion_matrix(
-            labels.values,
-            predictions.values,
+            all_labels,
+            all_predictions,
             save_path=join(test_run_path, "confusion_matrix.png"),
             normalized=False,
         )
         plot_confusion_matrix(
-            labels,
-            predictions,
+            all_labels,
+            all_predictions,
             save_path=join(test_run_path, "confusion_matrix_normalized.png"),
             normalized=True,
         )
