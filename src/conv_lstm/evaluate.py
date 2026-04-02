@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import List
 from os.path import join, exists
 
-from src.common.evaluate import combine_model_type_results
+from src.common.evaluate import combine_model_type_results, print_common_results
 from src.common.helpers import save_dataframe
 from src.sampling.images import FRAME_SIZE
 from src.labels import (
@@ -109,7 +109,14 @@ def collect_evaluation_performance(
     return results
 
 
-def print_results(results: DataFrame):
+def print_results(evaluation_root: str):
+    model_type_root = join(evaluation_root, "conv_lstm")
+    if not exists(model_type_root):
+        return
+
+    results = combine_model_type_results(model_type_root)
+    print("Report of CONV_LSTM results:")
+
     total = len(results.index)
 
     processed_acc = sum(results["processed"] == results["labels"]) / total
@@ -120,12 +127,3 @@ def print_results(results: DataFrame):
 
     avg_total_speed_seq = sum(results["inference_speed_seq"]) / total
     print(f"Average sequential time: {avg_total_speed_seq} s")
-
-
-def print_all_results(evaluation_root: str):
-    model_type_root = join(evaluation_root, "conv_lstm")
-    if exists(model_type_root):
-        df = combine_model_type_results(model_type_root)
-        print()
-        print("Report of CONV_LSTM results:")
-        print_results(df)
