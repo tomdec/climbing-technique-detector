@@ -29,8 +29,8 @@ from src.common.model import (
 from src.common.plot import plot_confusion_matrix
 from src.common.wandb import PROJECT_NAME
 from src.common.model import weighted_categorical_cross_entropy
-from src.common.data import split_input_output
-from src.rnn.data import WindowGenerator, output_to_labels
+from src.common.data import split_input_output, output_to_labels
+from src.rnn.data import WindowGenerator
 from src.rnn.augmentation import AugmentationPipeline
 from src.rnn.architecture import get_model, RnnArch
 

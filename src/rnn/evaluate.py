@@ -1,14 +1,12 @@
 import tensorflow as tf
 from cv2 import VideoCapture, CAP_PROP_POS_FRAMES, cvtColor, COLOR_BGR2RGB
 from cv2.typing import MatLike
-from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import LabelBinarizer
 from mediapipe.python.solutions.holistic import Holistic
 from pandas import DataFrame
-from numpy import array, ndarray
+from numpy import array
 from time import process_time, perf_counter
 from pathlib import Path
-from typing import List
 from numpy import float32
 from pandas import concat
 from os.path import join, exists
@@ -29,9 +27,8 @@ from src.labels import (
 from src.hpe.mp.landmarks import get_feature_labels
 from src.hpe.mp.evaluate import to_feature_vector
 from src.hpe.mp.model import build_holistic_model
-from src.rnn.architecture import RnnArch
 from src.rnn.data import WindowGenerator
-from src.rnn.model import Rnn, RnnConstructorArgs, RnnModelInitializeArgs
+from src.rnn.model import Rnn
 
 
 def _get_input_features(
