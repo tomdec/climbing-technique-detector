@@ -7,9 +7,11 @@ from keras.api.layers import (
     MaxPooling2D,
     MaxPooling3D,
     Conv2D,
+    Conv3D,
     Dense,
     Reshape,
     Flatten,
+    LSTM,
 )
 from keras.api.optimizers import Adam
 from keras.api.losses import CategoricalCrossentropy
@@ -24,12 +26,13 @@ class ConvLstmArch(Enum):
     ARCH2 = 2
     ARCH3 = 3
     ARCH4 = 4
+    ARCH5 = 5
 
 
 def __arch1_factory() -> Sequential:
     model = Sequential(
         [
-            InputLayer(shape=(5, FRAME_SIZE, FRAME_SIZE, 3)),
+            # InputLayer(shape=(5, FRAME_SIZE, FRAME_SIZE, 3)),
             ConvLSTM2D(32, 3, return_sequences=False),
             MaxPooling2D(2),
             Conv2D(32, 3),
@@ -49,7 +52,7 @@ def __arch1_factory() -> Sequential:
 def __arch2_factory() -> Sequential:
     model = Sequential(
         [
-            InputLayer(shape=(5, FRAME_SIZE, FRAME_SIZE, 3)),
+            # InputLayer(shape=(5, FRAME_SIZE, FRAME_SIZE, 3)),
             ConvLSTM2D(32, 3, return_sequences=True),
             MaxPooling3D((1, 2, 2)),
             ConvLSTM2D(32, 3, return_sequences=False),
@@ -69,7 +72,7 @@ def __arch2_factory() -> Sequential:
 def __arch3_factory() -> Sequential:
     model = Sequential(
         [
-            InputLayer(shape=(5, FRAME_SIZE, FRAME_SIZE, 3)),
+            # InputLayer(shape=(5, FRAME_SIZE, FRAME_SIZE, 3)),
             ConvLSTM2D(64, 3, return_sequences=True),
             MaxPooling3D((1, 2, 2)),
             ConvLSTM2D(32, 3, return_sequences=False),
@@ -89,7 +92,7 @@ def __arch3_factory() -> Sequential:
 def __arch4_factory() -> Sequential:
     model = Sequential(
         [
-            InputLayer(shape=(5, FRAME_SIZE, FRAME_SIZE, 3)),
+            # InputLayer(shape=(5, FRAME_SIZE, FRAME_SIZE, 3)),
             ConvLSTM2D(32, 3, return_sequences=True),
             MaxPooling3D((1, 4, 4)),
             ConvLSTM2D(16, 3, return_sequences=False),
@@ -104,11 +107,33 @@ def __arch4_factory() -> Sequential:
     return model
 
 
+def __arch5_factory() -> Sequential:
+    model = Sequential(
+        [
+            # InputLayer(shape=(5, FRAME_SIZE, FRAME_SIZE, 3)),
+            Conv3D(32, (1, 3, 3)),
+            MaxPooling3D((1, 2, 2)),
+            Conv3D(32, (1, 3, 3)),
+            MaxPooling3D((1, 2, 2)),
+            Conv3D(32, (1, 3, 3)),
+            MaxPooling3D((1, 2, 2)),
+            Conv3D(16, (1, 3, 3)),
+            MaxPooling3D((1, 4, 4)),
+            Reshape((5, -1)),
+            LSTM(16),
+            Reshape((1, -1)),
+            Dense(get_valid_label_count(), activation="softmax"),
+        ]
+    )
+    return model
+
+
 __arch_mapping: Mapping[ConvLstmArch, Callable[[], Sequential]] = {
     ConvLstmArch.ARCH1: __arch1_factory,
     ConvLstmArch.ARCH2: __arch2_factory,
     ConvLstmArch.ARCH3: __arch3_factory,
     ConvLstmArch.ARCH4: __arch4_factory,
+    ConvLstmArch.ARCH5: __arch5_factory,
 }
 
 
