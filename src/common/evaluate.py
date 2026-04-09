@@ -5,7 +5,12 @@ from pandas import concat
 from os.path import join, exists
 from pathlib import Path
 
-from src.labels import get_labels_from_video, find_valid_segments
+from src.labels import (
+    get_labels_from_video,
+    find_valid_segments,
+    iterate_valid_labels,
+    get_valid_label_count,
+)
 from src.common.helpers import read_dataframe
 
 
@@ -114,3 +119,57 @@ def get_results_per_cvs(model_type: str) -> DataFrame:
         )
     else:
         return DataFrame(data=processed_acc, columns=["processed"])
+
+
+def print_precision_recall_per_class(model_type_root: str):
+    df = combine_model_type_results("data/df/evaluation_results/sota")
+    total = len(df.index)
+    label_count = df["labels"].value_counts()
+    label_count = label_count.drop("INVALID")
+    guess_precisions = label_count / total
+    guess_recall = 1 / get_valid_label_count()
+
+    tp_c = df.query("labels == processed")["labels"].value_counts()
+    fp_c = df.query("labels != processed")["processed"].value_counts()
+    fn_c = df.query("labels != processed")["labels"].value_counts()
+    fn_c = fn_c.drop("INVALID")
+
+    precision = {
+        label: tp_c[label] / (tp_c[label] + fp_c[label])
+        for label in iterate_valid_labels()
+    }
+    recall = {
+        label: tp_c[label] / (tp_c[label] + fn_c[label])
+        for label in iterate_valid_labels()
+    }
+
+    for label in iterate_valid_labels():
+        pr_guess = guess_precisions[label]
+        re_guess = guess_recall
+
+        pr_model = precision[label]
+        re_model = recall[label]
+        if pr_guess < pr_model:
+            pr_msg_template = (
+                "Model precision ({:.1%}) is greater than guessing precision ({:.1%})."
+            )
+        else:
+            pr_msg_template = (
+                "Model precision ({:.1%}) is lower than or equal to guessing "
+                "precision ({:.1%})."
+            )
+
+        if re_guess < re_model:
+            re_msg_template = (
+                "Model recall ({:.1%}) is greater than guessing recall ({:.1%})."
+            )
+        else:
+            re_msg_template = (
+                "Model recall ({:.1%}) is lower than or equal to guessing recall "
+                "({:.1%})."
+            )
+
+        print(f"{label}:")
+        print(pr_msg_template.format(pr_model, pr_guess))
+        print(re_msg_template.format(re_model, re_guess))
+        print()
