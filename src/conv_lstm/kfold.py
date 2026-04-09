@@ -19,6 +19,20 @@ from src.conv_lstm.model import (
 
 class ConvLstmFoldCrossValidation:
 
+    @staticmethod
+    def evaluation_instance(name: str):
+        """Create instance of the Conv. LSTM fold cross validation model only used for evaluation.
+
+        Args:
+            name (str): Name of the model.
+
+        Returns:
+            HpeDnnFoldCrossValidation: K-fold model instance
+        """
+        return ConvLstmFoldCrossValidation(
+            model_args=ConvLstmConstructorArgs(name=name)
+        )
+
     @property
     def model_constructor_args(self) -> ConvLstmConstructorArgs:
         return self._model_args
