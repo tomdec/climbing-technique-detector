@@ -27,6 +27,7 @@ class ConvLstmArch(Enum):
     ARCH3 = 3
     ARCH4 = 4
     ARCH5 = 5
+    ARCH6 = 6
 
 
 def __arch1_factory() -> Sequential:
@@ -128,12 +129,33 @@ def __arch5_factory() -> Sequential:
     return model
 
 
+def __arch6_factory() -> Sequential:
+    model = Sequential(
+        [
+            # InputLayer(shape=(5, FRAME_SIZE, FRAME_SIZE, 3)),
+            ConvLSTM2D(32, 3, return_sequences=False),
+            MaxPooling2D(2),
+            Conv2D(32, 3, activation="relu"),
+            MaxPooling2D(2),
+            Conv2D(32, 3, activation="relu"),
+            MaxPooling2D(2),
+            Conv2D(32, 3, activation="relu"),
+            MaxPooling2D(2),
+            Flatten(),
+            Reshape((1, -1)),
+            Dense(get_valid_label_count(), activation="softmax"),
+        ]
+    )
+    return model
+
+
 __arch_mapping: Mapping[ConvLstmArch, Callable[[], Sequential]] = {
     ConvLstmArch.ARCH1: __arch1_factory,
     ConvLstmArch.ARCH2: __arch2_factory,
     ConvLstmArch.ARCH3: __arch3_factory,
     ConvLstmArch.ARCH4: __arch4_factory,
     ConvLstmArch.ARCH5: __arch5_factory,
+    ConvLstmArch.ARCH6: __arch6_factory,
 }
 
 
