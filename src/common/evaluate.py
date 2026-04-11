@@ -142,17 +142,19 @@ def get_results_per_cvs(model_type: str) -> DataFrame:
 
 
 def print_precision_recall_per_class(model_type_root: str):
-    df = combine_model_type_results("data/df/evaluation_results/sota")
+    df = combine_model_type_results(model_type_root)
     total = len(df.index)
     label_count = df["labels"].value_counts()
-    label_count = label_count.drop("INVALID")
+    if "INVALID" in label_count.index:
+        label_count = label_count.drop("INVALID")
     guess_precisions = label_count / total
     guess_recall = 1 / get_valid_label_count()
 
     tp_c = df.query("labels == processed")["labels"].value_counts()
     fp_c = df.query("labels != processed")["processed"].value_counts()
     fn_c = df.query("labels != processed")["labels"].value_counts()
-    fn_c = fn_c.drop("INVALID")
+    if "INVALID" in fn_c.index:
+        fn_c = fn_c.drop("INVALID")
 
     precision = {
         label: tp_c[label] / (tp_c[label] + fp_c[label])
