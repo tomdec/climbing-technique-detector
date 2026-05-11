@@ -11,5 +11,7 @@
         "comments": false,
         "strings": false
     },
-    "editor.quickSuggestionsDelay": 10
+    "editor.quickSuggestionsDelay": 10,
+    "plantuml.diagramsRoot": "./docs/src",
+    "plantuml.exportOutDir": "./docs/out"
 }

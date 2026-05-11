@@ -1,0 +1,49 @@
+@startuml models
+
+
+abstract class ClassificationModel{
+  name: str
+
+  +void initialize_model()
+  +void execute_train_runs(args: MultiRunTrainArgs)
+  +{abstract} void train_model(args: TrainArgs)
+  +{abstract} void test_model(args: TestArgs)
+  #{abstract} void fresh_model()
+  #{abstract} void load_model(model_path: str)
+}
+
+class HpeDnn{
+  +void train_model(args: TrainArgs)
+  +void test_model(args: TestArgs)
+  #void fresh_model()
+  #void load_model(model_path: str)
+}
+ClassificationModel <|-- HpeDnn
+
+class Sota{
+  +void train_model(args: TrainArgs)
+  +void test_model(args: TestArgs)
+  #void fresh_model()
+  #void load_model(model_path: str)
+}
+ClassificationModel <|-- Sota
+
+
+class Rnn{
+  +void train_model(args: TrainArgs)
+  +void test_model(args: TestArgs)
+  #void fresh_model()
+  #void load_model(model_path: str)
+}
+ClassificationModel <|-- Rnn
+
+
+class ConvLstm{
+  +void train_model(args: TrainArgs)
+  +void test_model(args: TestArgs)
+  #void fresh_model()
+  #void load_model(model_path: str)
+}
+ClassificationModel <|-- ConvLstm
+
+@enduml
