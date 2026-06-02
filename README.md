@@ -1,7 +1,6 @@
-# climbing-technique-detector
+# Video Classification tools
 
 # Requirements
-
 Python version: a minimum version of python 3.9 is required. 
 In this application we used [Python 3.12.3](https://www.python.org/downloads/release/python-3123/)
 
@@ -133,6 +132,8 @@ Run these scripts with the `--help` flag to get tool specific information.
 Contains all data files required in this project.
 Label files will be included in source control to have back-ups of them, video files and images 
 won't since they are too large and not mine to make publicly available.
+Public data, like trained model weights and extracted HPE features, are available at 
+[this OSF project](https://osf.io/hmjp8/overview?view_only=499ad681b3b74997b400f8e608632c7e).
 
 ### /aug
 Examples of augmentation transformations are stored here, only for illustration purposes.
@@ -205,6 +206,9 @@ Folder that contains the full, original, videos that are used as dataset for thi
 
 ## /src
 Contains the source code required in the project.
+Some class diagrams are included in the [`docs` folder](/docs/src/kfold.puml) that show the 
+inheritance structure and most relevant methods.
+Generate the images from this source files using [plantUML](https://plantuml.com/).
 
 ## /test
 Contains tests for the source code, run with
@@ -495,3 +499,12 @@ Code samples to train these models can be found [here](dnn_vs_lstm.ipynb).
 Similar to the DNN models, there are several architectures defined in 
 [this file](src/rnn/architecture.py) and denoted by the enum `RnnArch`.
 
+### 11.4 Conv LSTM model
+Training convolutional LSTM models will also use the DataFrame object `data/df/rnn/cvs_features.pkl` 
+as dataset, but will retrieve the input images from the `data/frames` folder.
+Make sure to populate this folder with the frames from the video by running the 
+`generate-frame-dataset.py` script.
+Code samples to train these models can be found [here](lstm_vs_conv_lstm.ipynb).
+
+Similar to the other models, there are several architectures defined in 
+[this file](src/conv_lstm/architecture.py) and denoted by the enum `ConvLstmArch`.

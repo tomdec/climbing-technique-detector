@@ -1,0 +1,67 @@
+@startuml kfold
+
+abstract class AbstractFoldCrossValidation<TModel extends ClassificationModel>{
+  -splitter: KFold
+  
+  +void train_folds(train_run_args: MultiRunArgs | None)
+  +void test_folds()
+  #TModel init_fold_model(fold_num: int)
+  -void train_fold(fold_num: int, full_data: Any, 
+    train: ndarray, test: ndarray)
+  
+  +{abstract} Any get_full_data_list()
+  +{abstract} void build_fold(fold_num: int, train: ndarray, 
+    val: ndarray, test: ndarray, full_data: Any)
+  +{abstract} void clear_fold()  
+}
+
+
+
+class SOTAFoldCrossValidation{  
+  +string[] get_full_data_list()
+  +void build_fold(fold_num: int, train: ndarray, 
+    val: ndarray, test: ndarray, full_data: string[])
+  +void clear_fold() 
+}
+AbstractFoldCrossValidation <|-- SOTAFoldCrossValidation
+
+
+class HpeDnnFoldCrossValidation{  
+  +DataFrame get_full_data_list()
+  +void build_fold(fold_num: int, train: ndarray, 
+    val: ndarray, test: ndarray, full_data: DataFrame)
+  +void clear_fold() 
+}
+AbstractFoldCrossValidation<|-- HpeDnnFoldCrossValidation
+
+class RnnFoldCrossValidation{
+  -splitter: ExtendedStratifiedGroupKFold
+
+  +void train_folds(train_run_args: RnnIntMultiRunTrainArgs)
+  +void test_folds()
+  +DataFrame get_full_data_list()
+  
+  -Rnn init_fold_model(fold_num: int)
+  -void train_fold(fold_num: int, train_run_args: RnnIntMultiRunTrainArgs,
+    data: DataFrame, train_groups: list, val_groups: list, test_groups: list)
+  -WindowGenerator build_fold(fold_num: int, data: DataFrame, train_groups: list, 
+    val_groups: list, test_groups: list)
+}
+SOTAFoldCrossValidation <--[hidden]- RnnFoldCrossValidation
+
+class ConvLstmFoldCrossValidation{
+  -splitter: ExtendedStratifiedGroupKFold
+
+  +void train_folds(train_run_args: ConvLstmConstructorArgs)
+  +void test_folds()
+  +DataFrame get_full_data_list()
+  
+  -ConvLstm init_fold_model(fold_num: int)
+  -void train_fold(fold_num: int, train_run_args: ConvLstmIntMultiRunTrainArgs,
+    data: DataFrame, train_groups: list, val_groups: list, test_groups: list)
+  -WindowGenerator build_fold(fold_num: int, data: DataFrame, train_groups: list, 
+    val_groups: list, test_groups: list)
+}
+HpeDnnFoldCrossValidation <--[hidden]- ConvLstmFoldCrossValidation
+
+@enduml
